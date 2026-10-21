@@ -12,8 +12,14 @@ Use Git and Python 3.12 or newer. Keep the checkout named `rockbox` to match the
 examples; commands are run from its root. Do not substitute distribution eSpeak
 data: engine and binary-data versions must agree.
 
+Run build commands in Linux or WSL. The clone option below sets line-ending
+policy only for the new checkout, not your global Git settings. Unix build
+entry points also have explicit LF attributes. A pre-existing Windows checkout
+can retain earlier CRLF scripts; do not discard local edits or assume updating
+attributes automatically rewrites unchanged files.
+
 ```sh
-git clone --branch accessible https://github.com/Pates2004/rockbox-accessible.git rockbox
+git clone --config core.autocrlf=false --branch accessible https://github.com/Pates2004/rockbox-accessible.git rockbox
 cd rockbox
 python3 -B tools/prepare_espeak_source.py
 ```

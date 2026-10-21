@@ -33,7 +33,7 @@ Potrzebujesz Gita i Pythona co najmniej 3.12. W przykładach katalog źródeł n
 się `rockbox`; polecenia wykonuj z jego katalogu głównego.
 
 ```sh
-git clone --branch accessible https://github.com/Pates2004/rockbox-accessible.git rockbox
+git clone --config core.autocrlf=false --branch accessible https://github.com/Pates2004/rockbox-accessible.git rockbox
 cd rockbox
 python3 -B tools/prepare_espeak_source.py
 ```

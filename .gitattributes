@@ -24,3 +24,11 @@ lib/espeak/sonic/sonic.h whitespace=cr-at-eol
 lib/espeak/sonic/LICENSE whitespace=cr-at-eol
 lib/espeak/DATA-PROVENANCE.json text eol=lf
 lib/espeak/supplied-r34-data.patch text eol=lf whitespace=-blank-at-eof
+*.sh text eol=lf
+*.pl text eol=lf
+*.py text eol=lf
+tools/configure text eol=lf
+tools/genlang text eol=lf
+tools/langstatus text eol=lf
+tools/langv1tov2 text eol=lf
+tools/updatelang text eol=lf

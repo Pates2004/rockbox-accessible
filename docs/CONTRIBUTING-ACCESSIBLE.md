@@ -9,7 +9,7 @@ guide for the actual target before changing or installing anything.
 ## Obtain and identify the source
 
 ```sh
-git clone --branch accessible https://github.com/Pates2004/rockbox-accessible.git rockbox
+git clone --config core.autocrlf=false --branch accessible https://github.com/Pates2004/rockbox-accessible.git rockbox
 cd rockbox
 git rev-parse HEAD
 python3 -B tools/prepare_espeak_source.py
@@ -21,6 +21,10 @@ the dictionaries, edit provenance hashes to accept different inputs, or copy
 libraries from an unrelated device. Existing dependency directories are not
 overwritten. Keep your own work on a separate branch and retain local data
 before replacing a simulator or a card installation.
+
+Use Linux/WSL for the documented build commands. The clone option changes only
+the new repository's local line-ending policy; it does not change global Git
+configuration. Preserve local edits before correcting an older CRLF checkout.
 
 ## Keep changes reviewable
 

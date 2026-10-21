@@ -144,6 +144,15 @@ class PublicSourceNoticeTests(unittest.TestCase):
             with self.subTest(autocrlf=autocrlf):
                 self.assertEqual(effective_git_attributes(["lib/espeak/License.txt"], autocrlf), expected)
 
+    def test_unix_build_entry_points_keep_lf_with_windows_autocrlf(self):
+        paths = ["tools/configure", "tools/genlang", "tools/langstatus", "tools/langv1tov2",
+                 "tools/updatelang", "tools/rockboxdev.sh", "tools/run-espeak-simulator.sh",
+                 "tools/buildzip.pl", "tools/prepare_hiby_notices.py"]
+        expected = {path: {"text": "set", "eol": "lf"} for path in paths}
+        for autocrlf in ("false", "true"):
+            with self.subTest(autocrlf=autocrlf):
+                self.assertEqual(effective_git_attributes(paths, autocrlf), expected)
+
     def test_only_substantively_modified_engine_imports_have_notices(self):
         changed = set()
         for relative, checksum in read_manifest("UPSTREAM.sha256").items():
