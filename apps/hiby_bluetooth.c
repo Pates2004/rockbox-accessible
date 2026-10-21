@@ -40,9 +40,14 @@ static long long operation_clock(void)
 {
     struct timespec value;
     if (clock_gettime(CLOCK_MONOTONIC, &value) || value.tv_sec < 0 ||
-        value.tv_sec > LLONG_MAX / 1000 || value.tv_nsec < 0 || value.tv_nsec >= 1000000000)
+        value.tv_nsec < 0 || value.tv_nsec >= 1000000000)
         return -1;
-    return (long long)value.tv_sec * 1000 + value.tv_nsec / 1000000;
+    long long milliseconds;
+    if (__builtin_mul_overflow(value.tv_sec, 1000LL, &milliseconds) ||
+        __builtin_add_overflow(milliseconds, value.tv_nsec / 1000000,
+                               &milliseconds))
+        return -1;
+    return milliseconds;
 }
 
 static bool operation_cancelled(void *context)

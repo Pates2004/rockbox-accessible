@@ -801,7 +801,15 @@ int accessibility_default_button_action(int button, int context, bool held_relea
     source = source.replace(function(source, "accessibility_button_is_repeat").strip(),
                             function(module, "accessibility_button_is_repeat"))
     source += function(inputs["apps/action.c"], "accessibility_default_button_action")
-    return "#define HIBY_R1\n" + source
+    inactive_service = r'''
+#include "hiby_bluetooth_service.h"
+static unsigned int bluetooth_notification_calls, bluetooth_timeout_calls;
+void hiby_bluetooth_service_process_notifications(void)
+{ ++bluetooth_notification_calls; }
+int hiby_bluetooth_service_adjust_timeout(int timeout)
+{ ++bluetooth_timeout_calls; return timeout; }
+'''
+    return "#define HIBY_R1\n" + inactive_service + source
 
 
 RECOGNIZER_CASES = r'''
@@ -841,6 +849,8 @@ int main(int argc, char **argv)
         CHECK(feed(BUTTON_NONE, 51, context, 0) == ACTION_NONE);
         CHECK(feed(BUTTON_NEXT | BUTTON_REL, 1, context, 0) == ACTION_NONE);
         CHECK(!action_last.keys_locked && transition_count == 1);
+        CHECK(bluetooth_notification_calls > 0);
+        CHECK(bluetooth_notification_calls == bluetooth_timeout_calls);
     }
     printf("{\"checks\":%d}\n", checks);
     return 0;
@@ -862,6 +872,8 @@ class AccessibilityLockPolicyTests(unittest.TestCase):
         cls.hashes = {path: hashlib.sha256((ROOT / path).read_bytes()).hexdigest() for path in (
             "apps/action.c", "apps/accessibility_screen.c", "apps/accessibility_screen.h",
             "apps/accessibility.c", "apps/accessibility_buttons.c", "apps/accessibility_buttons.h",
+            "apps/hiby_bluetooth_service.h", "apps/hiby_bluetooth.h",
+            "firmware/target/hosted/hiby/bluetooth-hiby.h",
             "apps/keymaps/keymap-hibyr1.c", "firmware/drivers/button.c",
             "tools/tests/test_accessibility_lock_policy.py")}
 
@@ -889,7 +901,9 @@ class AccessibilityLockPolicyTests(unittest.TestCase):
             binary = self.workspace / name
             generated.write_text(source, encoding="utf-8")
             command = ["cc", "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror",
-                       "-Wno-unused-function", "-Wno-unused-const-variable", "-pedantic"]
+                       "-Wno-unused-function", "-Wno-unused-const-variable", "-pedantic",
+                       "-I", str(ROOT / "apps"),
+                       "-I", str(ROOT / "firmware/target/hosted/hiby")]
             if os.environ.get("ROCKBOX_SCREEN_SANITIZERS", "1") != "0":
                 command += ["-fsanitize=undefined", "-fno-sanitize-recover=all"]
             command += [str(generated), "-o", str(binary)]

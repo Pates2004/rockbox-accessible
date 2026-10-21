@@ -723,6 +723,7 @@ static int target_cases(void)
     CHECK(list.nb_items == 0 && list.selected_item == 0);
     CHECK(list.y_pos == 0 && list.selected_size == 1 && list.title == NULL);
     CHECK(list.line_height[0] == 10 && list.parent[0] == parent);
+    CHECK(list.position_source == LIST_POSITION_INTERFACE);
     gui_synclist_init(&list, NULL, NULL, false, 1, parent);
     CHECK(target == &list && target_calls == 2);
     return 0;
@@ -1191,9 +1192,12 @@ def list_harness(inputs, mutation=None):
         re.search(r'^int ' + name + r'\([^;]+;', inputs["apps/talk.h"], re.MULTILINE)[0]
         for name in ("talk_spell", "talk_id")
     ) + "\n"
+    position_source = balanced_definition(
+        inputs["apps/gui/list.h"], r"^enum list_position_source\s*\{").rstrip() + ";\n"
     return (COMMON + "#define HAVE_TOUCHSCREEN\n#define HAVE_ESPEAK\n"
             + language_macros + talk_declarations
             + header_sources(inputs) + LIST_MOCKS
+            + "#ifdef HAVE_ESPEAK\n" + position_source + "#endif\n"
             + structure(inputs["apps/gui/list.h"], "gui_synclist") + LIST_RUNTIME
             + function(inputs["apps/gui/viewport.c"], "viewport_point_within_vp")
             + function(bitmap, "get_click_location")

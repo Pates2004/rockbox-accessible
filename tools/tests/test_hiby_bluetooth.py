@@ -906,6 +906,9 @@ CONTROLLER_CLOCK_WRAPPER = r'''
 #include <pthread.h>
 #include <time.h>
 static bool controller_clock_fake;
+static bool controller_clock_raw;
+static time_t controller_clock_seconds;
+static long controller_clock_nanoseconds;
 static long long controller_clock_value;
 static long long controller_enqueue_advance;
 static unsigned int controller_clock_reads;
@@ -923,6 +926,12 @@ static int test_controller_clock_gettime(clockid_t clock, struct timespec *value
     }
     if (!__atomic_load_n(&controller_clock_fake, __ATOMIC_SEQ_CST))
         return clock_gettime(clock, value);
+    if (__atomic_load_n(&controller_clock_raw, __ATOMIC_SEQ_CST))
+    {
+        value->tv_sec = __atomic_load_n(&controller_clock_seconds, __ATOMIC_SEQ_CST);
+        value->tv_nsec = __atomic_load_n(&controller_clock_nanoseconds, __ATOMIC_SEQ_CST);
+        return 0;
+    }
     long long milliseconds = __atomic_load_n(&controller_clock_value, __ATOMIC_SEQ_CST);
     if (reads == __atomic_load_n(&controller_clock_backwards, __ATOMIC_SEQ_CST))
         milliseconds--;
@@ -945,6 +954,7 @@ void test_controller_clock(bool fake, unsigned int failure, unsigned int backwar
                            long long advance)
 {
     __atomic_store_n(&controller_clock_fake, fake, __ATOMIC_SEQ_CST);
+    __atomic_store_n(&controller_clock_raw, false, __ATOMIC_SEQ_CST);
     __atomic_store_n(&controller_clock_value, 5000, __ATOMIC_SEQ_CST);
     __atomic_store_n(&controller_enqueue_advance, advance, __ATOMIC_SEQ_CST);
     __atomic_store_n(&controller_clock_reads, 0, __ATOMIC_SEQ_CST);
@@ -954,6 +964,65 @@ void test_controller_clock(bool fake, unsigned int failure, unsigned int backwar
 unsigned int test_controller_clock_read_count(void)
 {
     return __atomic_load_n(&controller_clock_reads, __ATOMIC_SEQ_CST);
+}
+void test_controller_clock_fields(long long seconds, long nanoseconds)
+{
+    __atomic_store_n(&controller_clock_seconds, (time_t)seconds, __ATOMIC_SEQ_CST);
+    __atomic_store_n(&controller_clock_nanoseconds, nanoseconds, __ATOMIC_SEQ_CST);
+    __atomic_store_n(&controller_clock_raw, true, __ATOMIC_SEQ_CST);
+}
+unsigned int test_controller_clock_time_bits(void)
+{
+    return (unsigned int)(sizeof(time_t) * CHAR_BIT);
+}
+long long test_controller_clock_read(void)
+{
+    return operation_clock();
+}
+'''
+
+CONTROLLER_CLOCK_MAIN = r'''
+#include <assert.h>
+#include <stdio.h>
+
+static unsigned int checked_clock_cases;
+
+static void check_clock(long long seconds, long nanoseconds, long long expected)
+{
+    test_controller_clock(true, 0, 0, 0);
+    test_controller_clock_fields(seconds, nanoseconds);
+    assert(test_controller_clock_read() == expected);
+    checked_clock_cases++;
+}
+
+int main(void)
+{
+    test_controller_clock(true, 1, 0, 0);
+    assert(test_controller_clock_read() == -1);
+    checked_clock_cases++;
+    check_clock(0, 0, 0);
+    check_clock(0, 1, 0);
+    check_clock(0, 999999, 0);
+    check_clock(0, 1000000, 1);
+    check_clock(1, 999999999, 1999);
+    check_clock(2147483647LL, 999999999, 2147483647999LL);
+    check_clock(-1, 0, -1);
+    check_clock(-1, 1, -1);
+    check_clock(0, -1, -1);
+    check_clock(0, 1000000000, -1);
+    if (test_controller_clock_time_bits() >= 64)
+    {
+        check_clock(9223372036854775LL, 807000000, LLONG_MAX);
+        check_clock(9223372036854775LL, 807999999, LLONG_MAX);
+        check_clock(9223372036854775LL, 808000000, -1);
+        check_clock(9223372036854775LL, 999999999, -1);
+        check_clock(9223372036854776LL, 0, -1);
+        check_clock(LLONG_MAX, 0, -1);
+    }
+    assert(checked_clock_cases == (test_controller_clock_time_bits() >= 64 ? 17u : 11u));
+    printf("verified-controller-clock-cases=%u time_t_bits=%u\n",
+           checked_clock_cases, test_controller_clock_time_bits());
+    return 0;
 }
 '''
 
@@ -1258,6 +1327,9 @@ class BluetoothTests(unittest.TestCase):
         cls.clock_controller.test_controller_clock.argtypes = [ctypes.c_bool, ctypes.c_uint,
                                                               ctypes.c_uint, ctypes.c_longlong]
         cls.clock_controller.test_controller_clock_read_count.restype = ctypes.c_uint
+        cls.clock_controller.test_controller_clock_fields.argtypes = [ctypes.c_longlong, ctypes.c_long]
+        cls.clock_controller.test_controller_clock_time_bits.restype = ctypes.c_uint
+        cls.clock_controller.test_controller_clock_read.restype = ctypes.c_longlong
         cls.simulator = ctypes.CDLL(str(cls.evidence / "unavailable.so"))
         for library in (cls.controller, cls.simulator, cls.integrated, cls.clock_controller):
             library.hiby_bluetooth_init.restype = ctypes.c_bool
@@ -2939,6 +3011,59 @@ class BluetoothTests(unittest.TestCase):
         while not library.test_active() and time.monotonic() < deadline:
             time.sleep(0.001)
         self.assertEqual(library.test_active(), 1)
+
+    def test_controller_clock_conversion_edge_cases(self):
+        source = self.evidence / "controller-clock-conversion.c"
+        source.write_text(CONTROLLER_CLOCK_WRAPPER.replace("CONTROLLER_PATH", CONTROLLER.as_posix()) +
+                          CONTROLLER_CLOCK_MAIN, encoding="utf-8")
+        executions = []
+        for sanitized in (False, True):
+            executable = self.evidence / ("controller-clock-conversion-sanitized" if sanitized else "controller-clock-conversion")
+            options = ["-fsanitize=address,undefined", "-fno-sanitize-recover=all", "-fno-omit-frame-pointer"] if sanitized else []
+            self.compile_command(self.flags + self.includes + options + ["-DHIBY_BT_HOST_TEST", "-DHIBY_BT_NO_UI",
+                str(source), str(self.evidence / "fake.c"), "-o", str(executable)])
+            result = subprocess.run([str(executable)], capture_output=True, text=True, timeout=10,
+                                    env={**os.environ, "ASAN_OPTIONS": "detect_leaks=1:abort_on_error=1", "UBSAN_OPTIONS": "halt_on_error=1"})
+            executions.append({"sanitized": sanitized, "returncode": result.returncode,
+                               "stdout": result.stdout, "stderr": result.stderr})
+            (self.evidence / "controller-clock-conversion-result.json").write_text(json.dumps(executions, indent=2), encoding="utf-8")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            bits = self.clock_controller.test_controller_clock_time_bits()
+            cases = 17 if bits >= 64 else 11
+            self.assertEqual(result.stdout, f"verified-controller-clock-cases={cases} time_t_bits={bits}\n")
+
+    def test_automatic_worker_invalid_clock_fields_reject_before_backend_calls(self):
+        library = self.clock_controller
+        self.assertTrue(library.hiby_bluetooth_init())
+        cases = [(-1, 0), (-1, 1), (0, -1), (0, 1000000000)]
+        if library.test_controller_clock_time_bits() >= 64:
+            cases += [(9223372036854775, 808000000), (9223372036854776, 0)]
+        for seconds, nanoseconds in cases:
+            with self.subTest(seconds=seconds, nanoseconds=nanoseconds):
+                library.test_controller_clock(True, 0, 0, 0)
+                library.test_controller_clock_fields(seconds, nanoseconds)
+                calls = library.test_calls()
+                generation = self.snapshot(library).generation
+                self.assertFalse(library.hiby_bluetooth_request_automatic(CONNECT_PAIRED, ADDRESS, 100))
+                observed = self.snapshot(library)
+                self.assertEqual(observed.error, TIMEOUT)
+                self.assertFalse(observed.busy)
+                self.assertGreater(observed.generation, generation)
+                self.assertEqual(library.test_calls(), calls)
+
+    def test_automatic_worker_valid_clock_with_overflowing_deadline_is_rejected(self):
+        library = self.clock_controller
+        if library.test_controller_clock_time_bits() < 64:
+            self.skipTest("actual time_t cannot represent the signed-millisecond limit")
+        self.assertTrue(library.hiby_bluetooth_init())
+        library.test_controller_clock(True, 0, 0, 0)
+        library.test_controller_clock_fields(9223372036854775, 807000000)
+        self.assertEqual(library.test_controller_clock_read(), 9223372036854775807)
+        calls = library.test_calls()
+        self.assertFalse(library.hiby_bluetooth_request_automatic(VERIFY_LINK, None, 1))
+        self.assertEqual(self.snapshot(library).error, TIMEOUT)
+        self.assertFalse(self.snapshot(library).busy)
+        self.assertEqual(library.test_calls(), calls)
 
     def test_automatic_worker_restricts_operations_and_accepts_only_bounded_timeouts(self):
         library = self.clock_controller

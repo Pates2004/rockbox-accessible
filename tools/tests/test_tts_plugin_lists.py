@@ -82,6 +82,9 @@ enum { ACTION_NONE, ACTION_STD_OK, ACTION_STD_CANCEL, ACTION_STD_MENU,
        LANG_PLUGIN_STATS_MAX_FILES, LANG_BYTE, LANG_KIBIBYTE,
        LANG_MEBIBYTE, LANG_GIBIBYTE, LANG_WAIT, LANG_DELETED,
        VOICE_BLANK, VOICE_EMPTY_LIST };
+#ifdef HAVE_ESPEAK
+/* ACTUAL_LIST_POSITION_SOURCE */
+#endif
 struct gui_synclist {
     int selected_item, nb_items;
     long scheduled_talk_tick;
@@ -89,6 +92,9 @@ struct gui_synclist {
     int (*get_talk)(int, void *);
     void *data;
     bool talk_menu;
+#ifdef HAVE_ESPEAK
+    enum list_position_source position_source;
+#endif
 };
 struct simplelist_info {
     const char *title;
@@ -96,7 +102,13 @@ struct simplelist_info {
     const char *(*get_name)(int, void *, char *, size_t);
     int (*action_callback)(int, struct gui_synclist *);
     void *callback_data;
+#ifdef HAVE_ESPEAK
+    enum list_position_source position_source;
+#endif
 };
+#ifdef HAVE_ESPEAK
+static enum list_position_source last_item_position_source;
+#endif
 struct user_settings { bool talk_menu, tts_enabled; };
 struct mp3entry;
 static struct user_settings settings = { .talk_menu = true, .tts_enabled = true };
@@ -207,9 +219,17 @@ static void test_init(struct gui_synclist *list,
     (void)scroll_all; (void)selection_size; (void)viewport;
     *list = (struct gui_synclist){ .get_name = name, .data = data,
                                 .talk_menu = talk_menus_enabled(&settings) };
+#ifdef HAVE_ESPEAK
+    list->position_source = LIST_POSITION_INTERFACE;
+#endif
 }
 static void test_items(struct gui_synclist *list, int count)
-{ list->nb_items = count; }
+{
+    list->nb_items = count;
+#ifdef HAVE_ESPEAK
+    last_item_position_source = list->position_source;
+#endif
+}
 static void test_select(struct gui_synclist *list, int selection)
 {
     if (selection < 0 || selection >= list->nb_items)
@@ -246,7 +266,12 @@ static long test_event(long action)
 static int test_menu(const void *menu, int *selection, void *viewport, bool toolbar)
 { (void)menu; (void)selection; (void)viewport; (void)toolbar; return menu_choice; }
 static void test_simple_init(struct simplelist_info *list, char *title, int count, void *data)
-{ *list = (struct simplelist_info){ .title = title, .count = count, .callback_data = data }; }
+{
+    *list = (struct simplelist_info){ .title = title, .count = count, .callback_data = data };
+#ifdef HAVE_ESPEAK
+    list->position_source = LIST_POSITION_INTERFACE;
+#endif
+}
 static bool test_simple_show(struct simplelist_info *list)
 {
     shown_count = list->count;
@@ -871,6 +896,7 @@ int main(void)
     assert(edit(&scan) == 0);
 #ifdef HAVE_ESPEAK
     assert(speech_count == 2 && !strcmp(utterances[1], "Deleted"));
+    assert(last_item_position_source == LIST_POSITION_FILE);
 #else
     assert(speech_count == 0);
 #endif
@@ -921,6 +947,12 @@ class PluginListTests(unittest.TestCase):
                 (ROOT / "apps/plugins" / name).read_bytes()).hexdigest()
             for name in paths
         }
+        list_header = ROOT / "apps/gui/list.h"
+        cls.position_source = extract_block(
+            list_header.read_text(encoding="utf-8"), "enum list_position_source\n").rstrip() + ";\n"
+        provenance["apps/gui/list.h"] = hashlib.sha256(list_header.read_bytes()).hexdigest()
+        provenance["tools/tests/test_tts_plugin_lists.py"] = hashlib.sha256(
+            Path(__file__).read_bytes()).hexdigest()
         (WORKSPACE / "input-sha256.json").write_text(json.dumps(provenance, indent=2), encoding="utf-8")
 
     def run_source(self, name, body, address_sanitize=False):
@@ -930,7 +962,8 @@ class PluginListTests(unittest.TestCase):
                 with self.subTest(plugin=name, mode=mode):
                     output = WORKSPACE / name / mode
                     output.mkdir(parents=True)
-                    (output / "plugin.h").write_text(with_menu_policy(COMMON), encoding="utf-8")
+                    header = COMMON.replace("/* ACTUAL_LIST_POSITION_SOURCE */", self.position_source)
+                    (output / "plugin.h").write_text(with_menu_policy(header), encoding="utf-8")
                     source = output / "harness.c"
                     source.write_text('#include "plugin.h"\n' + body, encoding="utf-8")
                     definition = "A useful definition.\n"
