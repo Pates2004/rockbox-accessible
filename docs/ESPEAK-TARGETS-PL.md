@@ -10,7 +10,7 @@ rdzenia oraz dostosowywać wejście i usługi platformy. Ekran dotykowy lub usł
 HiBy to osobna możliwość, nie warunek syntezy menu czy czytania tekstu.
 Ta sekcja opisuje nowy etap; nie dodaje wyników kompilacji ani prób sprzętowych.
 
-Zamknięty odbiór programowy R1 native alpha12 / Windows alpha15, jego zamrożenie
+Zamknięty odbiór programowy R1 native alpha13 / Windows alpha16, jego zamrożenie
 źródeł, raporty, paczki i sumy pozostają dowodami wyłącznie tego wydania.
 Nowe zmiany źródeł
 wymagają nowego zamrożenia i świeżej walidacji. Zachowaj istniejące wydania Sans;
@@ -56,7 +56,7 @@ Dostępność → Ustawienia Talkbox:
 
 Te preferencje należą do `HAVE_ESPEAK`, nie do `HAVE_TOUCHSCREEN` lub `HIBY_R1`.
 To zachowanie źródeł nowego etapu, wymagające świeżych testów, nie wynik
-zamkniętego odbioru alpha12/Windows15. Nowe pola `user_settings`, widoczne dla
+zamkniętego odbioru alpha13/Windows16. Nowe pola `user_settings`, widoczne dla
 wtyczek, oraz role list wymagają ABI integracji **`0xe006`**. Zachowane wydania
 Sans pozostają przy **`0xe003`**; wcześniejsze generacje R1 używały `0xe004`
 i `0xe005`. Ich paczki nie są zgodne z nowym układem źródeł.
@@ -93,7 +93,7 @@ nieobsługiwanych kontrolek.
 | --- | --- |
 | `sansaclipplus`, `sansaclipzip` | Zachowane natywne wydania r29 i zgodne symulatory Windows opisują [Clip+](ESPEAK-CLIPPLUS-PL.md), [Clip Zip](ESPEAK-CLIPZIP-PL.md) i [Windows](ESPEAK-WINDOWS-PL.md). Nie walidują nowych wspólnych preferencji, źródeł r34 ani ABI `0xe006`; powrót do Sans wymaga osobno zleconego etapu kompilacji/testów. Nie deklarujemy odbioru sprzętowego. |
 | `ipod6g` | Poniżej istnieją historyczne dowody linkowania/startu rdzenia Windows. Natywny zintegrowany eSpeak pozostaje zablokowany w configure; nie ustalono tu istnienia bieżącej natywnej paczki Talkbox ani pełnego odbioru symulatora nowego etapu. |
-| `hibyr1` | Zamknięte wyniki programowe native alpha12 / Windows alpha15 dotyczą wyłącznie zapisanych wejść. Odbiór fizycznego R1, dostępności dotyku, Bluetooth/RF, baterii i NVDA pozostaje otwarty. Zobacz [R1](ESPEAK-HIBYR1-PL.md). |
+| `hibyr1` | Zamknięte wyniki programowe native alpha13 / Windows alpha16 dotyczą wyłącznie zapisanych wejść. Odbiór fizycznego R1, dostępności dotyku, Bluetooth/RF, baterii i NVDA pozostaje otwarty. Zobacz [R1](ESPEAK-HIBYR1-PL.md). |
 | Inne cele dotykowe lub linuksowe | Makro możliwości pozwala wybrać właściwy kod; nie przenosi odbioru R1 ani zgodności z usługą producenta. Przygotuj osobny zapis kompilacji i testów danego celu. |
 
 ### Włączenie nowego celu i kompilacja

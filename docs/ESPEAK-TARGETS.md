@@ -10,7 +10,7 @@ input and platform services. A touchscreen or HiBy service is a separate
 capability, not a prerequisite for synthesized menus or text reading.
 This section documents the new phase; it adds no build or physical-test result.
 
-The closed R1 native alpha12 / Windows alpha15 software acceptance, its source
+The closed R1 native alpha13 / Windows alpha16 software acceptance, its source
 freeze, reports, packages and checksums remain evidence of that release only.
 New source changes
 require a new freeze and fresh validation. Preserve the existing Sansa releases;
@@ -55,7 +55,7 @@ Talkbox settings:
 
 These preferences belong to `HAVE_ESPEAK`, not `HAVE_TOUCHSCREEN` or `HIBY_R1`.
 They are new-phase source behavior requiring fresh tests, not results covered
-by the closed alpha12/Windows15 acceptance. The new plugin-visible fields in
+by the closed alpha13/Windows16 acceptance. The new plugin-visible fields in
 `user_settings` and list-role fields require integrated plugin ABI **`0xe006`**.
 Preserved Sansa releases remain **`0xe003`**; prior R1 generations used `0xe004`
 and `0xe005`. Their accepted packages do not accept the new source layout.
@@ -90,7 +90,7 @@ hardware. Keep platform code behind its guards and unsupported controls absent.
 | --- | --- |
 | `sansaclipplus`, `sansaclipzip` | Preserved native r29 releases and matching Windows simulators are described in [Clip+](ESPEAK-CLIPPLUS.md), [Clip Zip](ESPEAK-CLIPZIP.md) and [Windows](ESPEAK-WINDOWS.md). They do not validate the new shared preferences, r34 source or ABI `0xe006`; a return to Sansa needs a separately authorized build/test phase. Physical acceptance is not claimed. |
 | `ipod6g` | Historical Windows core linking/startup evidence exists below. Native integrated eSpeak remains blocked by configure; there is no current native Talkbox package or new-phase full simulator acceptance established here. |
-| `hibyr1` | Closed native alpha12 / Windows alpha15 software results remain valid for their recorded inputs only. Physical R1, touchscreen accessibility, Bluetooth/RF, battery and NVDA acceptance remain open. See [R1](ESPEAK-HIBYR1.md). |
+| `hibyr1` | Closed native alpha13 / Windows alpha16 software results remain valid for their recorded inputs only. Physical R1, touchscreen accessibility, Bluetooth/RF, battery and NVDA acceptance remain open. See [R1](ESPEAK-HIBYR1.md). |
 | Other touchscreen or hosted targets | A capability macro permits relevant code selection; it does not transfer R1 acceptance or vendor-service compatibility. Establish a separate target-specific build and test record. |
 
 ### Onboarding and build sequence

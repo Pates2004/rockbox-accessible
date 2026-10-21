@@ -959,6 +959,8 @@ unsigned int test_controller_clock_read_count(void)
 
 UI_STATUS_PRELUDE = r'''
 #include "hiby_bluetooth.h"
+#include "hiby_bluetooth_service.h"
+#include "hiby_bluetooth_settings.h"
 #include "hiby_connectivity.h"
 #include <assert.h>
 #include <stdarg.h>
@@ -1049,6 +1051,29 @@ static void talk_spell(const char *text, bool enqueue) { (void)text; (void)enque
 bool hiby_bluetooth_init(void) { return true; }
 void hiby_bluetooth_cancel(void) {}
 void hiby_bluetooth_set_inhibited(bool inhibited) { (void)inhibited; }
+bool hiby_bluetooth_cancel_automatic(void)
+{
+    assert(false && "status fixture must not cancel an automatic operation");
+    return false;
+}
+int hiby_bt_preferences_get(struct hiby_bt_preferences *preferences)
+{
+    (void)preferences;
+    assert(false && "status fixture must not read preferences");
+    return -1;
+}
+int hiby_bt_preferences_set(enum hiby_bt_preference preference, int value)
+{
+    (void)preference;
+    (void)value;
+    assert(false && "status fixture must not change preferences");
+    return -1;
+}
+void hiby_bluetooth_service_get_status(struct hiby_bt_service_status *status)
+{
+    /* Radio-state cases run without the background reconnect service. */
+    memset(status, 0, sizeof(*status));
+}
 bool hiby_connectivity_init(void) { return true; }
 void hiby_connectivity_get_snapshot(struct hiby_connectivity_snapshot *snapshot)
 {
@@ -1159,6 +1184,8 @@ class BluetoothTests(unittest.TestCase):
         cls.measurements = {}
         cls.source_paths = (BACKEND, HEADER, CONTROLLER, CONTROLLER.with_suffix(".h"),
                             CONTROLLER.with_name("hiby_bluetooth_service.h"),
+                            CONTROLLER.with_name("hiby_bluetooth_settings.h"),
+                            CONTROLLER.with_name("bluetooth_policy.h"),
                             HEADER.with_name("pcm-hiby.h"), HEADER.with_name("power-control-hiby.h"),
                             Path(__file__).resolve())
         cls.source_hashes = {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
