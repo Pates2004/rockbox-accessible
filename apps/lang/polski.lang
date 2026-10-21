@@ -74,7 +74,7 @@
     *: "Off"
   </source>
   <dest>
-    *: "Wył·"
+    *: "Wył."
   </dest>
   <voice>
     *: "Wyłącz"
@@ -768,7 +768,7 @@
   </dest>
   <voice>
     *: none
-    recording: "Monofoncziny lewy plus prawy"
+    recording: "Monofoniczny lewy plus prawy"
   </voice>
 </phrase>
 <phrase>
@@ -810,7 +810,7 @@
     *: "~Crossfeed"
   </dest>
   <voice>
-    *: "krosfid"
+    *: "Crossfeed"
   </voice>
 </phrase>
 <phrase>
@@ -936,7 +936,7 @@
     *: "Ustawienia podstawowe"
   </dest>
   <voice>
-    *: "Ustawnienia podstawowe korektora"
+    *: "Ustawienia podstawowe korektora"
   </voice>
 </phrase>
 <phrase>
@@ -1470,10 +1470,10 @@
     *: "Replaygain"
   </source>
   <dest>
-    *: "~Replaygain"
+    *: "~ReplayGain"
   </dest>
   <voice>
-    *: "riplejgejn"
+    *: "ReplayGain"
   </voice>
 </phrase>
 <phrase>
@@ -1498,10 +1498,10 @@
     *: "Replaygain Type"
   </source>
   <dest>
-    *: "Tryb Replaygain"
+    *: "Tryb ReplayGain"
   </dest>
   <voice>
-    *: "Tryb riplejgejn"
+    *: "Tryb ReplayGain"
   </voice>
 </phrase>
 <phrase>
@@ -1699,11 +1699,11 @@
   </source>
   <dest>
     *: none
-    headphone_detection: "Wstrzymanie po odłączaniu słuchawek"
+    headphone_detection: "Wstrzymanie po odłączeniu słuchawek"
   </dest>
   <voice>
     *: none
-    headphone_detection: "Wstrzymanie po odłączaniu słuchawek"
+    headphone_detection: "Wstrzymanie po odłączeniu słuchawek"
   </voice>
 </phrase>
 <phrase>
@@ -1762,10 +1762,10 @@
     *: "Sort Case Sensitive"
   </source>
   <dest>
-    *: "Sortuj uwzgl. wielkość liter"
+    *: "Sortuj, uwzgl. wielkość liter"
   </dest>
   <voice>
-    *: "Sortuj uwzględniając wielkość liter"
+    *: "Sortuj, uwzględniając wielkość liter"
   </voice>
 </phrase>
 <phrase>
@@ -1818,10 +1818,10 @@
     *: "By Date"
   </source>
   <dest>
-    *: "Od najstarczego"
+    *: "Od najstarszego"
   </dest>
   <voice>
-    *: "Według daty od najstarczego"
+    *: "Według daty od najstarszego"
   </voice>
 </phrase>
 <phrase>
@@ -2196,10 +2196,10 @@
     *: "LCD Settings"
   </source>
   <dest>
-    *: "Ustawienia LCD"
+    *: "Ustawienia wyświetlacza"
   </dest>
   <voice>
-    *: "Ustawienia wyświetlacza el si di"
+    *: "Ustawienia wyświetlacza"
   </voice>
 </phrase>
 <phrase>
@@ -2339,11 +2339,11 @@
   </source>
   <dest>
     *: none
-    backlight_brightness: "Jasność"
+    backlight_brightness: "Jasność podświetlenia"
   </dest>
   <voice>
     *: none
-    backlight_brightness: "Jasność"
+    backlight_brightness: "Jasność podświetlenia"
   </voice>
 </phrase>
 <phrase>
@@ -2402,10 +2402,10 @@
     *: "Upside Down"
   </source>
   <dest>
-    *: "Odwrócony"
+    *: "Odwróć ekran"
   </dest>
   <voice>
-    *: "Odwrócony"
+    *: "Odwróć ekran"
   </voice>
 </phrase>
 <phrase>
@@ -2579,11 +2579,11 @@
   </source>
   <dest>
     *: none
-    remote: "Ustawienia pilota LCD"
+    remote: "Ustawienia wyświetlacza pilota"
   </dest>
   <voice>
     *: none
-    remote: "Ustawienia wyświetlacza pilota el si di"
+    remote: "Ustawienia wyświetlacza pilota"
   </voice>
 </phrase>
 <phrase>
@@ -2783,11 +2783,11 @@
     wheel_acceleration: none
   </source>
   <dest>
-    *: "Opóźnienie przyspiesznie przy przeglądaniu list"
+    *: "Opóźnienie przyspieszenia przy przeglądaniu list"
     wheel_acceleration: none
   </dest>
   <voice>
-    *: "Opóźnienie przyspiesznie przy przeglądaniu list"
+    *: "Opóźnienie przyspieszenia przy przeglądaniu list"
     wheel_acceleration: none
   </voice>
 </phrase>
@@ -3390,11 +3390,11 @@
   </source>
   <dest>
     *: none
-    dircache: "Pamięć podręczna katalogów"
+    dircache: "Pamięć podręczna folderów"
   </dest>
   <voice>
     *: none
-    dircache: "Pamięć podręczna katalogów"
+    dircache: "Pamięć podręczna folderów"
   </voice>
 </phrase>
 <phrase>
@@ -4147,10 +4147,10 @@
     *: "Voice Menus"
   </source>
   <dest>
-    *: "Menu głosowe"
+    *: "Używaj plików głosowych do czytania interfejsu"
   </dest>
   <voice>
-    *: "Menu głosowe"
+    *: "Używaj plików głosowych do czytania interfejsu"
   </voice>
 </phrase>
 <phrase>
@@ -4161,10 +4161,10 @@
     *: "Voice Directories"
   </source>
   <dest>
-    *: "Mówione katalogi"
+    *: "Czytanie nazw katalogów"
   </dest>
   <voice>
-    *: "Mówione katalogi"
+    *: "Czytanie nazw katalogów"
   </voice>
 </phrase>
 <phrase>
@@ -4189,10 +4189,10 @@
     *: "Voice Filenames"
   </source>
   <dest>
-    *: "Mówione nazwy plików"
+    *: "Czytanie nazw plików"
   </dest>
   <voice>
-    *: "Mówione nazwy plików"
+    *: "Czytanie nazw plików"
   </voice>
 </phrase>
 <phrase>
@@ -4782,7 +4782,7 @@
   </dest>
   <voice>
     *: none
-    radio: "stany zjednoczone i kanada"
+    radio: "Stany Zjednoczone i Kanada"
   </voice>
 </phrase>
 <phrase>
@@ -6018,10 +6018,10 @@
     *: "Queue Last"
   </source>
   <dest>
-    *: "Ostanie do kolejki"
+    *: "Ostatnie do kolejki"
   </dest>
   <voice>
-    *: "Ostanie do kolejki"
+    *: "Ostatnie do kolejki"
   </voice>
 </phrase>
 <phrase>
@@ -6256,10 +6256,10 @@
     *: "Show Track Info"
   </source>
   <dest>
-    *: "Pokaż informacje utworu"
+    *: "Pokaż informacje o utworze"
   </dest>
   <voice>
-    *: "Pokaż informacje dla utowru"
+    *: "Pokaż informacje o utworze"
   </voice>
 </phrase>
 <phrase>
@@ -6802,7 +6802,7 @@
   </source>
   <dest>
     *: none
-    pitchscreen: "Wzmocnienie półtonu"
+    pitchscreen: "Podwyższenie o pół tonu"
   </dest>
   <voice>
     *: none
@@ -6819,7 +6819,7 @@
   </source>
   <dest>
     *: none
-    pitchscreen: "Obniżenie półtonu"
+    pitchscreen: "Obniżenie o pół tonu"
   </dest>
   <voice>
     *: none
@@ -7056,11 +7056,11 @@
   </source>
   <dest>
     *: none
-    iaudiom5,iaudiox5: "Pamięć jest pełna. Wciśnij POWER żeby kontynuować."
-    iriverh100,iriverh120,iriverh300: "Pamięć jest pełna. Wciśnij STOP żeby kontynuować."
-    recording: "Pamięć jest pełna. Wciśnij OFF żeby kontynuować."
-    samsungyh*: "Pamięć jest pełna. Wciśnij LEFT żeby kontynuować."
-    sansac200*,sansae200*,vibe500: "Pamięć jest pełna. Wciśnij PREV żeby kontynuować."
+    iaudiom5,iaudiox5: "Pamięć jest pełna. Wciśnij POWER, żeby kontynuować."
+    iriverh100,iriverh120,iriverh300: "Pamięć jest pełna. Wciśnij STOP, żeby kontynuować."
+    recording: "Pamięć jest pełna. Wciśnij OFF, żeby kontynuować."
+    samsungyh*: "Pamięć jest pełna. Wciśnij LEFT, żeby kontynuować."
+    sansac200*,sansae200*,vibe500: "Pamięć jest pełna. Wciśnij PREV, żeby kontynuować."
   </dest>
   <voice>
     *: none
@@ -7793,7 +7793,7 @@
     *: ""
   </dest>
   <voice>
-    *: "bilion"
+    *: "miliard"
   </voice>
 </phrase>
 <phrase>
@@ -7933,7 +7933,7 @@
     *: ""
   </dest>
   <voice>
-    *: "kilohercy"
+    *: "kiloherców"
   </voice>
 </phrase>
 <phrase>
@@ -7975,7 +7975,7 @@
     *: ""
   </dest>
   <voice>
-    *: "miliampero godzin"
+    *: "miliamperogodzin"
   </voice>
 </phrase>
 <phrase>
@@ -8017,7 +8017,7 @@
     *: ""
   </dest>
   <voice>
-    *: "hercy"
+    *: "herców"
   </voice>
 </phrase>
 <phrase>
@@ -8762,10 +8762,10 @@
     *: "Only When Viewing All Types"
   </source>
   <dest>
-    *: "Tylko gdy wyświetlane wszystkie typy plików"
+    *: "Tylko gdy wyświetlane są wszystkie typy plików"
   </dest>
   <voice>
-    *: "Tylko gdy wyświetlane wszystkie typy plików"
+    *: "Tylko gdy wyświetlane są wszystkie typy plików"
   </voice>
 </phrase>
 <phrase>
@@ -9189,11 +9189,11 @@
   </source>
   <dest>
     *: none
-    accessory_supply: "Zasilanie Akcesorium"
+    accessory_supply: "Zasilanie akcesorium"
   </dest>
   <voice>
     *: none
-    accessory_supply: "Zasilanie Akcesorium"
+    accessory_supply: "Zasilanie akcesorium"
   </voice>
 </phrase>
 <phrase>
@@ -9221,7 +9221,7 @@
     *: ""
   </dest>
   <voice>
-    *: "Szybki Dostęp"
+    *: "Szybki dostęp"
   </voice>
 </phrase>
 <phrase>
@@ -10211,7 +10211,7 @@
   </dest>
   <voice>
     *: none
-    gigabeats,samsungypr1: "pasma wzm."
+    gigabeats,samsungypr1: "Wzmocnienie pasma"
   </voice>
 </phrase>
 <phrase>
@@ -11057,10 +11057,10 @@
     *: "Force"
   </source>
   <dest>
-    *: "Moc"
+    *: "Wymuś"
   </dest>
   <voice>
-    *: "Moc"
+    *: "Wymuś"
   </voice>
 </phrase>
 <phrase>
@@ -11130,7 +11130,7 @@
     *: "Resume on automatic track change"
   </source>
   <dest>
-    *: "Wznów przy automatcznej zmianie utworu"
+    *: "Wznów przy automatycznej zmianie utworu"
   </dest>
   <voice>
     *: "Wznów przy automatycznej zmianie utworu"
@@ -11846,10 +11846,10 @@
     *: "Exempt Seek"
   </source>
   <dest>
-    *: "Zwolnij przewijanie"
+    *: "Wyjątek: przewijanie"
   </dest>
   <voice>
-    *: "Zwolnij przewijanie"
+    *: "Wyjątek: przewijanie"
   </voice>
 </phrase>
 <phrase>
@@ -11888,10 +11888,10 @@
     *: "Exempt Skip"
   </source>
   <dest>
-    *: "Zwolnij pomijanie"
+    *: "Wyjątek: pomijanie"
   </dest>
   <voice>
-    *: "Zwolnij pomijanie"
+    *: "Wyjątek: pomijanie"
   </voice>
 </phrase>
 <phrase>
@@ -11916,10 +11916,10 @@
     *: "Advanced Key Lock"
   </source>
   <dest>
-    *: "Zaawansowana blokada klawszy"
+    *: "Zaawansowana blokada klawiszy"
   </dest>
   <voice>
-    *: "Zaawansowana blokada klawszy"
+    *: "Zaawansowana blokada klawiszy"
   </voice>
 </phrase>
 <phrase>
@@ -11944,10 +11944,10 @@
     *: "Exempt Play"
   </source>
   <dest>
-    *: "Zwolnij odtwarzanie"
+    *: "Wyjątek: odtwarzanie"
   </dest>
   <voice>
-    *: "Zwolnij odtwarzanie"
+    *: "Wyjątek: odtwarzanie"
   </voice>
 </phrase>
 <phrase>
@@ -12829,11 +12829,11 @@
     lowmem: none
   </source>
   <dest>
-    *: "Wyczyść wszystko wznawia"
+    *: "Wyczyść wszystkie wznowienia"
     lowmem: none
   </dest>
   <voice>
-    *: "Wyczyść wszystko wznawia"
+    *: "Wyczyść wszystkie wznowienia"
     lowmem: none
   </voice>
 </phrase>
@@ -13570,7 +13570,7 @@
   </dest>
   <voice>
     *: none
-    pitchscreen: "Przedział czasu"
+    pitchscreen: "Rozciąganie czasu"
   </voice>
 </phrase>
 <phrase>
@@ -14798,7 +14798,7 @@
   </dest>
   <voice>
     *: none
-    filter_roll_off: "Krutki ostry"
+    filter_roll_off: "Krótki ostry"
   </voice>
 </phrase>
 <phrase>
@@ -14815,7 +14815,7 @@
   </dest>
   <voice>
     *: none
-    filter_roll_off: "Krutki wolny"
+    filter_roll_off: "Krótki wolny"
   </voice>
 </phrase>
 <phrase>
@@ -14840,10 +14840,10 @@
     *: "Voice Prompt Volume"
   </source>
   <dest>
-    *: "Głośność komunikatów głosowych"
+    *: "Głośność plików głosowych"
   </dest>
   <voice>
-    *: "Głośność komunikatów głosowych"
+    *: "Głośność plików głosowych"
   </voice>
 </phrase>
 <phrase>
@@ -14984,10 +14984,10 @@
     *: "Exempt Volume"
   </source>
   <dest>
-    *: "Zwolnij głośność"
+    *: "Wyjątek: głośność"
   </dest>
   <voice>
-    *: "Zwolnij głośność"
+    *: "Wyjątek: głośność"
   </voice>
 </phrase>
 <phrase>
@@ -16867,7 +16867,7 @@
   </dest>
   <voice>
     *: none
-    usbdac: "dak uesbe"
+    usbdac: "DAC USB"
   </voice>
 </phrase>
 <phrase>
@@ -16918,7 +16918,7 @@
   </dest>
   <voice>
     *: none
-    usbdac: "dak uesbe aktywny"
+    usbdac: "DAC USB aktywny"
   </voice>
 </phrase>
 <phrase>
@@ -17075,7 +17075,7 @@
     *: "PRZEDŁUŻONO"
   </dest>
   <voice>
-    *: "Przedłużno"
+    *: "Przedłużono"
   </voice>
 </phrase>
 <phrase>
