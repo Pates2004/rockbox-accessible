@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -74,6 +75,13 @@
 #include "list.h"
 #include "general.h"
 #include "appevents.h"
+
+#if defined(HAVE_ESPEAK) && (defined(SIMULATOR) || defined(HAVE_PCM_RECORDING_VOICE))
+#include "audio_thread.h"
+#include "tts.h"
+#include "string-extra.h"
+#define HAVE_RECORDING_TTS
+#endif
 
 #ifdef HAVE_RECORDING
 /* This array holds the record size interval lengths, in mebibytes */
@@ -581,9 +589,11 @@ int rec_create_directory(void)
 
         if(rc < 0)
         {
+            splashf(0, "%s %s", str(LANG_REC_DIR_NOT_WRITABLE),
+                    str(LANG_OFF_ABORT));
             while (action_userabort(HZ) == false)
             {
-                splashf(0, "%s %s",
+                splashf_silent(0, "%s %s",
                         str(LANG_REC_DIR_NOT_WRITABLE),
                         str(LANG_OFF_ABORT));
             }
@@ -622,13 +632,30 @@ void rec_set_source(int source, unsigned flags)
 
 void rec_set_recording_options(struct audio_recording_options *options)
 {
+#ifdef HAVE_RECORDING_TTS
+    talk_force_shutup();
+#endif
     rec_set_source(options->rec_source,
                    options->rec_source_flags | SRCF_RECORDING);
     audio_set_recording_options(options);
 }
 
+static bool recording_start_available(void)
+{
+#if defined(HAVE_RECORDING_TTS) && !defined(AUDIO_HAVE_RECORDING)
+    splash(HZ, ID2P(LANG_TTS_RECORDER_UNAVAILABLE));
+    return false;
+#else
+    return true;
+#endif
+}
+
 void rec_command(enum recording_command cmd)
 {
+    if ((cmd == RECORDING_CMD_START || cmd == RECORDING_CMD_START_NEWFILE) &&
+        !recording_start_available())
+        return;
+
     switch(cmd)
     {
         case RECORDING_CMD_STOP_SHUTDOWN:
@@ -673,9 +700,13 @@ static void trigger_listener(int trigger_status)
     switch (trigger_status)
     {
         case TRIG_GO:
+            if (!recording_start_available())
+                break;
             if(!(audio_status() & AUDIO_STATUS_RECORD))
             {
                 rec_status |= RCSTAT_HAVE_RECORDED;
+                rec_command(RECORDING_CMD_START);
+                last_seconds = 0;
             }
 
             /* if we're already recording this is a retrigger */
@@ -750,6 +781,10 @@ enum rec_list_items_stereo {
     ITEM_SAMPLERATE,
 #endif
     ITEM_FILENAME,
+#ifdef HAVE_RECORDING_TTS
+    ITEM_TIME,
+    ITEM_SIZE,
+#endif
     ITEM_COUNT,
 };
 
@@ -763,7 +798,7 @@ static const char* reclist_get_name(int selected_item, void * data,
     char buf3[32];
 #endif
     (void)data; /* not used */
-    if(selected_item >= ITEM_COUNT)
+    if(selected_item < 0 || selected_item >= ITEM_COUNT)
         return "";
 
     switch (listid_to_enum[selected_item])
@@ -798,6 +833,8 @@ static const char* reclist_get_name(int selected_item, void * data,
                                   buf2, sizeof(buf2)));
             } break;
 #endif
+            default:
+                return "";
             }
             break;
 #if defined(HAVE_LINE_REC) || defined(HAVE_FMRADIO_REC)
@@ -863,19 +900,19 @@ static const char* reclist_get_name(int selected_item, void * data,
         {
             if(audio_status() & AUDIO_STATUS_RECORD)
             {
-                size_t tot_len = strlen(path_buffer) +
-                                strlen(str(LANG_RECORDING_FILENAME)) + 1;
-                if(tot_len > buffer_len)
+                const char *label = str(LANG_RECORDING_FILENAME);
+                const char *filename = path_buffer;
+                size_t prefix_len = strlen(label) + 1;
+                size_t available = buffer_len > prefix_len ?
+                                   buffer_len - prefix_len - 1 : 0;
+                size_t length = strlen(filename);
+                if (length > available)
                 {
-                    snprintf(buffer, buffer_len, "%s %s",
-                            str(LANG_RECORDING_FILENAME),
-                            path_buffer + tot_len - buffer_len);
+                    filename += length - available;
+                    while ((*filename & 0xc0) == 0x80)
+                        filename++;
                 }
-                else
-                {
-                    snprintf(buffer, buffer_len, "%s %s",
-                            str(LANG_RECORDING_FILENAME), path_buffer);
-                }
+                snprintf(buffer, buffer_len, "%s %s", label, filename);
             }
             else
             {
@@ -883,11 +920,119 @@ static const char* reclist_get_name(int selected_item, void * data,
             }
             break;
         }
+#ifdef HAVE_RECORDING_TTS
+        case ITEM_TIME:
+        {
+            bool prerecord = (audio_status() & AUDIO_STATUS_PRERECORD) != 0;
+            unsigned long elapsed = (prerecord ? audio_prerecorded_time() :
+                                                audio_recorded_time()) / HZ;
+            snprintf(buffer, buffer_len, "%s %02lu:%02lu:%02lu",
+                     str(prerecord ? LANG_RECORD_PRERECORD : LANG_RECORDING_TIME),
+                     elapsed / 3600, elapsed / 60 % 60, elapsed % 60);
+            break;
+        }
+        case ITEM_SIZE:
+            output_dyn_value(buf2, sizeof(buf2), audio_num_recorded_bytes(),
+                             byte_units, 4, true);
+            snprintf(buffer, buffer_len, "%s %s", str(LANG_RECORDING_SIZE), buf2);
+            break;
+#endif
         default:
             return "";
     }
     return buffer;
 }
+
+#ifdef HAVE_RECORDING_TTS
+static bool recording_speech_available(void)
+{
+    return tts_is_available();
+}
+
+static int reclist_speak(int selected_item, void *data)
+{
+    if (!recording_speech_available() || selected_item < 0 ||
+        selected_item >= ITEM_COUNT)
+        return 0;
+
+    switch (listid_to_enum[selected_item])
+    {
+        case ITEM_FILENAME:
+            talk_spell(str(LANG_RECORDING_FILENAME), false);
+            if (audio_status() & AUDIO_STATUS_RECORD)
+                talk_spell(path_buffer, true);
+            break;
+        case ITEM_TIME:
+        {
+            bool prerecord = (audio_status() & AUDIO_STATUS_PRERECORD) != 0;
+            talk_spell(str(prerecord ? LANG_RECORD_PRERECORD : LANG_RECORDING_TIME), false);
+            talk_value((prerecord ? audio_prerecorded_time() :
+                                   audio_recorded_time()) / HZ, UNIT_TIME, true);
+            break;
+        }
+        default:
+        {
+            char buffer[MAX_PATH];
+            const char *text = reclist_get_name(selected_item, data, buffer,
+                                               sizeof(buffer));
+            if (text && *text)
+                talk_spell(text, false);
+            break;
+        }
+    }
+    return 0;
+}
+
+struct recording_speech_state
+{
+    int audio_status;
+    bool trigger_armed;
+    char filename[MAX_PATH];
+};
+
+static void recording_speak_state(struct recording_speech_state *state,
+                                  int audio_stat, int trigger_status)
+{
+    int status = audio_stat & (AUDIO_STATUS_RECORD | AUDIO_STATUS_PAUSE |
+                              AUDIO_STATUS_PRERECORD | AUDIO_STATUS_ERROR);
+    bool trigger_armed = trigger_status != TRIG_OFF;
+    bool speak = recording_speech_available() &&
+                 !(audio_stat & AUDIO_STATUS_ERROR);
+    bool enqueue = false;
+
+    if (state->audio_status != status && state->audio_status >= 0 && speak)
+    {
+        talk_id(LANG_RECORDING, false);
+        if (status & AUDIO_STATUS_PAUSE)
+            talk_id(LANG_PAUSE, true);
+        else if (status & AUDIO_STATUS_PRERECORD)
+            talk_spell(str(LANG_RECORD_PRERECORD), true);
+        else if (!(status & AUDIO_STATUS_RECORD))
+            talk_id(LANG_OFF, true);
+        enqueue = true;
+    }
+    if (state->trigger_armed != trigger_armed && speak)
+    {
+        talk_id(LANG_RECORD_TRIGGER, enqueue);
+        talk_id(trigger_armed ? LANG_ON : LANG_OFF, true);
+        enqueue = true;
+    }
+    if (status & AUDIO_STATUS_RECORD)
+    {
+        if (strcmp(state->filename, path_buffer) && speak)
+        {
+            talk_spell(str(LANG_RECORDING_FILENAME), enqueue);
+            talk_spell(path_buffer, true);
+        }
+        strlcpy(state->filename, path_buffer, sizeof(state->filename));
+    }
+    else
+        state->filename[0] = '\0';
+
+    state->audio_status = status;
+    state->trigger_armed = trigger_armed;
+}
+#endif
 
 static void recording_step_levels(int setting_id, int steps)
 {
@@ -967,6 +1112,11 @@ bool recording_screen(bool no_source)
                                      /* tweak layout tiny screens / big fonts */
     bool compact_view[NB_SCREENS] = { false };
     struct gui_synclist lists;      /* the list in the bottom vp */
+    bool talk_suppressed = true;
+#ifdef HAVE_RECORDING_TTS
+    struct recording_speech_state speech_state = { .audio_status = -1 };
+    talk_suppressed = !tts_is_available();
+#endif
 #if defined(HAVE_AGC)
     bool peak_valid = false;
 #endif
@@ -991,8 +1141,9 @@ bool recording_screen(bool no_source)
     int keyclick = global_settings.keyclick;
     global_settings.keyclick = 0;
 
-    /* recording_menu gets messed up: so prevent manus talking */
-    talk_disable(true);
+    talk_force_shutup();
+    if (talk_suppressed)
+        talk_disable(true);
     /* audio_init_recording stops anything playing when it takes the audio
        buffer */
 
@@ -1088,6 +1239,9 @@ bool recording_screen(bool no_source)
             /* init the bottom list */
             gui_synclist_init(&lists, reclist_get_name, NULL, false, 1, vp_list);
             gui_synclist_set_title(&lists, NULL, Icon_NOICON);
+#ifdef HAVE_RECORDING_TTS
+            gui_synclist_set_voice_callback(&lists, reclist_speak);
+#endif
 
             send_event(GUI_EVENT_ACTIONUPDATE, (void*)1); /* force a redraw */
 
@@ -1159,6 +1313,10 @@ bool recording_screen(bool no_source)
 #endif
                 listid_to_enum[listi++] = ITEM_SAMPLERATE;
                 listid_to_enum[listi++] = ITEM_FILENAME;
+#ifdef HAVE_RECORDING_TTS
+                listid_to_enum[listi++] = ITEM_TIME;
+                listid_to_enum[listi++] = ITEM_SIZE;
+#endif
 
                 gui_synclist_set_nb_items(&lists, listi);   /* spdif */
             }
@@ -1181,11 +1339,18 @@ bool recording_screen(bool no_source)
                 listid_to_enum[listi++] = ITEM_AGC_MAXDB;
 #endif
                 listid_to_enum[listi++] = ITEM_FILENAME;
+#ifdef HAVE_RECORDING_TTS
+                listid_to_enum[listi++] = ITEM_TIME;
+                listid_to_enum[listi++] = ITEM_SIZE;
+#endif
 
                 gui_synclist_set_nb_items(&lists, listi);   /* stereo */
             }
 
             gui_synclist_draw(&lists);
+#ifdef HAVE_RECORDING_TTS
+            gui_synclist_speak_item(&lists);
+#endif
         } /* if(done < 0) */
 
         audio_stat = audio_status();
@@ -1241,6 +1406,10 @@ bool recording_screen(bool no_source)
         button = peak_meter_draw_get_btn(CONTEXT_RECSCREEN,
                                          pm_x, pm_y, pm_h,
                                          screen_update, vp_top);
+        audio_stat = audio_status();
+#ifdef HAVE_RECORDING_TTS
+        recording_speak_state(&speech_state, audio_stat, peak_meter_trigger_status());
+#endif
         if (last_audio_stat != audio_stat)
         {
             if (audio_stat & AUDIO_STATUS_RECORD)
@@ -1335,6 +1504,9 @@ bool recording_screen(bool no_source)
                 }
                 set_gain();
                 update_countdown = 0; /* Update immediately */
+#ifdef HAVE_RECORDING_TTS
+                gui_synclist_speak_item(&lists);
+#endif
                 break;
             case ACTION_SETTINGS_DEC:
             case ACTION_SETTINGS_DECREPEAT:
@@ -1407,6 +1579,9 @@ bool recording_screen(bool no_source)
                 }
                 set_gain();
                 update_countdown = 0; /* Update immediately */
+#ifdef HAVE_RECORDING_TTS
+                gui_synclist_speak_item(&lists);
+#endif
                 break;
             case ACTION_STD_CANCEL:
                 /* turn off the trigger */
@@ -1450,6 +1625,8 @@ bool recording_screen(bool no_source)
 #endif
             case ACTION_REC_PAUSE:
             case ACTION_REC_NEWFILE:
+                if (!recording_start_available())
+                    break;
                 /* Only act if the mpeg is stopped */
                 if(!(audio_stat & AUDIO_STATUS_RECORD))
                 {
@@ -1461,7 +1638,7 @@ bool recording_screen(bool no_source)
                         rec_status |= RCSTAT_HAVE_RECORDED;
                         rec_command(RECORDING_CMD_START);
                         last_seconds = 0;
-                        if (global_settings.talk_menu)
+                        if (talk_menus_enabled(&global_settings))
                         {
                             /* no voice possible here, but a beep */
                             audio_beep(HZ/2); /* longer beep on start */
@@ -1491,7 +1668,7 @@ bool recording_screen(bool no_source)
                         if(audio_stat & AUDIO_STATUS_PAUSE)
                         {
                             rec_command(RECORDING_CMD_RESUME);
-                            if (global_settings.talk_menu)
+                            if (talk_menus_enabled(&global_settings))
                             {
                                 /* no voice possible here, but a beep */
                                 audio_beep(HZ/4); /* short beep on resume */
@@ -1576,6 +1753,9 @@ bool recording_screen(bool no_source)
                 screens[i].clear_viewport();
             }
             update_countdown = 5;
+#ifdef HAVE_RECORDING_TTS
+            update_list = true;
+#endif
             last_seconds = seconds;
 
             dseconds = split_seconds;
@@ -1770,16 +1950,20 @@ bool recording_screen(bool no_source)
     audio_stat = audio_status();
     if (audio_stat & AUDIO_STATUS_ERROR)
     {
-        splash(0, str(LANG_DISK_FULL));
-
-        FOR_NB_SCREENS(i)
-            screens[i].update();
-
         /* stop recording first and try to finish saving whatever it can */
         rec_command(RECORDING_CMD_STOP);
         audio_close_recording();
 
         audio_error_clear();
+        if (talk_suppressed)
+        {
+            talk_disable(false);
+            talk_suppressed = false;
+        }
+        splashf(0, ID2P(LANG_ERROR_FORMATSTR), str(LANG_RECORDING));
+
+        FOR_NB_SCREENS(i)
+            screens[i].update();
 
         while(1)
         {
@@ -1805,7 +1989,8 @@ rec_abort:
         rec_set_source(AUDIO_SRC_PLAYBACK, SRCF_PLAYBACK);
 
     /* restore talking */
-    talk_disable(false);
+    if (talk_suppressed)
+        talk_disable(false);
 
     /* restore keyclick */
     global_settings.keyclick = keyclick;

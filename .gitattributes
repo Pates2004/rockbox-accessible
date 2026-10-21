@@ -14,3 +14,13 @@
 *.vcproj        -text
 *.wav           binary
 *.xcf           binary
+lib/espeak/DATA.sha256 text eol=lf
+lib/espeak/UPSTREAM.sha256 text eol=lf
+lib/espeak/SONIC.sha256 text eol=lf
+lib/espeak/engine/** text eol=lf whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
+lib/espeak/License.txt whitespace=-blank-at-eol,-blank-at-eof
+lib/espeak/sonic/sonic.c whitespace=cr-at-eol
+lib/espeak/sonic/sonic.h whitespace=cr-at-eol
+lib/espeak/sonic/LICENSE whitespace=cr-at-eol
+lib/espeak/DATA-PROVENANCE.json text eol=lf
+lib/espeak/supplied-r34-data.patch text eol=lf whitespace=-blank-at-eof

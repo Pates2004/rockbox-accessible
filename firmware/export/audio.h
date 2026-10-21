@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -51,6 +52,11 @@ void audio_stop(void);
 /* Stops audio from serving playback and frees resources*/
 void audio_hard_stop(void);
 void audio_pause(void);
+#if (defined(HIBY_R1) && defined(HAVE_ESPEAK) && !defined(SIMULATOR) && !defined(BOOTLOADER)) || defined(HIBY_BT_SERVICE_HOST_TEST)
+unsigned int audio_playback_generation(void);
+bool audio_pause_guarded(unsigned int generation, bool (*begin)(void *context),
+    void (*end)(void *context), void *context);
+#endif
 void audio_resume(void);
 void audio_next(void);
 void audio_prev(void);

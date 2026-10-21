@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -237,9 +238,24 @@ enum system_sound
 void system_sound_play(enum system_sound sound);
 
 typedef bool (*keyclick_callback)(int action, void* data);
+enum keyclick_source
+{
+    KEYCLICK_SOURCE_NONE = 0,
+    KEYCLICK_SOURCE_PHYSICAL = 1,
+    KEYCLICK_SOURCE_GESTURE = 2,
+    KEYCLICK_SOURCE_EXPLORATION = 4,
+    KEYCLICK_SOURCE_BOTH = KEYCLICK_SOURCE_PHYSICAL | KEYCLICK_SOURCE_GESTURE,
+    KEYCLICK_SOURCE_ALL = KEYCLICK_SOURCE_BOTH | KEYCLICK_SOURCE_EXPLORATION
+};
 void keyclick_set_callback(keyclick_callback cb, void* data);
+bool keyclick_list_boundary_enabled(void);
 /* Produce keyclick based upon button and global settings */
 void keyclick_click(bool rawbutton, int action);
+void keyclick_click_gesture(int action);
+void keyclick_click_gesture_repeat(int action, bool repeat);
+void keyclick_click_physical(int action, bool repeat);
+void keyclick_click_exploration(bool occupied);
+void keyclick_click_touch_target(bool occupied, bool single_tap);
 
 /* Return current ReplayGain mode a file should have (REPLAYGAIN_TRACK or
  * REPLAYGAIN_ALBUM) if ReplayGain processing is enabled, or -1 if no

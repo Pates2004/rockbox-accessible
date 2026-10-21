@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -180,7 +181,11 @@ int plugin_open(const char *plugin, const char *parameter);
  * when this happens please take the opportunity to sort in
  * any new functions "waiting" at the end of the list.
  */
+#ifdef HAVE_ESPEAK
+#define PLUGIN_API_VERSION 0xe006
+#else
 #define PLUGIN_API_VERSION 285
+#endif
 
 /* 239 Marks the removal of ARCHOS HWCODEC and CHARCELL */
 

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -125,6 +126,13 @@
 #ifdef HAVE_HARDWARE_CLICK
 #include "piezo.h"
 #endif
+#ifdef HIBY_R1
+#include "hiby_power.h"
+#ifdef HAVE_ESPEAK
+#include "hiby_connectivity.h"
+#include "hiby_bluetooth_service.h"
+#endif
+#endif
 
 #if (CONFIG_PLATFORM & PLATFORM_NATIVE)
 #define MAIN_NORETURN_ATTR NORETURN_ATTR
@@ -152,6 +160,11 @@
 #endif
 #endif /* SDL */
 
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK) && !defined(SIMULATOR) && !defined(BOOTLOADER)
+#include "pcm-hiby.h"
+#define HAVE_ARGV_MAIN
+#endif
+
 // #define AUTOROCK /* define this to check for "autostart.rock" on boot */
 /* Alternatively, you can define autostart plugin path and its argument: */
 // #define AUTOROCK     VIEWERS_DATA_DIR"/imageviewer.rock"
@@ -166,7 +179,13 @@ static void init(void);
 int main(int argc, char *argv[]) INIT_ATTR MAIN_NORETURN_ATTR ;
 int main(int argc, char *argv[])
 {
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK) && !defined(SIMULATOR) && !defined(BOOTLOADER)
+    int helper_result = hiby_pcm_helper_main(argc, argv);
+    if (helper_result >= 0)
+        return helper_result;
+#else
     sys_handle_argv(argc, argv);
+#endif
 #else
 int main(void) INIT_ATTR MAIN_NORETURN_ATTR;
 int main(void)
@@ -182,6 +201,9 @@ int main(void)
     }
     list_init();
     tree_init();
+#if defined(HIBY_R1) && !defined(SIMULATOR) && !defined(BOOTLOADER)
+    hiby_power_startup_notice();
+#endif
 #if defined(HAVE_DEVICEDATA) && !defined(BOOTLOADER) /* SIMULATOR */
     verify_device_data();
 #endif
@@ -358,7 +380,7 @@ static void init_tagcache(void)
 #if 0 /* FIXME: Audio isn't even initialized yet! */
             /* hwcodec can't use voice here, as the database commit
              * uses the audio buffer. */
-            if(global_settings.talk_menu
+            if(talk_menus_enabled(&global_settings)
                && (talked_tick == 0
                    || TIME_AFTER(current_tick, talked_tick+7*HZ)))
             {
@@ -402,6 +424,9 @@ static void init(void)
     system_init();
     core_allocator_init();
     kernel_init();
+#if defined(HIBY_R1) && !defined(SIMULATOR) && !defined(BOOTLOADER)
+    hiby_power_init();
+#endif
 #ifdef APPLICATION
     paths_init();
 #endif
@@ -462,6 +487,10 @@ static void init(void)
     shortcuts_init();
 
     audio_init();
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+    hiby_bluetooth_service_start();
+    hiby_connectivity_apply_startup_policy();
+#endif
     talk_announce_voice_invalid(); /* notify user w/ voice prompt if voice file invalid */
     settings_apply_skins();
 

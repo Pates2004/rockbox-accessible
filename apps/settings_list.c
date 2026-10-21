@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -75,6 +76,9 @@
 #include "iap-usb.h"
 
 #include "voice_thread.h"
+#ifdef HAVE_ESPEAK
+#include "tts.h"
+#endif
 
 #if defined(DX50) || defined(DX90)
 #include "governor-ibasso.h"
@@ -541,8 +545,8 @@ static int32_t getlang_time_unit_0_is_off(int value, int unit)
 {
     if (value == 0)
         return LANG_OFF;
-    else
-        return talk_time_intervals(value, unit, false);
+    talk_time_intervals(value, unit, false);
+    return -1;
 }
 
 #if defined(HAVE_BACKLIGHT) || defined(HAVE_LCD_SLEEP_SETTING)
@@ -564,8 +568,8 @@ static int32_t getlang_time_unit_0_is_always(int value, int unit)
         return LANG_NEVER;
     else if (value == 0)
         return LANG_ALWAYS;
-    else
-        return talk_time_intervals(value, unit, false);
+    talk_time_intervals(value, unit, false);
+    return -1;
 }
 #endif /* HAVE_BACKLIGHT || HAVE_LCD_SLEEP_SETTING */
 
@@ -588,8 +592,8 @@ static int32_t getlang_time_unit_0_is_skip_track(int value, int unit)
         return LANG_SKIP_OUTRO;
     else if (value == 0)
         return LANG_SKIP_TRACK;
-    else
-        return talk_time_intervals(value, unit, false);
+    talk_time_intervals(value, unit, false);
+    return -1;
 }
 
 static const char* formatter_time_unit_0_is_eternal(char *buffer,
@@ -605,8 +609,8 @@ static int32_t getlang_time_unit_0_is_eternal(int value, int unit)
 {
     if (value == 0)
         return LANG_PM_ETERNAL;
-    else
-        return talk_time_intervals(value, unit, false);
+    talk_time_intervals(value, unit, false);
+    return -1;
 }
 
 #ifndef HAVE_WHEEL_ACCELERATION
@@ -1746,6 +1750,71 @@ const struct settings_list settings[] = {
     INT_SETTING(0, talk_mixer_amp, LANG_TALK_MIXER_LEVEL, 100,
         "talk mixer level", UNIT_PERCENT, 0, 100, 5, NULL, NULL, voice_set_mixer_level),
 
+#ifdef HAVE_ESPEAK
+    CHOICE_SETTING(0, tts_announce_position, LANG_TALKBOX_ANNOUNCE_POSITION,
+                   TTS_POSITION_EXCEPT_SLIDERS, "tts announce position",
+                   "on,interface,files,except-sliders,off", NULL, 5,
+                   ID2P(LANG_TALKBOX_POSITION_EVERYWHERE),
+                   ID2P(LANG_TALKBOX_POSITION_INTERFACE),
+                   ID2P(LANG_TALKBOX_POSITION_FILES),
+                   ID2P(LANG_TALKBOX_POSITION_EXCEPT_SLIDERS), ID2P(LANG_OFF)),
+    OFFON_SETTING(0, tts_announce_dynamic, LANG_TALKBOX_ANNOUNCE_DYNAMIC, true,
+                  "tts announce dynamic", NULL),
+    CHOICE_SETTING(0, list_boundary_feedback, LANG_ACCESSIBILITY_LIST_BOUNDARY, 1,
+                   "list boundary feedback", "sound and speech,sound,speech,off", NULL, 4,
+                   ID2P(LANG_ACCESSIBILITY_FEEDBACK_BOTH), ID2P(LANG_ACCESSIBILITY_FEEDBACK_SOUND),
+                   ID2P(LANG_ACCESSIBILITY_FEEDBACK_SPEECH), ID2P(LANG_OFF)),
+    OFFON_SETTING(0, accessibility_shortcut_enabled, LANG_ACCESSIBILITY_SHORTCUT_ENABLED, true,
+                  "accessibility shortcut enabled", NULL),
+    OFFON_SETTING(0, accessibility_shortcut_espeak, LANG_ACCESSIBILITY_SHORTCUT_ESPEAK, true,
+                  "accessibility shortcut tts", NULL),
+    OFFON_SETTING(0, accessibility_shortcut_voice_files, LANG_ACCESSIBILITY_SHORTCUT_VOICE_FILES, false,
+                  "accessibility shortcut voice files", NULL),
+#ifdef HAVE_TOUCHSCREEN
+    OFFON_SETTING(0, accessibility_shortcut_touch, LANG_ACCESSIBILITY_ENABLED, true,
+                  "accessibility shortcut touch", NULL),
+#ifdef HAVE_SCREEN_CURTAIN
+    OFFON_SETTING(0, accessibility_shortcut_curtain, LANG_ACCESSIBILITY_CURTAIN, false,
+                  "accessibility shortcut curtain", NULL),
+#endif
+#endif
+    OFFON_SETTING(F_TEMPVAR, tts_enabled, LANG_TTS_ENABLED, true,
+                  "tts enabled", NULL),
+    INT_SETTING(0, tts_rate, LANG_TTS_RATE, 175, "tts rate",
+                UNIT_INT, 80, 1350, 1, tts_format_rate, tts_rate_talk_id, NULL),
+    CHOICE_SETTING(0, tts_rate_scale, LANG_TTS_RATE_SCALE, TTS_RATE_PERCENT,
+                   "tts rate scale", "percent,wpm", NULL, 2,
+                   ID2P(LANG_TTS_RATE_PERCENT), ID2P(LANG_TTS_RATE_WPM)),
+    INT_SETTING(0, tts_pitch, LANG_TTS_PITCH, 50, "tts pitch",
+                UNIT_PERCENT, 0, 99, 1, NULL, NULL, NULL),
+    INT_SETTING(0, tts_volume, LANG_TTS_VOLUME, 100, "tts volume",
+                UNIT_PERCENT, 0, 200, 1, NULL, NULL, NULL),
+    INT_SETTING(0, tts_range, LANG_TTS_RANGE, 50, "tts range",
+                UNIT_PERCENT, 0, 99, 1, NULL, NULL, NULL),
+    INT_SETTING(0, tts_wordgap, LANG_TTS_WORDGAP, 0, "tts wordgap",
+                UNIT_INT, 0, 100, 1, NULL, NULL, NULL),
+    CHOICE_SETTING(0, tts_punctuation, LANG_TTS_PUNCTUATION, 0,
+                   "tts punctuation", "none,some,most,all", NULL, 4,
+                   ID2P(LANG_TTS_PUNCTUATION_NONE),
+                   ID2P(LANG_TTS_PUNCTUATION_SOME),
+                   ID2P(LANG_TTS_PUNCTUATION_MOST),
+                   ID2P(LANG_TTS_PUNCTUATION_ALL)),
+    OFFON_SETTING(0, tts_ducking, LANG_TTS_DUCKING, true,
+                  "tts ducking", tts_ducking_changed),
+    INT_SETTING(0, tts_ducking_level, LANG_TTS_DUCKING_LEVEL, 25,
+                "tts ducking level", UNIT_PERCENT, 0, 100, 5,
+                NULL, NULL, tts_ducking_level_changed),
+    TEXT_SETTING(0, tts_language, "tts language", "system", NULL, NULL),
+    CHOICE_SETTING(0, tts_reader_unit, LANG_TTS_READER_UNIT, 1,
+                   "tts reader unit", "character,word,line,paragraph,page", NULL, 5,
+                   ID2P(LANG_TTS_UNIT_CHARACTER), ID2P(LANG_TTS_UNIT_WORD),
+                   ID2P(LANG_TTS_UNIT_LINE), ID2P(LANG_TTS_UNIT_PARAGRAPH),
+                   ID2P(LANG_TTS_UNIT_PAGE)),
+    INT_SETTING(0, tts_reader_page_lines, LANG_TTS_READER_PAGE_LINES, 20,
+                "tts reader page lines", UNIT_INT, 1, 100, 1, NULL, NULL, NULL),
+    TEXT_SETTING(0, tts_variant, "tts variant", "", NULL, NULL),
+#endif
+
 #ifdef HAVE_RECORDING
      /* recording */
     TABLE_SETTING(F_TIME_SETTING | F_ALLOW_ARBITRARY_VALS | F_RECSETTING,
@@ -2347,8 +2416,13 @@ const struct settings_list settings[] = {
                 scanaccel_formatter, NULL, NULL),
 #endif /* HAVE_WHEEL_ACCELERATION */
     /* keyclick */
+#ifdef HAVE_ESPEAK
+#define DEFAULT_KEYCLICK_STRENGTH 2
+#else
+#define DEFAULT_KEYCLICK_STRENGTH 0
+#endif
 #ifdef HAVE_HARDWARE_CLICK
-    CHOICE_SETTING(0, keyclick, LANG_KEYCLICK_SOFTWARE, 0,
+    CHOICE_SETTING(0, keyclick, LANG_KEYCLICK_SOFTWARE, DEFAULT_KEYCLICK_STRENGTH,
                    "keyclick", "off,weak,moderate,strong", NULL, 4,
                    ID2P(LANG_OFF), ID2P(LANG_WEAK), ID2P(LANG_MODERATE),
                    ID2P(LANG_STRONG)),
@@ -2357,7 +2431,7 @@ const struct settings_list settings[] = {
     OFFON_SETTING(0, keyclick_hardware, LANG_KEYCLICK_HARDWARE, false,
         "hardware keyclick", NULL),
 #else
-    CHOICE_SETTING(0, keyclick, LANG_KEYCLICK, 0,
+    CHOICE_SETTING(0, keyclick, LANG_KEYCLICK, DEFAULT_KEYCLICK_STRENGTH,
                    "keyclick", "off,weak,moderate,strong", NULL, 4,
                    ID2P(LANG_OFF), ID2P(LANG_WEAK), ID2P(LANG_MODERATE),
                    ID2P(LANG_STRONG)),

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -31,6 +32,10 @@
 #include "lcd.h"
 #include "lcd-target.h"
 #include "backlight-target.h"
+#include "backlight.h"
+#ifdef HAVE_SCREEN_CURTAIN
+#include "mutex.h"
+#endif
 #include "sysfs.h"
 #include "panic.h"
 
@@ -40,6 +45,9 @@ static int fd = -1;
 static struct fb_var_screeninfo vinfo;
 static struct fb_fix_screeninfo finfo;
 fb_data *framebuffer = NULL; /* global variable, see lcd-target.h */
+#ifdef HAVE_SCREEN_CURTAIN
+static struct mutex lcd_curtain_mutex;
+#endif
 
 #ifdef FB_DOUBLEBUF
 static int fb_plane;
@@ -63,6 +71,9 @@ static void redraw(void)
 
 void lcd_init_device(void)
 {
+#ifdef HAVE_SCREEN_CURTAIN
+    mutex_init(&lcd_curtain_mutex);
+#endif
     const char * const fb_dev = "/dev/fb0";
     fd = open(fb_dev, O_RDWR | O_CLOEXEC);
     if(fd < 0)
@@ -140,16 +151,51 @@ void lcd_init_device(void)
 #ifdef HAVE_LCD_SHUTDOWN
 void lcd_shutdown(void)
 {
-    munmap(framebuffer, FRAMEBUFFER_SIZE);
+#ifdef HAVE_SCREEN_CURTAIN
+    mutex_lock(&lcd_curtain_mutex);
+#endif
+    if (fd < 0)
+    {
+#ifdef HAVE_SCREEN_CURTAIN
+        mutex_unlock(&lcd_curtain_mutex);
+#endif
+        return;
+    }
+    munmap(framebuffer, finfo.smem_len);
     framebuffer = NULL;
     close(fd);
     fd = -1;
+#ifdef HAVE_SCREEN_CURTAIN
+    mutex_unlock(&lcd_curtain_mutex);
+#endif
 }
 #endif
 
 #ifdef HAVE_LCD_ENABLE
 void lcd_enable(bool on)
 {
+#ifdef HAVE_SCREEN_CURTAIN
+    mutex_lock(&lcd_curtain_mutex);
+    if (fd < 0 || lcd_active() == on)
+    {
+        mutex_unlock(&lcd_curtain_mutex);
+        return;
+    }
+
+    lcd_set_active(on);
+    if (on)
+        ioctl(fd, FB_BLANK_UNBLANK);
+    else
+    {
+        memset(framebuffer, 0, finfo.smem_len);
+        redraw();
+        ioctl(fd, FB_BLANK_POWERDOWN);
+    }
+    mutex_unlock(&lcd_curtain_mutex);
+
+    if (on)
+        send_event(LCD_EVENT_ACTIVATION, NULL);
+#else
     if (fd < 0) return;
 
     if (lcd_active() == on)
@@ -165,6 +211,7 @@ void lcd_enable(bool on)
         redraw();
         ioctl(fd, FB_BLANK_POWERDOWN);
     }
+#endif
 }
 #endif
 
@@ -185,10 +232,22 @@ static void fb_copy_rect(fb_data *dst, const fb_data *src,
 }
 #endif
 
+#ifdef HAVE_SCREEN_CURTAIN
+static void lcd_update_locked(void)
+#else
 void lcd_update(void)
+#endif
 {
     if (fd < 0) return;
 
+#ifdef HAVE_SCREEN_CURTAIN
+    if (backlight_screen_curtain_active())
+    {
+        memset(framebuffer, 0, finfo.smem_len);
+        redraw();
+        return;
+    }
+#endif
 #ifdef HAVE_LCD_ENABLE
     if (lcd_active())
 #endif
@@ -207,10 +266,21 @@ void lcd_update(void)
     }
 }
 
+#ifdef HAVE_SCREEN_CURTAIN
+static void lcd_update_rect_locked(int x, int y, int width, int height)
+#else
 void lcd_update_rect(int x, int y, int width, int height)
+#endif
 {
     if (fd < 0) return;
 
+#ifdef HAVE_SCREEN_CURTAIN
+    if (backlight_screen_curtain_active())
+    {
+        lcd_update_locked();
+        return;
+    }
+#endif
 #ifdef HAVE_LCD_ENABLE
     if (lcd_active())
 #endif
@@ -237,3 +307,25 @@ void lcd_update_rect(int x, int y, int width, int height)
         redraw();
     }
 }
+
+#ifdef HAVE_SCREEN_CURTAIN
+void lcd_update(void)
+{
+    mutex_lock(&lcd_curtain_mutex);
+    lcd_update_locked();
+    mutex_unlock(&lcd_curtain_mutex);
+}
+
+void lcd_update_rect(int x, int y, int width, int height)
+{
+    mutex_lock(&lcd_curtain_mutex);
+    lcd_update_rect_locked(x, y, width, height);
+    mutex_unlock(&lcd_curtain_mutex);
+}
+
+void lcd_set_screen_curtain(bool enabled)
+{
+    (void)enabled;
+    lcd_update();
+}
+#endif

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -40,6 +41,9 @@
 #include "settings.h"
 #include "audio.h"
 #include "voice_thread.h"
+#ifdef HAVE_ESPEAK
+#include "tts.h"
+#endif
 
 /* 2 channels * 2 bytes/sample, interleaved */
 #define PCMBUF_SAMPLE_SIZE   (2 * 2)
@@ -1328,7 +1332,18 @@ static void pcmbuf_update_volume(void)
     unsigned int vol = fade_vol;
 
     if (soft_mode)
-        vol >>= 2;
+    {
+#ifdef HAVE_ESPEAK
+        if (tts_output_uses_synthesis())
+        {
+            unsigned int level = global_settings.tts_ducking ?
+                MAX(0, MIN(100, global_settings.tts_ducking_level)) : 100;
+            vol = vol * level / 100;
+        }
+        else
+#endif
+            vol >>= 2;
+    }
 
     mixer_channel_set_amplitude(PCM_MIXER_CHAN_PLAYBACK, vol);
 }
@@ -1409,6 +1424,13 @@ void pcmbuf_soft_mode(bool shhh)
         tick_add_task(pcmbuf_fade_tick);
 }
 
+
+#ifdef HAVE_ESPEAK
+void pcmbuf_update_voice_volume(void)
+{
+    pcmbuf_soft_mode(soft_mode);
+}
+#endif
 
 /** Time and position */
 

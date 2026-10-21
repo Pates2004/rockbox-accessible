@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -42,6 +43,9 @@
 #include "option_select.h"
 #include "screens.h"
 #include "talk.h"
+#ifdef HAVE_ESPEAK
+#include "tts.h"
+#endif
 #include "lang.h"
 #include "misc.h"
 #include "action.h"
@@ -268,7 +272,7 @@ static int init_menu_lists(const struct menu_item_ex *menu,
     title = init_title(menu, &icon, buf, buf_sz);
     gui_synclist_set_title(lists, title, icon);
     gui_synclist_set_icon_callback(lists, global_settings.show_icons?menu_get_icon:NULL);
-    if(global_settings.talk_menu)
+    if(talk_menus_enabled(&global_settings))
         gui_synclist_set_voice_callback(lists, talk_menu_item);
     gui_synclist_set_nb_items(lists,current_subitems_count);
     gui_synclist_select_item(lists, find_menu_selection(selected));
@@ -282,56 +286,56 @@ static int init_menu_lists(const struct menu_item_ex *menu,
 
 static int talk_menu_item(int selected_item, void *data)
 {
-    const struct menu_item_ex *menu = (const struct menu_item_ex *)data;
-    int id = -1;
-    int type;
-    unsigned char *str;
-    int sel = get_menu_selection(selected_item, menu);
-
-        if ((menu->flags&MENU_TYPE_MASK) == MT_MENU)
-        {
-            type = menu->submenus[sel]->flags&MENU_TYPE_MASK;
-            if ((type == MT_SETTING) || (type == MT_SETTING_W_TEXT))
-                talk_setting(menu->submenus[sel]->variable);
-            else
-            {
-                if (menu->submenus[sel]->flags&(MENU_DYNAMIC_DESC))
-                {
-                    int (*list_speak_item)(int selected_item, void * data)
-                        = menu->submenus[sel]->menu_get_name_and_icon->
-                        list_speak_item;
-                    if(list_speak_item)
-                        list_speak_item(sel, menu->submenus[sel]->
-                                        menu_get_name_and_icon->
-                                        list_get_name_data);
-                    else
-                    {
-                        char buffer[80];
-                        str = menu->submenus[sel]->menu_get_name_and_icon->
-                            list_get_name(sel, menu->submenus[sel]->
-                                    menu_get_name_and_icon->
-                                    list_get_name_data, buffer, sizeof(buffer));
-                        id = P2ID(str);
-                    }
-                }
-                else
-                    id = P2ID(menu->submenus[sel]->callback_and_desc->desc);
-                if (id != -1)
-                    talk_id(id,false);
-            }
-        }
-        else if(((menu->flags&MENU_TYPE_MASK) == MT_RETURN_ID))
-        {
-            if ((menu->flags&MENU_DYNAMIC_DESC) == 0)
-            {
-                unsigned char *s = (unsigned char *)menu->strings[sel];
-                /* string list, try to talk it if ID2P was used */
-                id = P2ID(s);
-                if (id != -1)
-                    talk_id(id,false);
-            }
-        }
+    if (!talk_menus_enabled(&global_settings))
         return 0;
+
+    const struct menu_item_ex *menu = (const struct menu_item_ex *)data;
+    int sel = get_menu_selection(selected_item, menu);
+    int type = menu->flags & MENU_TYPE_MASK;
+    bool stringlist = type == MT_RETURN_ID;
+    const unsigned char *text = NULL;
+    char buffer[MAX_PATH];
+
+    if (type == MT_MENU)
+    {
+        menu = menu->submenus[sel];
+        type = menu->flags & MENU_TYPE_MASK;
+        if (type == MT_SETTING || type == MT_SETTING_W_TEXT)
+        {
+            talk_setting(menu->variable);
+            return 0;
+        }
+    }
+    else if (type != MT_RETURN_ID)
+        return 0;
+
+    if (menu->flags & MENU_DYNAMIC_DESC)
+    {
+        const struct menu_get_name_and_icon *dynamic = menu->menu_get_name_and_icon;
+        if (dynamic->list_speak_item)
+        {
+            dynamic->list_speak_item(sel, dynamic->list_get_name_data);
+            return 0;
+        }
+        text = (const unsigned char *)dynamic->list_get_name(
+            sel, dynamic->list_get_name_data, buffer, sizeof(buffer));
+    }
+    else if (stringlist)
+        text = (const unsigned char *)menu->strings[sel];
+    else
+        text = menu->callback_and_desc->desc;
+
+    if (text == NULL)
+        return 0;
+
+    long id = P2ID(text);
+    if (id >= 0)
+        talk_id(id, false);
+#ifdef HAVE_ESPEAK
+    else if (tts_is_available() && *text != '\0')
+        talk_spell((const char *)text, false);
+#endif
+    return 0;
 }
 
 void do_setting_screen(const struct settings_list *setting, const char * title,

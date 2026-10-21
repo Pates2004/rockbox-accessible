@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -170,7 +171,7 @@ static void setup_properties_list(struct dir_stats *stats)
                                        LANG_PROPERTIES_DIRECTORY_PROPERTIES :
                                        LANG_PROPERTIES_FILE_PROPERTIES),
                                NOICON);
-    if (rb->global_settings->talk_menu)
+    if (talk_menus_enabled(rb->global_settings))
         rb->gui_synclist_set_voice_callback(&properties_lists, speak_property_selection);
     rb->gui_synclist_set_nb_items(&properties_lists, nb_props*2);
 }

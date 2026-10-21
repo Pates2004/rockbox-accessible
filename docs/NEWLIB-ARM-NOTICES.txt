@@ -1,0 +1,83 @@
+Arm notices for the native Clip+ newlib math runtime
+==================================================
+
+These are the complete original notices from math_err.c and its included
+math_config.h in newlib 4.4.0.20231231. The inspected native firmware links
+math_err.o from Ubuntu's libm.a. Its selected newlib copyright collection
+does not contain these Arm notices; this document supplies them in addition
+to, not instead of, the other newlib notices.
+
+Verified official source archive (read in memory; no upstream archive copy
+or extracted source files are required alongside this notice):
+https://sourceware.org/pub/newlib/newlib-4.4.0.20231231.tar.gz
+Archive size: 9022406 bytes
+Archive SHA-256:
+0c166a39e1bf0951dfafcd68949fe0e4b6d3658081d6282f39aeefc6310f2f13
+
+Paths below are relative to the archive's newlib-4.4.0.20231231 directory.
+The source SHA-256 values identify the complete upstream files, not only
+their notice blocks. Both original notice blocks are reproduced verbatim.
+
+newlib/libm/common/math_err.c
+Source SHA-256:
+4061965605e06441bcf359c7ce68b45ea2446604b47fb4d8be81af84e281df45
+
+/* Double-precision math error handling.
+   Copyright (c) 2018 Arm Ltd.  All rights reserved.
+
+   SPDX-License-Identifier: BSD-3-Clause
+
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions
+   are met:
+   1. Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+   2. Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+   3. The name of the company may not be used to endorse or promote
+      products derived from this software without specific prior written
+      permission.
+
+   THIS SOFTWARE IS PROVIDED BY ARM LTD ``AS IS'' AND ANY EXPRESS OR IMPLIED
+   WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+   MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+   IN NO EVENT SHALL ARM LTD BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+   TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+
+newlib/libm/common/math_config.h
+Source SHA-256:
+e34414b03657344538643bcafa3999ef2b8bbbce431e17490ac0c4d2a7f9dc7c
+
+/* Configuration for math routines.
+   Copyright (c) 2017-2018 Arm Ltd.  All rights reserved.
+
+   SPDX-License-Identifier: BSD-3-Clause
+
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions
+   are met:
+   1. Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+   2. Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+   3. The name of the company may not be used to endorse or promote
+      products derived from this software without specific prior written
+      permission.
+
+   THIS SOFTWARE IS PROVIDED BY ARM LTD ``AS IS'' AND ANY EXPRESS OR IMPLIED
+   WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+   MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+   IN NO EVENT SHALL ARM LTD BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+   TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */

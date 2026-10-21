@@ -1,3 +1,4 @@
+# Modified for Rockbox Accessible; change notice dated 2026-10-21.
 #             __________               __   ___.
 #   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
 #   Source     |       _//  _ \_/ ___\|  |/ /| __ \ /  _ \  \/  /
@@ -129,6 +130,9 @@ else ifneq (,$(findstring warble,$(APP_TYPE)))
 else # core
   include $(APPSDIR)/lang/lang.make
   include $(APPSDIR)/apps.make
+  ifeq ($(ESPEAK),1)
+    include $(ROOTDIR)/lib/espeak/espeak.make
+  endif
   include $(ROOTDIR)/lib/rbcodec/rbcodec.make
 
   ifeq ($(ENABLEDPLUGINS),yes)

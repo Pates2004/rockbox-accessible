@@ -1,60 +1,82 @@
-/* The following file is (with slight modifications for Rockbox) from dietlibc
-* version 0.31 which is licensed under the GPL version 2: */
-
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 #include <stdlib.h>
 #include <errno.h>
 #include <ctype.h>
 #include <limits.h>
-#include <gcc_extensions.h>
 
 unsigned long int strtoul(const char *ptr, char **endptr, int base)
 {
-  int neg = 0, overflow = 0;
-  unsigned long int v=0;
-  const char* orig;
-  const char* nptr=ptr;
+    const char *cursor = ptr;
+    unsigned long value = 0;
+    int negative = 0;
+    int overflow = 0;
 
-  while(UNLIKELY(isspace(*nptr))) ++nptr;
-
-  if (*nptr == '-') { neg=1; nptr++; }
-  else if (*nptr == '+') ++nptr;
-  orig=nptr;
-  if (base==16 && nptr[0]=='0') goto skip0x;
-  if (base) {
-    register unsigned int b=base-2;
-    if (UNLIKELY(b>34)) { errno=EINVAL; return 0; }
-  } else {
-    if (*nptr=='0') {
-      base=8;
-skip0x:
-      if ((nptr[1]=='x'||nptr[1]=='X') && isxdigit(nptr[2])) {
-	nptr+=2;
-	base=16;
-      }
-    } else
-      base=10;
-  }
-  while(LIKELY(*nptr)) {
-    register unsigned char c=*nptr;
-    c=(c>='a'?c-'a'+10:c>='A'?c-'A'+10:c<='9'?c-'0':0xff);
-    if (UNLIKELY(c>=base)) break;	/* out of base */
+    if (endptr)
+        *endptr = (char *)ptr;
+    if (base != 0 && (base < 2 || base > 36))
     {
-      register unsigned long x=(v&0xff)*base+c;
-      register unsigned long w=(v>>8)*base+(x>>8);
-      if (w>(ULONG_MAX>>8)) overflow=1;
-      v=(w<<8)+(x&0xff);
+        errno = EINVAL;
+        return 0;
     }
-    ++nptr;
-  }
-  if (UNLIKELY(nptr==orig)) {		/* no conversion done */
-    nptr=ptr;
-    errno=EINVAL;
-    v=0;
-  }
-  if (endptr) *endptr=(char *)nptr;
-  if (overflow) {
-    errno=ERANGE;
-    return ULONG_MAX;
-  }
-  return (neg?-v:v);
+
+    while (isspace((unsigned char)*cursor))
+        ++cursor;
+    if (*cursor == '+' || *cursor == '-')
+    {
+        negative = *cursor == '-';
+        ++cursor;
+    }
+
+    if ((base == 0 || base == 16) && cursor[0] == '0' &&
+        (cursor[1] == 'x' || cursor[1] == 'X') &&
+        isxdigit((unsigned char)cursor[2]))
+    {
+        base = 16;
+        cursor += 2;
+    }
+    else if (base == 0)
+        base = *cursor == '0' ? 8 : 10;
+
+    const char *digits = cursor;
+    unsigned long cutoff = ULONG_MAX / base;
+    unsigned int last_digit_limit = ULONG_MAX % base;
+
+    for (;; ++cursor)
+    {
+        unsigned char character = (unsigned char)*cursor;
+        unsigned int digit;
+        if (character >= '0' && character <= '9')
+            digit = character - '0';
+        else if (character >= 'A' && character <= 'Z')
+            digit = character - 'A' + 10;
+        else if (character >= 'a' && character <= 'z')
+            digit = character - 'a' + 10;
+        else
+            break;
+        if (digit >= (unsigned int)base)
+            break;
+
+        if (!overflow)
+        {
+            if (value > cutoff ||
+                (value == cutoff && digit > last_digit_limit))
+                overflow = 1;
+            else
+                value = value * base + digit;
+        }
+    }
+
+    if (cursor == digits)
+    {
+        errno = EINVAL;
+        return 0;
+    }
+    if (endptr)
+        *endptr = (char *)cursor;
+    if (overflow)
+    {
+        errno = ERANGE;
+        return ULONG_MAX;
+    }
+    return negative ? 0UL - value : value;
 }

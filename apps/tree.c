@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -223,7 +224,7 @@ static int tree_voice_cb(int selected_item, void * data)
         int lang_id = P2ID(name);
         /*debugf("%s Found name %s id %d\n", __func__, P2STR(name), lang_id);*/
         if (lang_id >= 0) {
-            if (global_settings.talk_menu)
+            if (talk_menus_enabled(&global_settings))
                 talk_id(lang_id, true);
             return 0;
         }
@@ -255,8 +256,9 @@ static int tree_voice_cb(int selected_item, void * data)
     }
     bool is_dir = (attr & ATTR_DIRECTORY);
     bool did_clip = false;
+    bool use_synthesis = talk_tts_enabled(&global_settings);
     /* First the .talk clip case */
-    if(is_dir)
+    if(!use_synthesis && is_dir)
     {
         if(global_settings.talk_dir_clip)
         {
@@ -265,7 +267,7 @@ static int tree_voice_cb(int selected_item, void * data)
                 /* failed, not existing */
                 did_clip = false;
         }
-    } else { /* it's a file */
+    } else if (!use_synthesis) { /* it's a file */
         if (global_settings.talk_file_clip && (attr & FILE_ATTR_THUMBNAIL))
         {
             did_clip = true;
@@ -274,8 +276,8 @@ static int tree_voice_cb(int selected_item, void * data)
                 did_clip = false;
         }
     }
-    bool spell_name = (customaction == ONPLAY_CUSTOMACTION_FIRSTLETTER);
-    if(!did_clip)
+    bool spell_name = use_synthesis || (customaction == ONPLAY_CUSTOMACTION_FIRSTLETTER);
+    if(!did_clip && !use_synthesis)
     {
         /* say the number or spell if required or as a fallback */
         switch (is_dir ? global_settings.talk_dir : global_settings.talk_file)
@@ -297,7 +299,7 @@ static int tree_voice_cb(int selected_item, void * data)
         }
     }
 
-    if(global_settings.talk_filetype && !is_dir
+    if(!use_synthesis && global_settings.talk_filetype && !is_dir
        && *local_tc->dirfilter < NUM_FILTER_MODES)
     {
         say_filetype(attr);
@@ -414,6 +416,9 @@ static int update_dir(void)
 
     /* Ensure that list is initialized before update_dir returns */
     gui_synclist_init(list, &tree_get_filename, &tc, false, 1, NULL);
+#ifdef HAVE_ESPEAK
+    list->position_source = id3db ? LIST_POSITION_INTERFACE : LIST_POSITION_FILE;
+#endif
 
 #ifdef HAVE_TAGCACHE
     /* Checks for changes */
@@ -522,7 +527,7 @@ static int update_dir(void)
     gui_synclist_set_icon_callback(list,
                             global_settings.show_icons?tree_get_fileicon:NULL);
 #ifdef HAVE_TAGCACHE
-    if(!id3db || global_settings.talk_menu)
+    if(!id3db || talk_menus_enabled(&global_settings))
 #endif
     {
         gui_synclist_set_voice_callback(list, &tree_voice_cb);
@@ -1312,7 +1317,7 @@ static int ft_play_dirname(char* name)
 #endif
 
     return talk_file(tc.currdir, name, dir_thumbnail_name, NULL,
-                     global_settings.talk_filetype ?
+                     talk_file_types_enabled(&global_settings) ?
                      TALK_IDARRAY(VOICE_DIR) : NULL,
                      false);
 }

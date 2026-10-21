@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
 *             __________               __   ___.
 *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -72,6 +73,12 @@ void root_menu_load_from_cfg(void* setting, char *value);
 char* root_menu_write_to_cfg(void* setting, char*buf, int buf_len);
 void root_menu_set_default(void* setting, void* defaultval);
 bool root_menu_is_changed(void* setting, void* defaultval);
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+bool root_menu_request_screen(int screen);
+bool root_menu_navigation_pending(void);
+void root_menu_cancel_navigation(void);
+int root_menu_take_navigation(void);
+#endif
 #endif
 
 

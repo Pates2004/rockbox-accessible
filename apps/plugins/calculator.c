@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -758,6 +759,8 @@ static void doAdd (double* operandOne, int* powerOne,
 static void doExponent(double* operandOne, int* powerOne,
                        double  operandTwo, int  powerTwo);
 static void printResult(void);
+static void calculator_talk_button(bool enqueue);
+static void calculator_talk_result(bool enqueue);
 static void formatResult(void);
 static void oneOperand(void);
 
@@ -980,6 +983,7 @@ static void cal_initial (void)
 
     /* clear button queue */
     rb->button_clear_queue();
+    calculator_talk_button(false);
 }
 
 /* -----------------------------------------------------------------------
@@ -1823,6 +1827,76 @@ static void printResult(void)
     rb->lcd_update_rect(0, 1, LCD_WIDTH, Y_1_POS);
 }
 
+static void calculator_talk_button(bool enqueue)
+{
+    static const int button_ids[2][BUTTON_ROWS][BUTTON_COLS] = {
+        {
+            { LANG_CALCULATOR_MEMORY_RECALL, LANG_CALCULATOR_MEMORY_ADD,
+              LANG_CALCULATOR_SCIENTIFIC, LANG_CALCULATOR_CLEAR_ENTRY,
+              LANG_CLEAR_ALL },
+            { -1, -1, -1, LANG_CALCULATOR_DIVIDE, LANG_CALCULATOR_SQRT },
+            { -1, -1, -1, LANG_CALCULATOR_MULTIPLY, LANG_CALCULATOR_SQUARE },
+            { -1, -1, -1, VOICE_MINUS, LANG_CALCULATOR_RECIPROCAL },
+            { -1, LANG_CALCULATOR_SIGN, LANG_CALCULATOR_DECIMAL,
+              VOICE_PLUS, LANG_CALCULATOR_EQUALS }
+        },
+        {
+            { LANG_CALCULATOR_FACTORIAL, LANG_CALCULATOR_PI,
+              LANG_CALCULATOR_BASIC, LANG_CALCULATOR_SINE,
+              LANG_CALCULATOR_ASINE },
+            { -1, -1, -1, LANG_CALCULATOR_COSINE, LANG_CALCULATOR_ACOSINE },
+            { -1, -1, -1, LANG_CALCULATOR_TANGENT, LANG_CALCULATOR_ATANGENT },
+            { -1, -1, -1, LANG_CALCULATOR_LN, LANG_CALCULATOR_EXP },
+            { -1, LANG_CALCULATOR_SIGN, LANG_CALCULATOR_DECIMAL,
+              LANG_CALCULATOR_LOG, LANG_CALCULATOR_POWER }
+        }
+    };
+
+    if (!talk_menus_enabled(rb->global_settings) ||
+        (unsigned int)buttonGroup > sciButtons ||
+        btn_row < 0 || btn_row >= BUTTON_ROWS ||
+        btn_col < 0 || btn_col >= BUTTON_COLS)
+        return;
+
+    int label = button_ids[buttonGroup][btn_row][btn_col];
+    if (label >= 0)
+        rb->talk_id(label, enqueue);
+    else
+        rb->talk_number(buttonChar[buttonGroup][btn_row][btn_col][0] - '0',
+                        enqueue);
+}
+
+static void calculator_talk_result(bool enqueue)
+{
+    if (!talk_menus_enabled(rb->global_settings) || calStatus == cal_exit)
+        return;
+
+    if (calStatus == cal_error || calStatus == cal_toDo)
+    {
+        rb->talk_id(LANG_ERROR_FORMATSTR, enqueue);
+        return;
+    }
+
+    char spoken[sizeof(buf)];
+    size_t length = 0;
+    for (size_t offset = 0; offset < sizeof(buf) && buf[offset]; ++offset)
+    {
+        if (buf[offset] != ' ' && length < sizeof(spoken) - 1)
+            spoken[length++] = buf[offset];
+    }
+    spoken[length] = '\0';
+    if (!length || rb->talk_id(LANG_CALCULATOR_RESULT, enqueue) < 0)
+        return;
+
+    char *exponent = rb->strchr(spoken, 'e');
+    if (exponent)
+        *exponent++ = '\0';
+    if (rb->talk_spell(spoken, true) < 0)
+        return;
+    if (exponent && rb->talk_id(LANG_CALCULATOR_EXPONENT, true) >= 0)
+        rb->talk_number(rb->atoi(exponent), true);
+}
+
 /* -----------------------------------------------------------------------
 Process typing buttons: 1-9, '.', sign
 main operand "result" and typingbuf are processed seperately here.
@@ -2141,6 +2215,12 @@ move button index
 Invert display new button, invert back previous button
 ----------------------------------------------------------------------- */
 static int handleButton(int button){
+    int previous_row = btn_row;
+    int previous_column = btn_col;
+    int previous_group = buttonGroup;
+    bool activated = false;
+    bool result_only = false;
+
     switch(button)
     {
         case CALCULATOR_INPUT:
@@ -2156,6 +2236,13 @@ static int handleButton(int button){
 #ifdef CALCULATOR_OPERATORS
         case CALCULATOR_OPERATORS:
 #endif
+            activated = true;
+            result_only = button == CALCULATOR_CALC;
+#ifdef CALCULATOR_OPERATORS
+            result_only = result_only || button == CALCULATOR_OPERATORS;
+#endif
+            if (!result_only)
+                calculator_talk_button(false);
             switch(buttonGroup){
                 case basicButtons:
                     basicButtonsProcess();
@@ -2178,6 +2265,8 @@ static int handleButton(int button){
                     break;
             }
             printResult();
+            activated = true;
+            result_only = true;
             break;
 #endif
         case CALCULATOR_LEFT:
@@ -2250,6 +2339,27 @@ static int handleButton(int button){
             return -1;
     }
 
+    if (activated)
+    {
+#ifdef CALCULATOR_OPERATORS
+        if (button == CALCULATOR_OPERATORS && talk_menus_enabled(rb->global_settings))
+        {
+            int label = oper == '+' ? VOICE_PLUS :
+                        oper == '-' ? VOICE_MINUS :
+                        oper == '*' ? LANG_CALCULATOR_MULTIPLY :
+                                      LANG_CALCULATOR_DIVIDE;
+            rb->talk_id(label, false);
+            result_only = false;
+        }
+#endif
+        if (previous_group != (int)buttonGroup)
+            calculator_talk_button(true);
+        else
+            calculator_talk_result(!result_only);
+    }
+    else if (previous_row != btn_row || previous_column != btn_col)
+        calculator_talk_button(false);
+
     return 0;
 }
 
@@ -2277,6 +2387,7 @@ enum plugin_status plugin_start(const void* parameter)
             if(touchscreen_map_raster(&calc_raster, rb->button_get_data() >> 16,
                                       rb->button_get_data() & 0xffff, &res) == 1)
             {
+                bool focus_changed = btn_row != res.y || btn_col != res.x;
                 btn_row = res.y;
                 btn_col = res.x;
                 drawButtons(buttonGroup);
@@ -2289,16 +2400,14 @@ enum plugin_status plugin_start(const void* parameter)
                 if(btn & BUTTON_REL)
                 {
                     btn = CALCULATOR_INPUT;
-                    switch(buttonGroup){
-                        case basicButtons:
-                            basicButtonsProcess();
-                            break;
-                        case sciButtons:
-                            sciButtonsProcess();
-                            break;
-                    }
+#ifdef CALCULATOR_INPUT_CALC_PRE
+                    lastbtn = CALCULATOR_INPUT_CALC_PRE;
+#endif
+                    handleButton(btn);
                     btn = BUTTON_TOUCHSCREEN;
                 }
+                else if (focus_changed)
+                    calculator_talk_button(false);
             }
         }
 #endif

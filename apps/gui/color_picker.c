@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -32,6 +33,8 @@
 #include "lang.h"
 #include "splash.h"
 #include "action.h"
+#include "accessibility.h"
+#include "talk.h"
 #include "icon.h"
 #include "color_picker.h"
 #include "viewport.h"
@@ -328,9 +331,36 @@ static int touchscreen_slider(struct screen *display,
     viewport_set_defaults(&vp, display->screen_type);
     struct viewport *last_vp = display->set_viewport(&vp);
 
-    button = action_get_touchscreen_press_in_vp(&x, &y, &vp);
+    bool explore = false;
+    bool force = false;
+#ifdef HAVE_ESPEAK
+    explore = accessibility_enabled();
+    if (explore)
+    {
+        int touch_x, touch_y;
+        if (!accessibility_explore_point(&touch_x, &touch_y, &force))
+        {
+            display->set_viewport(last_vp);
+            return ACTION_NONE;
+        }
+        if (!viewport_point_within_vp(&vp, touch_x, touch_y))
+        {
+            display->set_viewport(last_vp);
+            accessibility_explore_feedback(rgb, -1, false);
+            return ACTION_NONE;
+        }
+        x = touch_x - vp.x;
+        y = touch_y - vp.y;
+        button = BUTTON_TOUCHSCREEN;
+    }
+    else
+#endif
+        button = action_get_touchscreen_press_in_vp(&x, &y, &vp);
     if (button == ACTION_UNKNOWN || button == BUTTON_NONE)
+    {
+        display->set_viewport(last_vp);
         return ACTION_NONE;
+    }
     /* Get slider positions and top starting position
      * need vp.y here, because of the statusbar, since touchscreen
      * coordinates are absolute */
@@ -359,6 +389,37 @@ static int touchscreen_slider(struct screen *display,
             MARGIN_BOTTOM;              /* colored rectangle     */
 
     display->set_viewport(last_vp);
+
+#ifdef HAVE_ESPEAK
+    if (explore)
+    {
+        static const void *last_owner;
+        static int last_target;
+        int target = -1;
+        if (line_height > 0 && y >= text_top &&
+            y < text_top + line_height * (display_three_rows ? 3 : 1))
+            target = display_three_rows ? (y - text_top) / line_height : *selected_slider;
+        accessibility_explore_feedback(rgb, target, target >= 0);
+        if (force || last_owner != rgb || last_target != target)
+        {
+            last_owner = rgb;
+            last_target = target;
+            if (target >= 0)
+            {
+                *selected_slider = target;
+                char component[] = {str(LANG_COLOR_RGB_LABELS)[target], '\0'};
+                talk_spell(component, false);
+                talk_value(rgb->rgb_val[target], UNIT_INT, true);
+            }
+            else
+                accessibility_speak_empty();
+        }
+        return ACTION_NONE;
+    }
+#else
+    (void)explore;
+    (void)force;
+#endif
 
     if (y < text_top)
     {
@@ -423,11 +484,18 @@ bool set_color(struct screen *display, char *title,
                 draw_screen(&screens[i], title, &rgb, slider);
         }
 
-        button = get_action(CONTEXT_SETTINGS_COLOURCHOOSER, TIMEOUT_BLOCK);
+        button = get_action(
+#if defined(HIBY_R1)
+                            ALLOW_SOFTLOCK |
+#endif
+                            CONTEXT_SETTINGS_COLOURCHOOSER, TIMEOUT_BLOCK);
 #ifdef HAVE_TOUCHSCREEN
-        if (button == ACTION_TOUCHSCREEN
-                && display->screen_type == SCREEN_MAIN)
-            button = touchscreen_slider(display, &rgb, &slider);
+        if (button == ACTION_TOUCHSCREEN)
+        {
+            struct screen *touch_display = display ? display : &screens[SCREEN_MAIN];
+            if (touch_display->screen_type == SCREEN_MAIN)
+                button = touchscreen_slider(touch_display, &rgb, &slider);
+        }
 #endif
 
         switch (button)

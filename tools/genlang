@@ -1,4 +1,6 @@
 #!/usr/bin/perl -s
+# Modified for Rockbox Accessible; change notice dated 2026-10-21.
+use File::Temp ();
 #             __________               __   ___.
 #   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
 #   Source     |       _//  _ \_/ ___\|  |/ /| __ \ /  _ \  \/  /
@@ -375,6 +377,7 @@ while(<LANG>) {
 
                     $dest =~ s/^deprecate(|d)\z/\"\"/i;
                     $voice =~ s/^deprecate(|d)\z/\"\"/i;
+                    $voice =~ s/^none\z/\"\"/i;
 
                     # basic syntax error alerts, if there are no quotes we
                     # will assume an empty string was intended
@@ -727,12 +730,14 @@ if($verbose) {
 }
 
 if ($binary and !file_is_newer("$binpath/english.list", $english)) {
-    open(ENGLIST, ">$binpath/english.list") ||
-        die "Failed creating $binpath/english.list";
+    my ($cache_handle, $cache_path) = File::Temp::tempfile(
+        'english.list.XXXXXX', DIR => $binpath || '/');
     for my $user (keys %users) {
         for my $id (sort { $idmap[$user]{$a} <=> $idmap[$user]{$b} } keys %{$idmap[$user]}) {
-            print ENGLIST "$user:$id:$idmap[$user]{$id}\n";
+            print {$cache_handle} "$user:$id:$idmap[$user]{$id}\n";
         }
     }
-    close ENGLIST;
+    close($cache_handle) || die "Failed closing $cache_path";
+    rename($cache_path, "$binpath/english.list") ||
+        die "Failed publishing $binpath/english.list: $!";
 }

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 #include "plugin.h"
 #include "lib/helper.h"
 #include "lib/configfile.h"
@@ -999,7 +1000,7 @@ static int get_start_time(uint32_t duration)
             if (sliding)
             {
                 cancel_cpu_boost();
-                if (rb->global_settings->talk_menu)
+                if (talk_menus_enabled(rb->global_settings))
                 {
                     talk_val(resume_time / TS_SECOND, UNIT_TIME, false);
                     talk_val(resume_time * 100 / duration, UNIT_PERCENT, true);

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *
  *             __________               __   ___.
@@ -628,7 +629,7 @@ static int shortcut_menu_get_action(int action, struct gui_synclist *lists)
         if (confirm_delete_yesno("", str(LANG_SHORTCUTS)) != YESNO_YES)
         {
             gui_synclist_set_title(lists, lists->title, lists->title_icon);
-            if (global_settings.talk_menu)
+            if (talk_menus_enabled(&global_settings))
                 shortcut_menu_speak_item(selection, NULL);
             return ACTION_REDRAW;
         }
@@ -644,7 +645,7 @@ static int shortcut_menu_get_action(int action, struct gui_synclist *lists)
 
         if (shortcut_count > 0)
         {
-            if (global_settings.talk_menu)
+            if (talk_menus_enabled(&global_settings))
                 shortcut_menu_speak_item(gui_synclist_get_sel_pos(lists), NULL);
             return ACTION_REDRAW;
         }
@@ -740,7 +741,7 @@ int do_shortcut_menu(void *ignored)
         list.count = shortcut_count; /* in case shortcut was deleted */
         list.title = P2STR(ID2P(LANG_SHORTCUTS)); /* in case language changed */
         list.get_icon = global_settings.show_icons ? shortcut_menu_get_icon : NULL;
-        list.get_talk = global_settings.talk_menu ? shortcut_menu_speak_item : NULL;
+        list.get_talk = talk_menus_enabled(&global_settings) ? shortcut_menu_speak_item : NULL;
 
         if (simplelist_show_list(&list))
             break; /* returning from USB screen */

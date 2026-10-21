@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -107,32 +108,32 @@ void sim_exit_irq_handler(void)
 #endif
 }
 
-static bool sim_kernel_init(void)
+bool sim_kernel_init(void)
 {
     sim_irq_mtx = SDL_CreateMutex();
     if (sim_irq_mtx == NULL)
     {
-        panicf("Cannot create sim_handler_mtx\n");
+        fprintf(stderr, "Cannot create sim_handler_mtx: %s\n", SDL_GetError());
         return false;
     }
 
     sim_thread_cond = SDL_CreateCond();
     if (sim_thread_cond == NULL)
     {
-        panicf("Cannot create sim_thread_cond\n");
+        fprintf(stderr, "Cannot create sim_thread_cond: %s\n", SDL_GetError());
         return false;
     }
 #ifndef HAVE_SDL_THREADS
     wfi_cond = SDL_CreateCond();
     if (wfi_cond == NULL)
     {
-        panicf("Cannot create wfi\n");
+        fprintf(stderr, "Cannot create wfi: %s\n", SDL_GetError());
         return false;
     }
     wfi_mutex = SDL_CreateMutex();
     if (wfi_mutex == NULL)
     {
-        panicf("Cannot create wfi mutex\n");
+        fprintf(stderr, "Cannot create wfi mutex: %s\n", SDL_GetError());
         return false;
     }
 #endif
@@ -180,12 +181,6 @@ Uint32 tick_timer(Uint32 interval, void *param)
 
 void tick_start(unsigned int interval_in_ms)
 {
-    if (!sim_kernel_init())
-    {
-        panicf("Could not initialize kernel!");
-        exit(-1);
-    }
-
     if (tick_timer_id != 0)
     {
         SDL_RemoveTimer(tick_timer_id);

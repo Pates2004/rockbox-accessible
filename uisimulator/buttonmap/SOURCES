@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 #ifdef SIMULATOR
 buttonmaps.c
 #if CONFIG_KEYPAD == GIGABEAT_PAD
@@ -90,7 +91,11 @@ shanling-q1.c
 #elif CONFIG_KEYPAD == RG_NANO_PAD
 rg-nano.c
 #elif CONFIG_KEYPAD == HIBY_R3PROII_PAD
+#ifdef HIBY_R1
+hiby-r1.c
+#else
 hiby-r3proii.c
+#endif
 #elif CONFIG_KEYPAD == HIDIZS_AP80MAX_PAD
 hidizs-ap80max.c
 #endif

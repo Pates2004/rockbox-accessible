@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -42,6 +43,61 @@ typedef struct {
     long last_tick;
     timer_state_t state;
 } timer_ctx_t;
+
+static void countdown_talk_selection(const timer_ctx_t *ctx)
+{
+    if (!talk_menus_enabled(rb->global_settings))
+        return;
+
+    int field = ctx->current_field == 0 ? VOICE_MINUTES : VOICE_SECONDS;
+    int value = ctx->current_field == 0 ? ctx->set_minutes : ctx->set_seconds;
+    if (rb->talk_id(field, false) >= 0)
+        rb->talk_number(value, true);
+}
+
+static void countdown_talk_state(const timer_ctx_t *ctx)
+{
+    if (!talk_menus_enabled(rb->global_settings))
+        return;
+
+    int label;
+    long duration;
+    switch (ctx->state) {
+        case STATE_SETUP:
+            label = LANG_COUNTDOWN_TIMER_SET;
+            duration = ctx->set_minutes * 60 + ctx->set_seconds;
+            break;
+        case STATE_PAUSED:
+            label = LANG_COUNTDOWN_TIMER_PAUSED;
+            duration = (ctx->remaining_ticks + HZ - 1) / HZ;
+            break;
+        case STATE_FINISHED:
+            rb->talk_id(LANG_COUNTDOWN_TIMER_FINISHED, false);
+            return;
+        default:
+            label = ctx->remaining_ticks < 0 ? LANG_COUNTDOWN_TIMER_OVERTIME
+                                             : LANG_COUNTDOWN_TIMER_RUNNING;
+            duration = (ctx->remaining_ticks + HZ - 1) / HZ;
+            break;
+    }
+    if (ctx->remaining_ticks < 0 && ctx->state != STATE_SETUP)
+        duration = -(ctx->remaining_ticks / HZ) +
+                   (ctx->remaining_ticks % HZ != 0);
+    if (rb->talk_id(label, false) < 0 ||
+        rb->talk_value_decimal(duration, UNIT_TIME, 0, true) < 0)
+        return;
+    if (ctx->state == STATE_SETUP &&
+        rb->talk_id(ctx->current_field == 0 ? VOICE_MINUTES : VOICE_SECONDS,
+                    true) >= 0)
+        rb->talk_number(ctx->current_field == 0 ? ctx->set_minutes
+                                               : ctx->set_seconds, true);
+}
+
+static void countdown_cleanup(void)
+{
+    if (talk_menus_enabled(rb->global_settings))
+        rb->talk_shutup();
+}
 
 static inline int get_button(void)
 {
@@ -124,6 +180,9 @@ enum plugin_status plugin_start(const void *parameter)
 
     (void)parameter;
 
+    atexit(countdown_cleanup);
+    countdown_talk_state(&ctx);
+
     while (true) {
         if (ctx.state == STATE_RUNNING) {
             long now = *rb->current_tick;
@@ -134,7 +193,11 @@ enum plugin_status plugin_start(const void *parameter)
                 overtime_alerted = true;
                 ctx.state = STATE_FINISHED;
                 draw(&ctx);
-                rb->audio_pause();
+                int audio_status = rb->audio_status();
+                bool resume_music = (audio_status & AUDIO_STATUS_PLAY) &&
+                                    !(audio_status & AUDIO_STATUS_PAUSE);
+                if (resume_music)
+                    rb->audio_pause();
 #ifdef HAVE_BACKLIGHT
                 rb->backlight_on();
 #endif
@@ -144,7 +207,9 @@ enum plugin_status plugin_start(const void *parameter)
                 rb->sleep(HZ / 4);
                 rb->beep_play(1000, 400, 1000);
                 rb->sleep(HZ + HZ / 2);
-                rb->audio_resume();
+                if (resume_music)
+                    rb->audio_resume();
+                countdown_talk_state(&ctx);
                 ctx.state = STATE_RUNNING;
                 /* Reset last_tick so the beep/sleep time is not counted
                  * against remaining_ticks on the next iteration. */
@@ -154,6 +219,10 @@ enum plugin_status plugin_start(const void *parameter)
 
         draw(&ctx);
         button = get_button();
+
+        if (button == PLA_CANCEL || button == PLA_EXIT) {
+            return PLUGIN_OK;
+        }
 
         switch (ctx.state) {
             case STATE_SETUP: {
@@ -188,20 +257,24 @@ enum plugin_status plugin_start(const void *parameter)
                     case PLA_RIGHT:
                     case PLA_RIGHT_REPEAT:
                         ctx.current_field = (ctx.current_field + 1) % 2;
+                        countdown_talk_selection(&ctx);
                         break;
                     case PLA_SELECT:
                         if (ctx.set_minutes > 0 || ctx.set_seconds > 0) {
                             ctx.remaining_ticks = (ctx.set_minutes * 60 + ctx.set_seconds) * HZ;
                             ctx.last_tick = *rb->current_tick;
                             ctx.state = STATE_RUNNING;
+                            countdown_talk_state(&ctx);
                         }
                         break;
                     default:
                         exit_on_usb(button);
                         break;
                 }
-                if (time_changed)
+                if (time_changed) {
                     ctx.remaining_ticks = (ctx.set_minutes * 60 + ctx.set_seconds) * HZ;
+                    countdown_talk_selection(&ctx);
+                }
                 break;
             }
 
@@ -209,6 +282,7 @@ enum plugin_status plugin_start(const void *parameter)
                 switch (button) {
                     case PLA_SELECT:
                         ctx.state = STATE_PAUSED;
+                        countdown_talk_state(&ctx);
                         break;
                     default:
                         exit_on_usb(button);
@@ -225,6 +299,7 @@ enum plugin_status plugin_start(const void *parameter)
                     case PLA_SELECT:
                         ctx.last_tick = *rb->current_tick;
                         ctx.state = STATE_RUNNING;
+                        countdown_talk_state(&ctx);
                         break;
                     case PLA_UP:
                     case PLA_UP_REPEAT:

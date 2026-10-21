@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -986,12 +987,15 @@ static bool view_events(int selected, struct shown *shown)
     rb->gui_synclist_init(&gui_memos, &get_event_text, shown, false, 1, NULL);
     rb->gui_synclist_set_title(&gui_memos, "Events (" CALENDAR_EVENT_MENU_NAME " : menu)", NOICON);
     rb->gui_synclist_set_nb_items(&gui_memos, memos_in_shown_memory);
+    gui_memos.selected_item = selected;
     rb->gui_synclist_select_item(&gui_memos, selected);
     rb->gui_synclist_draw(&gui_memos);
+    rb->gui_synclist_speak_item(&gui_memos);
 
     while (!exit)
     {
-        button = rb->get_action(CONTEXT_LIST, TIMEOUT_BLOCK);
+        button = rb->get_action(CONTEXT_LIST,
+                               gui_memos.scheduled_talk_tick ? HZ/5 + 1 : TIMEOUT_BLOCK);
         rb->gui_synclist_do_button(&gui_memos, &button);
 
         switch (button)
@@ -1041,6 +1045,23 @@ static bool any_events(struct shown *shown, bool force)
         return false;
 
     return false;
+}
+
+static void speak_calendar_day(struct shown *shown)
+{
+    if (!talk_menus_enabled(rb->global_settings))
+        return;
+
+    struct tm date = { .tm_mday = shown->mday, .tm_mon = shown->mon - 1,
+                       .tm_year = shown->year - 1900,
+                       .tm_wday = (shown->wday + 1) % 7 };
+    rb->talk_date(&date, false);
+    update_memos_shown(shown);
+    if (memos_in_shown_memory > 0)
+    {
+        char event[MAX_CHAR_MEMO_LEN + 32];
+        rb->talk_spell(get_event_text(0, shown, event, sizeof(event)), true);
+    }
 }
 
 static void next_month(struct shown *shown, int step)
@@ -1114,14 +1135,17 @@ enum plugin_status plugin_start(const void* parameter)
     load_memo(&shown);
     any_events(&shown, false);
     draw_calendar(&shown);
+    speak_calendar_day(&shown);
 
     while (!exit)
     {
+        bool speak_date = true;
         button = rb->button_get(true);
         switch (button)
         {
             case CALENDAR_QUIT:
                 exit = true;
+                speak_date = false;
                 break;
 #ifdef CALENDAR_NEXT_MONTH
             case CALENDAR_NEXT_MONTH:
@@ -1161,11 +1185,14 @@ enum plugin_status plugin_start(const void* parameter)
                 break;
 
             default:
+                speak_date = false;
                 if(rb->default_event_handler(button) == SYS_USB_CONNECTED)
                     been_in_usb_mode = true;
                 draw_calendar(&shown);
                 break;
         }
+        if (speak_date)
+            speak_calendar_day(&shown);
     }
 
 

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -31,7 +32,7 @@ static void xingupdate(int percent)
 {
     rb->lcd_putsf(0, 1, "%d%%", percent);
     rb->lcd_update();
-    if (rb->global_settings->talk_menu)
+    if (talk_menus_enabled(rb->global_settings))
     {
         long now = *(rb->current_tick) / HZ;
         if (now - last_talk >= 5)
@@ -123,7 +124,7 @@ static int insert_data_in_file(const char *fname, int fpos, char *buf, int num_b
 
 static void fileerror(int rc)
 {
-    if (rb->global_settings->talk_menu) {
+    if (talk_menus_enabled(rb->global_settings)) {
         rb->talk_id(LANG_FILE_ERROR, true);
         rb->talk_value_decimal(rc, UNIT_INT, 0, true);
         rb->talk_force_enqueue_next();

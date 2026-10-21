@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -141,6 +142,15 @@ struct list_selection_color
 };
 #endif
 
+#ifdef HAVE_ESPEAK
+enum list_position_source
+{
+    LIST_POSITION_INTERFACE = 0,
+    LIST_POSITION_FILE,
+    LIST_POSITION_SLIDER
+};
+#endif
+
 struct gui_synclist
 {
     /*flags to hold settings show: icons, scrollbar etc..*/
@@ -164,6 +174,10 @@ struct gui_synclist
     int line_height[NB_SCREENS];
     int offset_position[NB_SCREENS]; /* the list's screen scroll placement in pixels */
     long scheduled_talk_tick, last_talked_tick, dirty_tick;
+#ifdef HAVE_ESPEAK
+    bool boundary_speech_pending;
+    enum list_position_source position_source;
+#endif
 
     list_get_icon *callback_get_item_icon;
     list_get_name *callback_get_item_name;
@@ -314,6 +328,9 @@ struct simplelist_info {
     bool scroll_all;
     bool hide_theme;
     bool speak_onshow; /* list speaks first item or 'empty list' */
+#ifdef HAVE_ESPEAK
+    enum list_position_source position_source;
+#endif
     int  timeout;
     int  selection; /* the item to select when the list is first displayed */
                     /* when the list is exited, this will be set to the
@@ -327,7 +344,7 @@ struct simplelist_info {
     enum themable_icons title_icon;
     list_get_icon *get_icon; /* can be NULL */
     list_get_name *get_name; /* NULL if you're using simplelist_addline() */
-    list_speak_item *get_talk; /* can be NULL to not speak */
+    list_speak_item *get_talk;
 #ifdef HAVE_LCD_COLOR
     list_get_color *get_color;
     struct list_selection_color *selection_color;

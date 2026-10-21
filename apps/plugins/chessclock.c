@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -482,7 +483,7 @@ static struct {
 } timer_holder[MAX_PLAYERS];
 
 static int run_timer(int nr);
-static int chessclock_set_int(char* string,
+static int chessclock_set_int(int label,
                               int* variable,
                               int step,
                               int min,
@@ -495,6 +496,49 @@ static char * show_time(int secs);
 static bool chesspause;
 
 #define MAX_TIME 7200
+
+static void chessclock_talk_setting(int label, int value, int flags)
+{
+    if (!talk_menus_enabled(rb->global_settings) || rb->talk_id(label, false) < 0)
+        return;
+    if (flags & FLAGS_SET_INT_SECONDS)
+        rb->talk_value_decimal(value, UNIT_TIME, 0, true);
+    else
+        rb->talk_number(value, true);
+}
+
+static void chessclock_talk_timer(int player, long max_ticks, long ticks,
+                                 bool round_time)
+{
+    if (!talk_menus_enabled(rb->global_settings) ||
+        rb->talk_id(LANG_CHESSCLOCK_PLAYER, false) < 0 ||
+        rb->talk_number(player + 1, true) < 0)
+        return;
+    if (ticks >= max_ticks) {
+        rb->talk_id(round_time ? LANG_CHESSCLOCK_ROUND_FINISHED
+                              : LANG_TIMEOUT, true);
+        return;
+    }
+    if (rb->talk_id(chesspause ? LANG_COUNTDOWN_TIMER_PAUSED
+                              : LANG_COUNTDOWN_TIMER_RUNNING, true) < 0 ||
+        rb->talk_id(round_time ? LANG_CHESSCLOCK_ROUND_TIME
+                              : LANG_CHESSCLOCK_TOTAL_TIME, true) < 0 ||
+        rb->talk_value_decimal((max_ticks - ticks + HZ - 1) / HZ,
+                               UNIT_TIME, 0, true) < 0)
+        return;
+    if (round_time && rb->talk_id(LANG_CHESSCLOCK_TOTAL_TIME, true) >= 0) {
+        long remaining = timer_holder[player].total_time * HZ -
+                         timer_holder[player].used_time - ticks;
+        rb->talk_value_decimal(MAX(0L, remaining + HZ - 1) / HZ,
+                               UNIT_TIME, 0, true);
+    }
+}
+
+static void chessclock_stop_speech(void)
+{
+    if (talk_menus_enabled(rb->global_settings))
+        rb->talk_shutup();
+}
 
 /* this is the plugin entry point */
 enum plugin_status plugin_start(const void* parameter)
@@ -510,7 +554,7 @@ enum plugin_status plugin_start(const void* parameter)
     settings.round_time = 10;
 
     /* now go ahead and have fun! */
-    rb->splash(HZ, "Chess Clock");
+    rb->splash(HZ, ID2P(LANG_CHESSCLOCK));
 
     rb->lcd_clear_display();
     i=0;
@@ -518,18 +562,19 @@ enum plugin_status plugin_start(const void* parameter)
         int res;
         switch (i) {
             case 0:
-                res=chessclock_set_int("Number of players",
+                res=chessclock_set_int(LANG_NUMBER_OF_PLAYERS,
                                        &settings.nr_timers, 1, 1,
                                        MAX_PLAYERS, 0);
                 break;
             case 1:
-                res=chessclock_set_int("Total time",
+                res=chessclock_set_int(LANG_CHESSCLOCK_TOTAL_TIME,
                                        &settings.total_time, 10, 10, MAX_TIME,
                                        FLAGS_SET_INT_SECONDS);
                 settings.round_time=settings.total_time;
                 break;
             case 2:
-                res=chessclock_set_int("Max round time", &settings.round_time,
+                res=chessclock_set_int(LANG_CHESSCLOCK_MAX_ROUND_TIME,
+                                       &settings.round_time,
                                        10, 10, settings.round_time,
                                        FLAGS_SET_INT_SECONDS);
                 break;
@@ -619,13 +664,15 @@ static void show_pause_mode(bool enabled)
 static int run_timer(int nr)
 {
     char buf[40];
-    char player_info[13];
+    char player_info[64];
     long last_tick;
     bool done=false;
     int retval=CHCL_OK;
-    long max_ticks=timer_holder[nr].total_time*HZ-timer_holder[nr].used_time;
+    long max_ticks=MAX(0L, timer_holder[nr].total_time*HZ -
+                          timer_holder[nr].used_time);
     long ticks=0;
     bool round_time=false;
+    bool expiration_announced;
 
     show_pause_mode(chesspause);
 
@@ -633,18 +680,26 @@ static int run_timer(int nr)
         max_ticks=settings.round_time*HZ;
         round_time=true;
     }
-    rb->snprintf(player_info, sizeof(player_info), "Player %d", nr+1);
+    rb->snprintf(player_info, sizeof(player_info), "%s %d",
+                 rb->str(LANG_CHESSCLOCK_PLAYER), nr+1);
     rb->lcd_puts(0, FIRST_LINE, (unsigned char *)player_info);
     last_tick=*rb->current_tick;
+    chessclock_talk_timer(nr, max_ticks, ticks, round_time);
+    expiration_announced = ticks >= max_ticks;
 
     while (!done) {
         int button;
         long now;
         if (ticks>=max_ticks) {
+            if (!expiration_announced) {
+                chessclock_talk_timer(nr, max_ticks, ticks, round_time);
+                expiration_announced = true;
+            }
             if (round_time)
-                rb->lcd_puts(0, FIRST_LINE+1, (unsigned char *)"ROUND UP!");
+                rb->lcd_puts(0, FIRST_LINE+1,
+                             rb->str(LANG_CHESSCLOCK_ROUND_FINISHED));
             else
-                rb->lcd_puts(0, FIRST_LINE+1, (unsigned char *)"TIME OUT!");
+                rb->lcd_puts(0, FIRST_LINE+1, rb->str(LANG_TIMEOUT));
 #ifdef HAVE_BACKLIGHT
             rb->backlight_on();
 #endif
@@ -653,6 +708,7 @@ static int run_timer(int nr)
             now=*rb->current_tick;
             if (!chesspause) {
                 ticks+=now-last_tick;
+                ticks=MIN(ticks, max_ticks);
                 if ((max_ticks-ticks)/HZ == 10) {
 #ifdef HAVE_BACKLIGHT
                     /* Backlight on if 10 seconds remain */
@@ -681,26 +737,34 @@ static int run_timer(int nr)
         switch (button) {
             /* OFF/ON key to exit */
             case CHC_QUIT:
+                chessclock_stop_speech();
                 return CHCL_CANCEL; /* Indicate exit */
 
             /* PLAY = Stop/Start toggle */
             case CHC_STARTSTOP:
                 chesspause=!chesspause;
+                last_tick=*rb->current_tick;
                 show_pause_mode(chesspause);
+                chessclock_talk_timer(nr, max_ticks, ticks, round_time);
                 break;
 
             /* LEFT = Reset timer */
             case CHC_RESET:
                 ticks=0;
+                last_tick=*rb->current_tick;
+                expiration_announced = max_ticks <= 0;
+                chessclock_talk_timer(nr, max_ticks, ticks, round_time);
                 break;
 
                 /* MENU  */
             case CHC_MENU:
             {
-                MENUITEM_STRINGLIST(menu, "Chess Clock", NULL,
-                                    "Delete player", "Restart round",
-                                    "Set round time", "Set total time",
-                                    "Playback Control");
+                MENUITEM_STRINGLIST(menu, ID2P(LANG_CHESSCLOCK), NULL,
+                                    ID2P(LANG_CHESSCLOCK_DELETE_PLAYER),
+                                    ID2P(LANG_CHESSCLOCK_RESTART_ROUND),
+                                    ID2P(LANG_CHESSCLOCK_SET_ROUND_TIME),
+                                    ID2P(LANG_CHESSCLOCK_SET_TOTAL_TIME),
+                                    ID2P(LANG_PLAYBACK_CONTROL));
 
                 int val, res;
                 switch(rb->do_menu(&menu, NULL, NULL, false))
@@ -719,7 +783,7 @@ static int run_timer(int nr)
                     case 2:
                         /* set round time */
                         val=(max_ticks-ticks)/HZ;
-                        res=chessclock_set_int("Round time",
+                        res=chessclock_set_int(LANG_CHESSCLOCK_ROUND_TIME,
                                                &val, 10, 0, MAX_TIME,
                                                FLAGS_SET_INT_SECONDS);
                         if (res==CHCL_USB) {
@@ -733,7 +797,7 @@ static int run_timer(int nr)
                     case 3:
                         /* set total time */
                         val=timer_holder[nr].total_time;
-                        res=chessclock_set_int("Total time",
+                        res=chessclock_set_int(LANG_CHESSCLOCK_TOTAL_TIME,
                                                &val,
                                                10, 0, MAX_TIME,
                                                FLAGS_SET_INT_SECONDS);
@@ -742,6 +806,11 @@ static int run_timer(int nr)
                             done=true;
                         } else if (res==CHCL_OK) {
                             timer_holder[nr].total_time=val;
+                            max_ticks=MAX(0L, val*HZ-timer_holder[nr].used_time);
+                            round_time=settings.round_time*HZ<max_ticks;
+                            if (round_time)
+                                max_ticks=settings.round_time*HZ;
+                            ticks=MIN(ticks, max_ticks);
                         }
                         break;
                     case 4:
@@ -755,6 +824,10 @@ static int run_timer(int nr)
                 rb->lcd_clear_display();
                 show_pause_mode(chesspause);
                 rb->lcd_puts(0, FIRST_LINE, (unsigned char *)player_info);
+                last_tick=*rb->current_tick;
+                expiration_announced = ticks >= max_ticks;
+                if (!done)
+                    chessclock_talk_timer(nr, max_ticks, ticks, round_time);
             }
             break;
 
@@ -782,10 +855,13 @@ static int run_timer(int nr)
 
     timer_holder[nr].used_time+=ticks;
 
+    if (retval == CHCL_USB)
+        chessclock_stop_speech();
+
     return retval;
 }
 
-static int chessclock_set_int(char* string,
+static int chessclock_set_int(int label,
                               int* variable,
                               int step,
                               int min,
@@ -796,7 +872,8 @@ static int chessclock_set_int(char* string,
     int button;
 
     rb->lcd_clear_display();
-    rb->lcd_puts_scroll(0, FIRST_LINE, (unsigned char *)string);
+    rb->lcd_puts_scroll(0, FIRST_LINE, rb->str(label));
+    chessclock_talk_setting(label, *variable, flags);
 
     while (!done) {
         char str[32];
@@ -808,6 +885,7 @@ static int chessclock_set_int(char* string,
         rb->lcd_update();
 
         button = rb->button_get(true);
+        int previous_value = *variable;
         switch(button) {
             case CHC_SETTINGS_INC:
             case CHC_SETTINGS_INC | BUTTON_REPEAT:
@@ -830,12 +908,17 @@ static int chessclock_set_int(char* string,
 #ifdef CHC_SETTINGS_CANCEL2
             case CHC_SETTINGS_CANCEL2:
 #endif
+                rb->lcd_scroll_stop();
+                chessclock_stop_speech();
                 return CHCL_CANCEL;
                 break;
 
             default:
-                if (rb->default_event_handler(button) == SYS_USB_CONNECTED)
+                if (rb->default_event_handler(button) == SYS_USB_CONNECTED) {
+                    rb->lcd_scroll_stop();
+                    chessclock_stop_speech();
                     return CHCL_USB;
+                }
                 break;
 
         }
@@ -845,6 +928,9 @@ static int chessclock_set_int(char* string,
         if(*variable < min )
             *variable = min;
 
+        if (*variable != previous_value)
+            chessclock_talk_setting(label, *variable, flags);
+
     }
     rb->lcd_scroll_stop();
 
@@ -853,7 +939,7 @@ static int chessclock_set_int(char* string,
 
 static char * show_time(int seconds)
 {
-    static char buf[]="00:00";
+    static char buf[16];
     rb->snprintf(buf, sizeof(buf), "%02d:%02d", seconds/60, seconds%60);
     return buf;
 }

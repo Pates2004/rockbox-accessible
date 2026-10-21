@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -71,6 +72,9 @@ int pcmbuf_descs(void);
 void pcmbuf_fade(bool fade, bool in);
 bool pcmbuf_fading(void);
 void pcmbuf_soft_mode(bool shhh);
+#ifdef HAVE_ESPEAK
+void pcmbuf_update_voice_volume(void);
+#endif
 
 /* Time and position */
 unsigned int pcmbuf_get_position_key(void);

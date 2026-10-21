@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -220,7 +221,7 @@ static int browser(void* param)
 
                     /* Display building progress */
                     static long talked_tick = 0;
-                    if(global_settings.talk_menu &&
+                    if(talk_dynamic_enabled(&global_settings) &&
                        (talked_tick == 0
                         || TIME_AFTER(current_tick, talked_tick+7*HZ)))
                     {
@@ -240,8 +241,7 @@ static int browser(void* param)
                     if (stat->commit_step > 0)
                     {
                         /* (prevent redundant voicing by splash_progress */
-                        bool tmp = global_settings.talk_menu;
-                        global_settings.talk_menu = false;
+                        talk_disable(true);
 
                         if (lang_is_rtl())
                         {
@@ -259,7 +259,7 @@ static int browser(void* param)
                                             stat->commit_step,
                                             tagcache_get_max_commit_step());
                         }
-                        global_settings.talk_menu = tmp;
+                        talk_disable(false);
                     }
                     else
                     {
@@ -707,6 +707,42 @@ static int get_selection(int last_screen)
     return 0;
 }
 
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+static int accessibility_destination = GO_TO_PREVIOUS;
+
+bool root_menu_request_screen(int screen)
+{
+    if (screen != GO_TO_FILEBROWSER && screen != GO_TO_WPS &&
+        screen != GO_TO_MAINMENU && screen != GO_TO_PLAYLISTS_SCREEN
+#ifdef HAVE_TAGCACHE
+        && screen != GO_TO_DBBROWSER
+#endif
+        )
+        return false;
+    if (root_menu_navigation_pending())
+        return false;
+    accessibility_destination = screen;
+    return true;
+}
+
+bool root_menu_navigation_pending(void)
+{
+    return accessibility_destination != GO_TO_PREVIOUS;
+}
+
+void root_menu_cancel_navigation(void)
+{
+    accessibility_destination = GO_TO_PREVIOUS;
+}
+
+int root_menu_take_navigation(void)
+{
+    int screen = accessibility_destination;
+    root_menu_cancel_navigation();
+    return screen;
+}
+#endif
+
 static inline int load_screen(int screen)
 {
     /* set the global_status.last_screen before entering,
@@ -949,6 +985,10 @@ void root_menu(void)
 
     while (true)
     {
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+        if (root_menu_navigation_pending())
+            next_screen = root_menu_take_navigation();
+#endif
         switch (next_screen)
         {
             case MENU_ATTACHED_USB:

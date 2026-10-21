@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -21,6 +22,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include "config.h"
 #include "system.h"
 #include "settings.h"
@@ -55,6 +57,9 @@
 #include "statusbar-skinned.h"
 #include "playback.h"
 #include "presets.h"
+#ifdef HAVE_RDS_CAP
+#include "list.h"
+#endif
 #include "wps.h" /* for wps_state... */
 
 #if CONFIG_TUNER
@@ -296,6 +301,79 @@ bool radio_hardware_present(void)
     return tuner_get(RADIO_PRESENT);
 }
 
+#ifdef HAVE_RDS_CAP
+struct radio_rds_info
+{
+    char name[8 * 3 + 1];
+    char text[64 * 3 + 1];
+};
+
+static void radio_read_info(struct radio_rds_info *info)
+{
+    memset(info, 0, sizeof(*info));
+    if (get_radio_status() == FMRADIO_OFF || !radio_hardware_present())
+        return;
+
+    if (!tuner_get_rds_info(RADIO_RDS_NAME, info->name, sizeof(info->name)))
+        info->name[0] = '\0';
+    if (!tuner_get_rds_info(RADIO_RDS_TEXT, info->text, sizeof(info->text)))
+        info->text[0] = '\0';
+    info->name[sizeof(info->name) - 1] = '\0';
+    info->text[sizeof(info->text) - 1] = '\0';
+}
+
+static const char *radio_info_get_name(int selected_item, void *data,
+                                      char *buffer, size_t buffer_len)
+{
+    struct radio_rds_info *info = data;
+    const char *text = selected_item == 0 ? info->name : info->text;
+    int label = selected_item == 0 ? LANG_FM_RDS_NAME : LANG_FM_RDS_TEXT;
+
+    snprintf(buffer, buffer_len, "%s: %s", str(label),
+             text[0] ? text : (const char *)str(LANG_FM_RDS_NO_DATA));
+    return buffer;
+}
+
+static int radio_info_speak(int selected_item, void *data)
+{
+    struct radio_rds_info *info = data;
+    const char *text = selected_item == 0 ? info->name : info->text;
+
+    talk_id(selected_item == 0 ? LANG_FM_RDS_NAME : LANG_FM_RDS_TEXT, false);
+    if (text[0])
+        talk_spell(text, true);
+    else
+        talk_id(LANG_FM_RDS_NO_DATA, true);
+    return 0;
+}
+
+static int radio_info_action(int action, struct gui_synclist *lists)
+{
+    if (action == ACTION_STD_OK)
+    {
+        radio_read_info(lists->data);
+        gui_synclist_speak_item(lists);
+        return ACTION_REDRAW;
+    }
+    return action;
+}
+
+int radio_show_info(void)
+{
+    struct radio_rds_info rds_info;
+    struct simplelist_info list;
+
+    radio_read_info(&rds_info);
+    simplelist_info_init(&list, str(LANG_FM_RDS_INFO), 2, &rds_info);
+    list.get_name = radio_info_get_name;
+    list.action_callback = radio_info_action;
+    if (talk_menus_enabled(&global_settings))
+        list.get_talk = radio_info_speak;
+    list.scroll_all = true;
+    return simplelist_show_list(&list) ? MENU_ATTACHED_USB : 0;
+}
+#endif
+
 void remember_frequency(void)
 {
     const struct fm_region_data * const fmr =
@@ -403,7 +481,10 @@ void radio_screen(void)
                                SRCF_FMRADIO_PAUSED : SRCF_FMRADIO_PLAYING);
 
     if(radio_preset_count() < 1 && yesno_pop(ID2P(LANG_FM_FIRST_AUTOSCAN)))
+    {
         presets_scan(NULL);
+        talk_cancel_enqueue_next();
+    }
 
     preset_set_current(preset_find(curr_freq));
     if(radio_current_preset() != -1)
@@ -562,7 +643,11 @@ void radio_screen(void)
 
             case ACTION_FM_MENU:
                 fms_fix_displays(FMS_EXIT);
-                do_menu(&radio_settings_menu, NULL, NULL, false);
+                if (do_menu(&radio_settings_menu, NULL, NULL, false) == MENU_ATTACHED_USB)
+                {
+                    screen_freeze = true;
+                    done = true;
+                }
                 preset_set_current(preset_find(curr_freq));
                 fms_fix_displays(FMS_ENTER);
                 update_type = SKIN_REFRESH_ALL;
@@ -704,7 +789,7 @@ void radio_screen(void)
         }
         update_type = 0;
 
-        if (global_settings.talk_file && talk
+        if (talk_file_names_enabled(&global_settings) && talk
             && radio_status == FMRADIO_PAUSED)
         {
             talk = false;

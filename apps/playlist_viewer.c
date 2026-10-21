@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *
  *             __________               __   ___.
@@ -882,7 +883,7 @@ static void update_gui(struct gui_synclist * playlist_lists, bool init)
                           &viewer, false, 1, NULL);
     gui_synclist_set_nb_items(playlist_lists, viewer.num_tracks);
     gui_synclist_set_voice_callback(playlist_lists,
-                                    global_settings.talk_file?
+                                    talk_file_names_enabled(&global_settings)?
                                     &playlist_callback_voice:NULL);
     gui_synclist_set_icon_callback(playlist_lists,
                   global_settings.playlist_viewer_icons?
@@ -1285,7 +1286,7 @@ bool search_playlist(void)
     {
         if (found_indicies_count != last_found_count)
         {
-            if (global_settings.talk_menu &&
+            if (talk_dynamic_enabled(&global_settings) &&
                 TIME_AFTER(current_tick, talked_tick + (HZ * 5)))
             {
                 talked_tick = current_tick;
@@ -1293,7 +1294,7 @@ bool search_playlist(void)
                 talk_id(LANG_PLAYLIST_SEARCH_MSG, true);
             }
             /* (voiced above) */
-            splashf(0, str(LANG_PLAYLIST_SEARCH_MSG), found_indicies_count,
+            splashf_silent(0, str(LANG_PLAYLIST_SEARCH_MSG), found_indicies_count,
                        str(LANG_OFF_ABORT));
             last_found_count = found_indicies_count;
         }
@@ -1326,9 +1327,9 @@ bool search_playlist(void)
     gui_synclist_init(&playlist_lists, playlist_search_callback_name,
                       &s_data, false, 1, NULL);
     gui_synclist_set_title(&playlist_lists, str(LANG_SEARCH_RESULTS), NOICON);
-    if(global_settings.talk_file)
+    if(talk_file_names_enabled(&global_settings))
         gui_synclist_set_voice_callback(&playlist_lists,
-                                        global_settings.talk_file?
+                                        talk_file_names_enabled(&global_settings)?
                                         &say_search_item:NULL);
     gui_synclist_set_nb_items(&playlist_lists, found_indicies_count);
     gui_synclist_select_item(&playlist_lists, 0);

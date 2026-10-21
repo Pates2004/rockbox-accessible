@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -30,6 +31,33 @@ static bool tomorrow = false;
 static int alarms[2] = {0, 0}, maxval[2] = {24, 60}, prev_tick = 3600 * 24;
 static bool quit = false, usb = false, waiting = false, done = false;
 
+static void alarm_talk_field(void)
+{
+    if (!talk_menus_enabled(rb->global_settings))
+        return;
+
+    if (rb->talk_id(current == 0 ? VOICE_HOURS : VOICE_MINUTES, false) >= 0)
+        rb->talk_number(alarms[current], true);
+}
+
+static void alarm_talk_time(bool armed)
+{
+    if (!talk_menus_enabled(rb->global_settings))
+        return;
+
+    struct tm alarm_time = {0};
+    alarm_time.tm_hour = alarms[0];
+    alarm_time.tm_min = alarms[1];
+    if (rb->talk_id(armed ? LANG_ALARMCLOCK_ARMED : LANG_ALARMCLOCK, false) < 0)
+        return;
+    if (!armed && rb->talk_id(LANG_EDIT, true) < 0)
+        return;
+    rb->talk_time(&alarm_time, true);
+    if (!armed &&
+        rb->talk_id(current == 0 ? VOICE_HOURS : VOICE_MINUTES, true) >= 0)
+        rb->talk_number(alarms[current], true);
+}
+
 static inline int get_button(void)
 {
     return pluginlib_getaction(HZ/2, plugin_contexts,
@@ -55,7 +83,8 @@ static void draw_centered_string(struct screen * display, char * string)
     display->getstringsize(string, &w, &h);
 
     if (w > display->lcdwidth || h > display->lcdheight) {
-        rb->splash(0, string);
+        display->puts_scroll(0, 0, string);
+        display->update();
     } else {
         display->putsxy((display->lcdwidth - w) / 2,
                         (display->lcdheight - h) / 2,
@@ -72,18 +101,16 @@ static void draw(struct screen * display)
     int secs = rem_seconds();
 
     if (waiting)
-        rb->snprintf(info, sizeof(info), "Next alarm in %02dh,"
-                                         " %02dmn, and %02ds.",
+        rb->snprintf(info, sizeof(info), "%s: %02d:%02d:%02d",
+                           rb->str(LANG_ALARMCLOCK_ARMED),
                            secs / 3600, (secs / 60) % 60, secs % 60);
     else {
         if (current == 0)
-            rb->snprintf(info, sizeof(info), "Set alarm at [%02d]:%02d.",
-                                                                 alarms[0],
-                                                                 alarms[1]);
+            rb->snprintf(info, sizeof(info), "%s: [%02d]:%02d",
+                         rb->str(LANG_ALARMCLOCK), alarms[0], alarms[1]);
         else
-            rb->snprintf(info, sizeof(info), "Set alarm at %02d:[%02d].",
-                                                                 alarms[0],
-                                                                 alarms[1]);
+            rb->snprintf(info, sizeof(info), "%s: %02d:[%02d]",
+                         rb->str(LANG_ALARMCLOCK), alarms[0], alarms[1]);
     }
     draw_centered_string(display, info);
 }
@@ -128,11 +155,11 @@ enum plugin_status plugin_start(const void* parameter)
     (void)parameter;
 
     if (!can_play()) {
-        rb->splash(HZ*2, "No track to resume! "
-                         "Play or pause one first.");
+        rb->splash(HZ*2, ID2P(LANG_NOTHING_TO_RESUME));
         return PLUGIN_ERROR;
     }
     pause_audio();
+    alarm_talk_time(false);
 
     while(!quit) {
         FOR_NB_SCREENS(i) {
@@ -149,9 +176,18 @@ enum plugin_status plugin_start(const void* parameter)
 #endif
             quit = true;
 
+        if (quit)
+            break;
+        if (rb->default_event_handler(button) == SYS_USB_CONNECTED) {
+            quit = usb = true;
+            break;
+        }
+
         if (waiting) {
             if (rem_seconds() <= 0) {
                 quit = done = true;
+                if (talk_menus_enabled(rb->global_settings))
+                    rb->talk_id(LANG_ALARMCLOCK_WAKEUP, false);
                 resume_audio();
             }
         }
@@ -164,6 +200,7 @@ enum plugin_status plugin_start(const void* parameter)
                 case PLA_SCROLL_FWD_REPEAT:
 #endif
                     alarms[current] = (alarms[current] + 1) % maxval[current];
+                    alarm_talk_field();
                     break;
                 case PLA_DOWN:
                 case PLA_DOWN_REPEAT:
@@ -173,6 +210,7 @@ enum plugin_status plugin_start(const void* parameter)
 #endif
                     alarms[current] = (alarms[current] + maxval[current] - 1)
                         % maxval[current];
+                    alarm_talk_field();
                     break;
 
                 case PLA_LEFT:
@@ -180,6 +218,7 @@ enum plugin_status plugin_start(const void* parameter)
                 case PLA_RIGHT:
                 case PLA_RIGHT_REPEAT:
                     current = (current + 1) % 2;
+                    alarm_talk_field();
                     break;
 
                 case PLA_SELECT:
@@ -188,16 +227,18 @@ enum plugin_status plugin_start(const void* parameter)
                         tomorrow = true;
 
                     waiting = true;
+                    alarm_talk_time(true);
                     break;
                 }
 
                 default:
-                    if (rb->default_event_handler(button) == SYS_USB_CONNECTED)
-                        quit = usb = true;
                     break;
             }
         }
     }
+
+    if (!done && talk_menus_enabled(rb->global_settings))
+        rb->talk_shutup();
 
     return (usb) ? PLUGIN_USB_CONNECTED
                  : (done ? PLUGIN_GOTO_WPS : PLUGIN_OK);

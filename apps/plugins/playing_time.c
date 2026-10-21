@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -317,7 +318,7 @@ static bool pt_display_stats(struct playing_time_info *pti)
 {
     struct gui_synclist pt_lists;
     rb->gui_synclist_init(&pt_lists, &pt_get_info, pti, true, 2, NULL);
-    if (rb->global_settings->talk_menu)
+    if (talk_menus_enabled(rb->global_settings))
         rb->gui_synclist_set_voice_callback(&pt_lists, pt_speak_info);
     rb->gui_synclist_set_nb_items(&pt_lists, pti->remaining_only ? 2 : 8*2);
     rb->gui_synclist_set_title(&pt_lists, *pti->single_mode_tag ?
@@ -367,7 +368,7 @@ static int pt_options(struct playing_time_info *pti)
 {
     struct gui_synclist pt_options;
     rb->gui_synclist_init(&pt_options, &pt_options_name, NULL, true, 1, NULL);
-    if (rb->global_settings->talk_menu)
+    if (talk_menus_enabled(rb->global_settings))
         rb->gui_synclist_set_voice_callback(&pt_options, pt_options_speak);
     rb->gui_synclist_set_nb_items(&pt_options, *pti->single_mode_tag ? 3 : 2);
     rb->gui_synclist_set_title(&pt_options, rb->str(LANG_PLAYING_TIME), NOICON);
@@ -532,7 +533,7 @@ static bool playing_time(void)
     {
         rb->snprintf(pti.error_str, sizeof pti.error_str,
                      "%d %s", pti.error_count, rb->str(LANG_TRACKS));
-        if (rb->global_settings->talk_menu)
+        if (talk_menus_enabled(rb->global_settings))
         {
             rb->talk_id(LANG_ERROR_FORMATSTR, false);
             rb->talk_number(pti.error_count, true);

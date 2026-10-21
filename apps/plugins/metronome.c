@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -787,6 +788,139 @@ static int display_state    = 0; /* Current display state code. */
 static bool display_trigger = false; /* Draw display on next occasion */
 
 static bool sound_paused = true;
+
+enum metronome_speech_fields
+{
+    METRONOME_SPEAK_STATE = 1,
+    METRONOME_SPEAK_TEMPO = 2,
+    METRONOME_SPEAK_METER = 4,
+    METRONOME_SPEAK_VOLUME = 8,
+    METRONOME_SPEAK_POSITION = 16
+};
+
+struct metronome_speech_state
+{
+    bool paused;
+    unsigned int tempo;
+    unsigned int beats_per_bar;
+    unsigned int base_beat;
+    int volume;
+    struct part *current_part;
+    unsigned int current_bar;
+};
+
+static unsigned int speech_pending = 0;
+static long speech_due = 0;
+
+static struct metronome_speech_state metronome_speech_snapshot(void)
+{
+    struct metronome_speech_state state = {
+        sound_paused, bpm, part->beats_per_bar, part->base_beat,
+        rb->global_status->volume, part, bar
+    };
+    return state;
+}
+
+static void metronome_speech_request(struct metronome_speech_state previous)
+{
+    if (!talk_menus_enabled(rb->global_settings))
+    {
+        speech_pending = 0;
+        return;
+    }
+
+    unsigned int changed = 0;
+    if (previous.paused != sound_paused)
+        changed |= METRONOME_SPEAK_STATE;
+    if (previous.tempo != bpm)
+        changed |= METRONOME_SPEAK_TEMPO;
+    if (previous.beats_per_bar != part->beats_per_bar ||
+        previous.base_beat != part->base_beat)
+        changed |= METRONOME_SPEAK_METER;
+    if (previous.volume != rb->global_status->volume)
+        changed |= METRONOME_SPEAK_VOLUME;
+    if (track_mode &&
+        (previous.current_part != part || previous.current_bar != bar))
+        changed |= METRONOME_SPEAK_POSITION;
+    if (changed)
+    {
+        speech_pending |= changed;
+        speech_due = *rb->current_tick + HZ / 5;
+        if (changed & METRONOME_SPEAK_STATE)
+            speech_due = *rb->current_tick;
+    }
+}
+
+static void metronome_speech_flush(void)
+{
+    if (!talk_menus_enabled(rb->global_settings))
+    {
+        speech_pending = 0;
+        return;
+    }
+    if (!speech_pending || TIME_BEFORE(*rb->current_tick, speech_due))
+        return;
+
+    unsigned int fields = speech_pending;
+    speech_pending = 0;
+    bool enqueue = false;
+    if (fields & METRONOME_SPEAK_STATE)
+    {
+        int label = sound_paused ? LANG_COUNTDOWN_TIMER_PAUSED
+                                 : LANG_COUNTDOWN_TIMER_RUNNING;
+        if (rb->talk_id(label, enqueue) < 0)
+            return;
+        enqueue = true;
+    }
+    if (fields & METRONOME_SPEAK_POSITION)
+    {
+        if (rb->talk_id(LANG_METRONOME_PART, enqueue) < 0 ||
+            rb->talk_number(part->id + 1, true) < 0)
+            return;
+        enqueue = true;
+        if (part->label && *part->label)
+        {
+            char label[64];
+            int length = rb->snprintf(label, sizeof(label), "%s", part->label);
+            if (length >= (int)sizeof(label) &&
+                ((unsigned char)part->label[sizeof(label) - 1] & 0xc0) == 0x80)
+            {
+                size_t boundary = sizeof(label) - 1;
+                while (boundary &&
+                       ((unsigned char)label[boundary - 1] & 0xc0) == 0x80)
+                    --boundary;
+                if (boundary)
+                    label[boundary - 1] = '\0';
+            }
+            if (rb->talk_spell(label, true) < 0)
+                return;
+        }
+        if (rb->talk_id(LANG_METRONOME_BAR, true) < 0 ||
+            rb->talk_number(bar + 1, true) < 0)
+            return;
+    }
+    if (fields & METRONOME_SPEAK_TEMPO)
+    {
+        if (rb->talk_id(LANG_METRONOME_TEMPO, enqueue) < 0 ||
+            rb->talk_number(bpm, true) < 0)
+            return;
+        enqueue = true;
+    }
+    if (fields & METRONOME_SPEAK_METER)
+    {
+        if (rb->talk_id(LANG_METRONOME_METER, enqueue) < 0 ||
+            rb->talk_number(part->beats_per_bar, true) < 0 ||
+            rb->talk_number(part->base_beat, true) < 0)
+            return;
+        enqueue = true;
+    }
+    if (fields & METRONOME_SPEAK_VOLUME)
+    {
+        if (rb->talk_id(LANG_VOLUME, enqueue) < 0)
+            return;
+        rb->talk_value_decimal(rb->global_status->volume, UNIT_DB, 0, true);
+    }
+}
 
 /* global static buffer for messages in any situation */
 static char buffer[64];
@@ -1611,6 +1745,12 @@ enum plugin_status plugin_start(const void* file)
     tweak_volume(part->volume);
     calc_period();
     draw_display();
+    speech_pending = METRONOME_SPEAK_STATE | METRONOME_SPEAK_TEMPO |
+                     METRONOME_SPEAK_METER | METRONOME_SPEAK_VOLUME;
+    if (track_mode)
+        speech_pending |= METRONOME_SPEAK_POSITION;
+    speech_due = *rb->current_tick;
+    metronome_speech_flush();
 
     /* main loop */
     while(true)
@@ -1624,6 +1764,7 @@ enum plugin_status plugin_start(const void* file)
             play_ticktock(); /* Draws display before playback. */
         }
 
+        struct metronome_speech_state previous = metronome_speech_snapshot();
         common_action = false;
         if(track_mode)
         {
@@ -1723,6 +1864,9 @@ enum plugin_status plugin_start(const void* file)
             display_trigger = false;
             draw_display();
         }
+        if (button != BUTTON_NONE)
+            metronome_speech_request(previous);
+        metronome_speech_flush();
 
         /* This determines the accuracy of the metronome with SWCODEC ... the
            scheduler decides when we are allowed to play. */

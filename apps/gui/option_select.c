@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -511,6 +512,11 @@ bool option_screen(const struct settings_list *setting,
     push_current_activity(ACTIVITY_OPTIONSELECT);
     gui_synclist_init(&lists, value_setting_get_name_cb,
                       (void*)setting, false, 1, parent);
+#ifdef HAVE_ESPEAK
+    if (!(setting->flags & F_CHOICE_SETTING) &&
+        (setting->flags & (F_T_SOUND | F_INT_SETTING | F_TABLE_SETTING)))
+        lists.position_source = LIST_POSITION_SLIDER;
+#endif
     if (setting->lang_id == -1)
     {
         title = setting_get_cfgvals(setting);
@@ -520,7 +526,7 @@ bool option_screen(const struct settings_list *setting,
         title = P2STR(option_title);
 
     gui_synclist_set_title(&lists, title, Icon_Questionmark);
-    if(global_settings.talk_menu)
+    if(talk_menus_enabled(&global_settings))
         gui_synclist_set_voice_callback(&lists, option_talk);
 
     val_to_selection(setting, oldvalue, &nb_items, &selected, &function);

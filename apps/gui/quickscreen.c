@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -23,6 +24,7 @@
 #include "font.h"
 #include "misc.h"
 #include "action.h"
+#include "accessibility.h"
 #include "settings_list.h"
 #include "lang.h"
 #include "viewport.h"
@@ -296,7 +298,7 @@ static void quickscreen_draw_cb(unsigned short id, void *data, void *userdata)
 
 static void talk_qs_option(const struct settings_list *opt, bool enqueue)
 {
-    if (!global_settings.talk_menu || !opt)
+    if (!talk_menus_enabled(&global_settings) || !opt)
         return;
 
     if (enqueue)
@@ -347,6 +349,63 @@ static bool quickscreen_do_button(struct quickscreen * qs, int button,
 }
 
 #ifdef HAVE_TOUCHSCREEN
+#ifdef HAVE_ESPEAK
+static void quickscreen_explore(struct quickscreen *qs)
+{
+    static const struct quickscreen *last_screen;
+    static int last_target;
+    int touch_x, touch_y;
+    bool force;
+    if (!accessibility_explore_point(&touch_x, &touch_y, &force))
+        return;
+    int target = -1;
+    FOR_QS_ITEMS(index)
+    {
+        if (qs->items[index] && viewport_point_within_vp(&qs->vps[SCREEN_MAIN][index], touch_x, touch_y))
+        {
+            target = index;
+            break;
+        }
+    }
+    const struct viewport *icons = &qs->vp_icons[SCREEN_MAIN];
+    if (target < 0 && qs->parent[SCREEN_MAIN].width > CENTER_ICONAREA_SIZE &&
+        icons->height >= QS_ICON_HEIGHT)
+    {
+        const int positions[QUICKSCREEN_ITEM_COUNT][2] = {
+            {icons->width / 2 - QS_ICON_WIDTH / 2, 0},
+            {0, icons->height / 2 - QS_ICON_HEIGHT / 2},
+            {icons->width - QS_ICON_WIDTH, icons->height / 2 - QS_ICON_HEIGHT / 2},
+            {icons->width / 2 - QS_ICON_WIDTH / 2, icons->height - QS_ICON_HEIGHT}
+        };
+        FOR_QS_ITEMS(index)
+        {
+            struct viewport icon = *icons;
+            icon.x += positions[index][0];
+            icon.y += positions[index][1];
+            icon.width = QS_ICON_WIDTH;
+            icon.height = QS_ICON_HEIGHT;
+            if (qs->items[index] && viewport_point_within_vp(&icon, touch_x, touch_y))
+            {
+                target = index;
+                break;
+            }
+        }
+    }
+    accessibility_explore_feedback(qs, target, target >= 0);
+    if (!force && last_screen == qs && last_target == target)
+        return;
+    last_screen = qs;
+    last_target = target;
+    if (target >= 0)
+    {
+        talk_id(qs->items[target]->lang_id, false);
+        option_talk_value(qs->items[target], option_value_as_int(qs->items[target]), true);
+    }
+    else
+        accessibility_speak_empty();
+}
+#endif
+
 static int quickscreen_touchscreen_button(void)
 {
     struct gesture_event gevent;
@@ -453,10 +512,24 @@ static void quickscreen_main(struct quickscreen * qs)
 #endif
     while (true)
     {
-        button = get_action(CONTEXT_QUICKSCREEN, HZ/5);
+        button = get_action(
+#if defined(HIBY_R1)
+                            ALLOW_SOFTLOCK |
+#endif
+                            CONTEXT_QUICKSCREEN, HZ/5);
 #ifdef HAVE_TOUCHSCREEN
         if (button == ACTION_TOUCHSCREEN)
+        {
+#ifdef HAVE_ESPEAK
+            if (accessibility_enabled())
+            {
+                quickscreen_explore(qs);
+                button = ACTION_NONE;
+            }
+            else
+#endif
             button = quickscreen_touchscreen_button();
+        }
 #endif
         if (default_event_handler_ex(button, cleanup, qs)
             == SYS_USB_CONNECTED)

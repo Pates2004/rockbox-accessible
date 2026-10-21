@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -43,6 +44,9 @@ void radio_stop(void);
 bool radio_hardware_present(void);
 bool in_radio_screen(void);
 bool radio_is_stereo(void);
+#ifdef HAVE_RDS_CAP
+int radio_show_info(void);
+#endif
 
 enum radio_scan_mode radio_get_mode(void); /* RADIO_SCAN_MODE, RADIO_PRESET_MODE */
 void radio_set_mode(enum radio_scan_mode);

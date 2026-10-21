@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -130,6 +131,85 @@ static int reset_color(void)
     settings_apply_skins();
     return 0;
 }
+
+enum interface_appearance
+{
+    INTERFACE_APPEARANCE_DARK = 0,
+    INTERFACE_APPEARANCE_LIGHT,
+    INTERFACE_APPEARANCE_DEFAULT,
+};
+
+static int apply_interface_appearance(void *parameter)
+{
+    intptr_t appearance = (intptr_t)parameter;
+
+    if (appearance < INTERFACE_APPEARANCE_DARK ||
+        appearance > INTERFACE_APPEARANCE_DEFAULT)
+        return 0;
+
+    if (appearance == INTERFACE_APPEARANCE_DEFAULT)
+    {
+        for (int index = 0; index < COLOR_COUNT; index++)
+            reset_setting(find_setting(colors[index].setting),
+                          colors[index].setting);
+        reset_setting(find_setting(&global_settings.cursor_style),
+                      &global_settings.cursor_style);
+    }
+    else
+    {
+        if (appearance == INTERFACE_APPEARANCE_DARK)
+        {
+            global_settings.fg_color = LCD_RGBPACK(0xf3, 0xf3, 0xf3);
+            global_settings.bg_color = LCD_RGBPACK(0x12, 0x12, 0x12);
+            global_settings.list_separator_color = LCD_RGBPACK(0x80, 0x80, 0x80);
+        }
+        else
+        {
+            global_settings.fg_color = LCD_RGBPACK(0x12, 0x12, 0x12);
+            global_settings.bg_color = LCD_RGBPACK(0xff, 0xff, 0xff);
+            global_settings.list_separator_color = LCD_RGBPACK(0x70, 0x70, 0x70);
+        }
+
+        global_settings.lss_color = LCD_RGBPACK(0x1e, 0x4e, 0x79);
+        global_settings.lse_color = global_settings.lss_color;
+        global_settings.lst_color = LCD_RGBPACK(0xff, 0xff, 0xff);
+        global_settings.cursor_style = SYNCLIST_CURSOR_COLOR;
+    }
+
+    global_settings.sbs_file[0] = '-';
+    global_settings.sbs_file[1] = '\0';
+    global_settings.ui_vp_config[0] = '-';
+    global_settings.ui_vp_config[1] = '\0';
+    global_settings.colors_file[0] = '-';
+    global_settings.colors_file[1] = '\0';
+#ifdef HAVE_BACKDROP_IMAGE
+    global_settings.backdrop_file[0] = '-';
+    global_settings.backdrop_file[1] = '\0';
+#endif
+
+    read_color_theme_file();
+    settings_save();
+    settings_apply(false);
+    settings_apply_skins();
+    return 0;
+}
+
+MENUITEM_FUNCTION_W_PARAM(appearance_dark, 0,
+                         ID2P(LANG_INTERFACE_APPEARANCE_DARK),
+                         apply_interface_appearance,
+                         (void*)INTERFACE_APPEARANCE_DARK, NULL, Icon_NOICON);
+MENUITEM_FUNCTION_W_PARAM(appearance_light, 0,
+                         ID2P(LANG_INTERFACE_APPEARANCE_LIGHT),
+                         apply_interface_appearance,
+                         (void*)INTERFACE_APPEARANCE_LIGHT, NULL, Icon_NOICON);
+MENUITEM_FUNCTION_W_PARAM(appearance_default, 0,
+                         ID2P(LANG_INTERFACE_APPEARANCE_DEFAULT),
+                         apply_interface_appearance,
+                         (void*)INTERFACE_APPEARANCE_DEFAULT, NULL, Icon_NOICON);
+MAKE_MENU(interface_appearance_menu, ID2P(LANG_INTERFACE_APPEARANCE),
+          NULL, Icon_Display_menu,
+          &appearance_dark, &appearance_light, &appearance_default);
+
 MENUITEM_FUNCTION_W_PARAM(set_bg_col, 0, ID2P(LANG_BACKGROUND_COLOR),
                           set_color_func, (void*)COLOR_BG, NULL, Icon_NOICON);
 MENUITEM_FUNCTION_W_PARAM(set_fg_col, 0, ID2P(LANG_FOREGROUND_COLOR),
@@ -153,7 +233,7 @@ MAKE_MENU(lss_settings, ID2P(LANG_SELECTOR_COLOR_MENU),
 /* now the actual menu */
 MAKE_MENU(colors_settings, ID2P(LANG_COLORS_MENU),
             NULL, Icon_Display_menu,
-            &lss_settings,  &set_sep_col,
+            &interface_appearance_menu, &lss_settings, &set_sep_col,
             &set_bg_col, &set_fg_col, &reset_colors
          );
 

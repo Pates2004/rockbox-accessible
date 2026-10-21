@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
 *             __________               __   ___.
 *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -673,7 +674,7 @@ struct pgn_game_node* pgn_show_game_list(struct pgn_game_node* first_game){
 
     rb->gui_synclist_init(&games_list, &get_game_text, first_game, false, 1, NULL);
     rb->gui_synclist_set_title(&games_list, rb->str(LANG_CHESSBOX_GAMES), NOICON);
-    if (rb->global_settings->talk_menu)
+    if (talk_menus_enabled(rb->global_settings))
         rb->gui_synclist_set_voice_callback(&games_list, speak_game_selection);
     rb->gui_synclist_set_nb_items(&games_list, i);
     rb->gui_synclist_select_item(&games_list, 0);

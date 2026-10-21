@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -34,6 +35,9 @@
 #include "crc32.h"
 #include "sound.h"
 #include "settings.h"
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+#include "accessibility.h"
+#endif
 #ifdef HAVE_COMPOSITE_VIDEO_OUT
 #include "videoout.h"
 #endif
@@ -1149,6 +1153,9 @@ void settings_apply(bool read_disk)
 #ifdef HAVE_TOUCHSCREEN
     touchscreen_set_mode(global_settings.touch_mode);
     memcpy(&calibration_parameters, &global_settings.ts_calibration_data, sizeof(struct touchscreen_parameter));
+#ifdef HAVE_ESPEAK
+    accessibility_init();
+#endif
 #endif
 
 #if !defined(SIMULATOR) && !defined(USB_NONE) && (defined(HAVE_USB_ADB) || defined(HAVE_USB_POWER))

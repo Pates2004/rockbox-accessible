@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -164,7 +165,7 @@ static int filetype_inbuilt_index(int tree_attr)
 
 long tree_get_filetype_voiceclip(int attr)
 {
-    if (global_settings.talk_filetype)
+    if (talk_file_types_enabled(&global_settings))
     {
         int index = filetype_inbuilt_index(attr);
         if (index >= 0)

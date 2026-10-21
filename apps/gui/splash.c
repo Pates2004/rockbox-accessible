@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -27,6 +28,9 @@
 #include "lang.h"
 #include "settings.h"
 #include "talk.h"
+#ifdef HAVE_ESPEAK
+#include "tts.h"
+#endif
 #include "splash.h"
 #include "viewport.h"
 #include "strptokspn_r.h"
@@ -37,6 +41,9 @@
 #endif
 
 static long progress_next_tick, talked_tick;
+#ifdef HAVE_ESPEAK
+static int progress_last_percent = -1;
+#endif
 
 #define MAXLINES  (LCD_HEIGHT/6)
 
@@ -361,13 +368,36 @@ static bool splash_internal(struct screen * screen, const char *fmt, va_list ap,
     return true; /* needs update */
 }
 
-void splashf(int ticks, const char *fmt, ...)
+#ifdef HAVE_ESPEAK
+static void splash_talk(const char *fmt, va_list arguments, int percent)
+{
+    char spoken[MAXBUFFER];
+    size_t size = sizeof(spoken) - (percent >= 0 ? 8 : 0);
+    if (vsnprintf(spoken, size, fmt, arguments) < 0)
+        return;
+    if (percent >= 0)
+    {
+        size_t length = strlen(spoken);
+        snprintf(spoken + length, sizeof(spoken) - length, " %d%%", percent);
+    }
+    for (char *character = spoken; *character; ++character)
+        if ((unsigned char)*character < 0x20)
+            *character = ' ';
+    talk_spell(spoken, false);
+}
+#endif
+
+static void splashvf(int ticks, bool speak, const char *fmt, va_list arguments)
 {
     va_list ap;
 
     /* fmt may be a so called virtual pointer. See settings.h. */
     long id;
-    if((id = P2ID((const unsigned char*)fmt)) >= 0)
+    if(speak && (id = P2ID((const unsigned char*)fmt)) >= 0
+#ifdef HAVE_ESPEAK
+       && !tts_is_available()
+#endif
+       )
         /* If fmt specifies a voicefont ID, and voice menus are
            enabled, then speak it. */
         cond_talk_ids_fq(id);
@@ -375,6 +405,15 @@ void splashf(int ticks, const char *fmt, ...)
     /* If fmt is a lang ID then get the corresponding string (which
        still might contain % place holders). */
     fmt = P2STR((unsigned char *)fmt);
+#ifdef HAVE_ESPEAK
+    if (speak && tts_is_available() && talk_menus_enabled(&global_settings))
+    {
+        va_copy(ap, arguments);
+        splash_talk(fmt, ap, -1);
+        va_end(ap);
+        talk_force_enqueue_next();
+    }
+#endif
     FOR_NB_SCREENS(i)
     {
         struct screen * screen = &(screens[i]);
@@ -382,7 +421,7 @@ void splashf(int ticks, const char *fmt, ...)
         viewport_set_defaults(&vp, screen->screen_type);
         struct viewport *last_vp = screen->set_viewport(&vp);
 
-        va_start(ap, fmt);
+        va_copy(ap, arguments);
         if (splash_internal(screen, fmt, ap, &vp, 0))
             screen->update_viewport();
         va_end(ap);
@@ -393,11 +432,64 @@ void splashf(int ticks, const char *fmt, ...)
         sleep(ticks);
 }
 
+void splashf(int ticks, const char *fmt, ...)
+{
+    va_list arguments;
+    va_start(arguments, fmt);
+    splashvf(ticks, true, fmt, arguments);
+    va_end(arguments);
+}
+
+void splashf_silent(int ticks, const char *fmt, ...)
+{
+    va_list arguments;
+    va_start(arguments, fmt);
+    splashvf(ticks, false, fmt, arguments);
+    va_end(arguments);
+}
+
 /* set delay before progress meter is shown */
 void splash_progress_set_delay(long delay_ticks)
 {
     progress_next_tick = current_tick + delay_ticks;
     talked_tick = 0;
+#ifdef HAVE_ESPEAK
+    progress_last_percent = -1;
+#endif
+}
+
+static void splash_progress_talk(int current, int total,
+                                 const char *fmt, va_list arguments)
+{
+    if (!talk_menus_enabled(&global_settings) || total <= 0)
+        return;
+    if (current < total && !talk_dynamic_enabled(&global_settings))
+        return;
+
+    int percent = (int)((int64_t)MIN(MAX(current, 0), total) * 100 / total);
+#ifdef HAVE_ESPEAK
+    if (tts_is_available())
+    {
+        if (percent == progress_last_percent ||
+            (progress_last_percent >= 0 && percent != 100 &&
+             TIME_BEFORE(current_tick, talked_tick + HZ*5)))
+            return;
+
+        splash_talk(fmt, arguments, percent);
+        progress_last_percent = percent;
+        talked_tick = current_tick;
+        return;
+    }
+#else
+    (void)fmt;
+    (void)arguments;
+#endif
+
+    if (TIME_AFTER(current_tick, talked_tick + HZ*5))
+    {
+        talked_tick = current_tick;
+        talk_ids(false, LANG_LOADING_PERCENT, TALK_ID(percent, UNIT_PERCENT));
+    }
 }
 
 /* splash a progress meter */
@@ -417,18 +509,13 @@ void splash_progress(int current, int total, const char *fmt, ...)
         vp_flag = 0; /* don't mark vp dirty to prevent flashing */
     }
 
-    if (global_settings.talk_menu &&
-        total > 0 &&
-        TIME_AFTER(current_tick, talked_tick + HZ*5))
-    {
-        talked_tick = current_tick;
-        talk_ids(false, LANG_LOADING_PERCENT,
-                 TALK_ID(current * 100 / total, UNIT_PERCENT));
-    }
-
     /* If fmt is a lang ID then get the corresponding string (which
        still might contain % place holders). */
     fmt = P2STR((unsigned char *)fmt);
+    va_start(ap, fmt);
+    splash_progress_talk(current, total, fmt, ap);
+    va_end(ap);
+
     FOR_NB_SCREENS(i)
     {
         struct screen * screen = &(screens[i]);

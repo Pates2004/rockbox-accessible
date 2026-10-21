@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -32,6 +33,9 @@
 #include "settings_list.h"
 #include "splash.h"
 #include "voice_thread.h"
+#ifdef HAVE_ESPEAK
+#include "tts.h"
+#endif
 #include "audio.h"
 #include "lang.h"
 #include "language.h"
@@ -764,6 +768,19 @@ static int _talk_spell(const char* spell, size_t len, bool enqueue)
 
     do_enqueue(enqueue); /* cut off all the pending stuff */
 
+#ifdef HAVE_ESPEAK
+    if (tts_is_available())
+    {
+        force_enqueue_next = false;
+        size_t length = 0;
+        while (length < len && spell[length])
+            ++length;
+        int result = tts_speak(spell, length, true);
+        need_shutup = result >= 0;
+        return result;
+    }
+#endif
+
     const char *last = spell;
     size_t len0 = len;
     /* Tokenize into UTF8 codepoints */
@@ -811,7 +828,10 @@ static int talk_spell_basename(const char *path,
 {
     if(prefix_ids)
     {
-        talk_idarray(prefix_ids, enqueue);
+        if (talk_is_disabled())
+            return -1;
+        do_enqueue(enqueue);
+        talk_idarray(prefix_ids, true);
         enqueue = true;
     }
     const char *basename;
@@ -846,8 +866,12 @@ static int talk_year(long year, bool enqueue)
 /* stop the playback and the pending clips */
 void talk_force_shutup(void)
 {
+#ifdef HAVE_ESPEAK
+    tts_stop();
+#else
     /* Had nothing to do (was frame boundary or not our clip) */
     voice_play_stop();
+#endif
     talk_queue_lock();
     queue_write = queue_read = 0; /* reset the queue */
     thumbnail_buf_used = 0;
@@ -909,6 +933,12 @@ void talk_init(void)
 {
     int filehandle;
     talk_temp_disable_count = 0;
+#ifdef HAVE_ESPEAK
+    static bool previous_tts_enabled;
+    bool mode_changed = previous_tts_enabled != global_settings.tts_enabled;
+    previous_tts_enabled = global_settings.tts_enabled;
+    if (!mode_changed)
+#endif
     if (talk_initialized && !strcasecmp(last_lang, global_settings.lang_file))
     {
         /* not a new file, nothing to do */
@@ -937,6 +967,16 @@ void talk_init(void)
      * this function is called when the talk voice file changes */
     index_handle = core_free(index_handle);
     talk_handle  = core_free(talk_handle);
+#ifdef HAVE_ESPEAK
+    if (global_settings.tts_enabled)
+    {
+        bool ready = tts_init();
+        talk_status = ready ? TALK_STATUS_OK : TALK_STATUS_ERR_NOFILE;
+        if (!ready)
+            splashf(HZ * 2, "%s", str(LANG_TTS_ERROR));
+        return;
+    }
+#endif
     /* don't free thumb handle, it doesn't depend on the actual voice file
      * and so we can re-use it if it's already allocated in any event */
 
@@ -1020,12 +1060,20 @@ int talk_id(int32_t id, bool enqueue)
     struct queue_entry clip;
     bool isloaded = true;
 
-    if (!has_voicefile)
+    if (!has_voicefile
+#ifdef HAVE_ESPEAK
+        && !tts_is_available()
+#endif
+        )
         return 0; /* no voicefile loaded, not an error -> pretend success */
     if (talk_is_disabled())
         return -1;
 
-    if (talk_handle <= 0 || index_handle <= 0) /* reload needed? */
+    if (
+#ifdef HAVE_ESPEAK
+        !tts_is_available() &&
+#endif
+        (talk_handle <= 0 || index_handle <= 0)) /* reload needed? */
     {
         int fd = open_voicefile();
         if (fd < 0 || !load_voicefile_index(fd))
@@ -1049,6 +1097,17 @@ int talk_id(int32_t id, bool enqueue)
         talk_value_decimal(id, unit, decimals, enqueue); /* speak it */
         return 0; /* and stop, end of special case */
     }
+
+#ifdef HAVE_ESPEAK
+    if (tts_is_available())
+    {
+        do_enqueue(enqueue);
+        force_enqueue_next = false;
+        int result = tts_speak_id(id, true);
+        need_shutup = result >= 0;
+        return result;
+    }
+#endif
 
     if (get_clip(id, &clip) < 0)
         return -1; /* not present */
@@ -1084,6 +1143,11 @@ int talk_idarray(const long *ids, bool enqueue)
 void talk_force_enqueue_next(void)
 {
     force_enqueue_next = true;
+}
+
+void talk_cancel_enqueue_next(void)
+{
+    force_enqueue_next = false;
 }
 
 /* play a thumbnail from file */
@@ -1158,6 +1222,17 @@ int talk_file(const char *root, const char *dir, const char *file,
               const char *ext, const long *prefix_ids, bool enqueue)
 /* Play a thumbnail file */
 {
+#ifdef HAVE_ESPEAK
+    if (tts_is_available())
+    {
+        const char *name = file;
+        if (file && !strcmp(file, dir_thumbnail_name))
+            name = dir ? dir : root;
+        if (!name)
+            return 0;
+        return talk_spell_basename(name, prefix_ids, enqueue) < 0 ? -1 : 1;
+    }
+#endif
     char buf[MAX_PATH];
     const char *fmt = "%s%s%s%s%s";
     /* Does root end with a slash? */
@@ -1176,6 +1251,10 @@ int talk_file(const char *root, const char *dir, const char *file,
 int talk_file_or_spell(const char *dirname, const char *filename,
                        const long *prefix_ids, bool enqueue)
 {
+#ifdef HAVE_ESPEAK
+    if (tts_is_available())
+        return talk_spell_basename(filename, prefix_ids, enqueue);
+#endif
     if (global_settings.talk_file_clip)
     {   /* .talk clips enabled */
         if(talk_file(dirname, NULL, filename, file_thumbnail_ext,
@@ -1208,6 +1287,10 @@ int talk_volume_id(int volume)
 int talk_dir_or_spell(const char* dirname,
                       const long *prefix_ids, bool enqueue)
 {
+#ifdef HAVE_ESPEAK
+    if (tts_is_available())
+        return talk_spell_basename(dirname, prefix_ids, enqueue);
+#endif
     if (global_settings.talk_dir_clip)
     {   /* .talk clips enabled */
         if (talk_file(dirname, NULL, dir_thumbnail_name, NULL,
@@ -1277,6 +1360,15 @@ int talk_number(long n, bool enqueue)
         return -1;
 
     do_enqueue(enqueue); /* cut off all the pending stuff */
+
+#ifdef HAVE_ESPEAK
+    if (tts_is_available())
+    {
+        char number[32];
+        snprintf(number, sizeof(number), "%ld", n);
+        return _talk_spell(number, NULL_TERMINATED, true);
+    }
+#endif
 
     if (n==0)
     {   /* special case */
@@ -1502,7 +1594,11 @@ int talk_time_intervals(long time, int unit_idx, bool enqueue)
     if (talk_is_disabled())
         return -1;
 
-    if (talk_handle <= 0 || index_handle <= 0) /* reload needed? */
+    if (
+#ifdef HAVE_ESPEAK
+        !tts_is_available() &&
+#endif
+        (talk_handle <= 0 || index_handle <= 0)) /* reload needed? */
     {
         int fd = open_voicefile();
         if (fd < 0 || !load_voicefile_index(fd))
@@ -1528,7 +1624,7 @@ int talk_time_intervals(long time, int unit_idx, bool enqueue)
         talk_time_value(units_in[UNIT_IDX_MS], UNIT_MS, true);
     }
 
-    return -1;
+    return 0;
 }
 
 /* spell a string */
@@ -1548,7 +1644,7 @@ void talk_disable(bool disable)
 void talk_setting(const void *global_settings_variable)
 {
     const struct settings_list *setting;
-    if (!global_settings.talk_menu)
+    if (!talk_menus_enabled(&global_settings))
         return;
     setting = find_setting(global_settings_variable);
     if (setting == NULL)
@@ -1640,6 +1736,10 @@ void talk_time(const struct tm *tm, bool enqueue)
 
 void talk_announce_voice_invalid(void)
 {
+#ifdef HAVE_ESPEAK
+    if (tts_is_available())
+        return;
+#endif
     int voice_fd;
     int voice_sz;
     int buf_handle;
@@ -1706,6 +1806,15 @@ bool talk_get_debug_data(struct talk_debug_data *data)
     struct clip_cache_metadata *cc;
 
     memset(data, 0, sizeof(*data));
+
+#ifdef HAVE_ESPEAK
+    if (tts_is_available())
+    {
+        strlcpy(data->voicefile, "eSpeak 1.44.05", sizeof(data->voicefile));
+        data->status = talk_status;
+        return data->status == TALK_STATUS_OK;
+    }
+#endif
 
     data->status = talk_status;
 

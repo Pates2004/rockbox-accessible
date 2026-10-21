@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -376,8 +377,13 @@ static void button_tick(void)
                         else
 #endif
                         {
-                            backlight_on();
-                            buttonlight_on();
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+                            if (!(btn & BUTTON_TOUCHSCREEN) || !touchscreen_wake_filter_needed())
+#endif
+                            {
+                                backlight_on();
+                                buttonlight_on();
+                            }
                         }
 #endif
                     }
@@ -393,9 +399,19 @@ static void button_tick(void)
                     else
 #endif
                     {
-                        skip_release = keypress_filter_fn(btn, data);
-                        backlight_on();
-                        buttonlight_on();
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+                        if ((btn & BUTTON_TOUCHSCREEN) && touchscreen_wake_filter_needed())
+                        {
+                            button_queue_try_post(btn, data);
+                            skip_release = false;
+                        }
+                        else
+#endif
+                        {
+                            skip_release = keypress_filter_fn(btn, data);
+                            backlight_on();
+                            buttonlight_on();
+                        }
                     }
 #else /* no backlight, nothing to skip */
                     button_queue_try_post(btn, data);

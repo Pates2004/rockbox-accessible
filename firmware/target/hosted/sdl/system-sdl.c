@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -43,6 +44,19 @@
 #include "panic.h"
 #include "debug.h"
 
+#if defined(WIN32) && defined(SIMULATOR) && defined(HAVE_ESPEAK)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <direct.h>
+#include <io.h>
+#include <wchar.h>
+#ifndef WC_ERR_INVALID_CHARS
+#define WC_ERR_INVALID_CHARS 0x00000080
+#endif
+#endif
+
 #if defined(RG_NANO) && !defined(SIMULATOR)
 #include <signal.h>
 #include "instant_play.h"
@@ -67,7 +81,7 @@ const char     *sim_root_dir = SIMULATOR_DEFAULT_ROOT;
 
 static SDL_Thread *evt_thread = NULL;
 
-#ifdef DEBUG
+#if defined(DEBUG) || defined(SIMULATOR)
 bool debug_audio = false;
 #endif
 
@@ -231,6 +245,9 @@ void system_init(void)
     if (SDL_InitSubSystem(SDL_INIT_TIMER))
         panicf("%s", SDL_GetError());
 
+    if (!sim_kernel_init())
+        exit(EXIT_FAILURE);
+
 #ifdef SIMULATOR
     {
         SDL_version compiled;
@@ -312,14 +329,152 @@ int hostfs_flush(void)
 }
 #endif /* HAVE_STORAGE_FLUSH */
 
+#if defined(WIN32) && defined(SIMULATOR) && defined(HAVE_ESPEAK)
+static void simulator_startup_error(const wchar_t *message,
+                                    const wchar_t *path) NORETURN_ATTR;
+
+static void simulator_startup_error(const wchar_t *message,
+                                    const wchar_t *path)
+{
+    wchar_t *details = NULL;
+    if (path)
+    {
+        size_t length = wcslen(message) + wcslen(path) + 3;
+        if (length <= SIZE_MAX / sizeof(*details))
+            details = malloc(length * sizeof(*details));
+        if (details)
+            swprintf(details, length, L"%ls\n\n%ls", message, path);
+    }
+
+    MessageBoxW(NULL, details ? details : message,
+                L"Rockbox: b\u0142\u0105d uruchamiania / startup error",
+                MB_OK | MB_ICONERROR | MB_SETFOREGROUND);
+    free(details);
+    exit(EXIT_FAILURE);
+}
+
+static wchar_t *simulator_wide_path(const char *path)
+{
+    int length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+                                     path, -1, NULL, 0);
+    if (length <= 0 || (size_t)length > SIZE_MAX / sizeof(wchar_t))
+        simulator_startup_error(L"Nie mo\u017cna odczyta\u0107 \u015bcie\u017cki symulatora jako UTF-8.\n"
+                                L"Cannot decode a simulator path as UTF-8.",
+                                NULL);
+
+    wchar_t *wide_path = malloc((size_t)length * sizeof(*wide_path));
+    if (!wide_path)
+        simulator_startup_error(L"Brak pami\u0119ci na \u015bcie\u017ck\u0119 symulatora.\n"
+                                L"Not enough memory for a simulator path.",
+                                NULL);
+    if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+                            path, -1, wide_path, length))
+        simulator_startup_error(L"Nie mo\u017cna odczyta\u0107 \u015bcie\u017cki symulatora jako UTF-8.\n"
+                                L"Cannot decode a simulator path as UTF-8.",
+                                NULL);
+    return wide_path;
+}
+
+static char *simulator_absolute_root(const char *root)
+{
+    wchar_t *wide_root = simulator_wide_path(root);
+    size_t capacity = GetFullPathNameW(wide_root, 0, NULL, NULL);
+    if (!capacity || capacity > SIZE_MAX / sizeof(wchar_t))
+        simulator_startup_error(L"Nie mo\u017cna ustali\u0107 katalogu podanego przez --root.\n"
+                                L"Cannot resolve the explicit --root directory.",
+                                wide_root);
+
+    wchar_t *absolute_root = malloc(capacity * sizeof(*absolute_root));
+    if (!absolute_root)
+        simulator_startup_error(L"Brak pami\u0119ci na \u015bcie\u017ck\u0119 katalogu --root.\n"
+                                L"Not enough memory for the --root directory.",
+                                wide_root);
+    DWORD length = GetFullPathNameW(wide_root, (DWORD)capacity, absolute_root, NULL);
+    if (!length || length >= capacity)
+        simulator_startup_error(L"Nie mo\u017cna ustali\u0107 katalogu podanego przez --root.\n"
+                                L"Cannot resolve the explicit --root directory.",
+                                wide_root);
+    free(wide_root);
+
+    int utf8_length = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
+                                          absolute_root, -1, NULL, 0,
+                                          NULL, NULL);
+    if (utf8_length <= 0)
+        simulator_startup_error(L"Nie mo\u017cna zapisa\u0107 \u015bcie\u017cki katalogu --root jako UTF-8.\n"
+                                L"Cannot encode the --root directory as UTF-8.",
+                                absolute_root);
+    char *utf8_root = malloc((size_t)utf8_length);
+    if (!utf8_root)
+        simulator_startup_error(L"Brak pami\u0119ci na \u015bcie\u017ck\u0119 katalogu --root.\n"
+                                L"Not enough memory for the --root directory.",
+                                absolute_root);
+    if (!WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
+                             absolute_root, -1, utf8_root, utf8_length,
+                             NULL, NULL))
+        simulator_startup_error(L"Nie mo\u017cna zapisa\u0107 \u015bcie\u017cki katalogu --root jako UTF-8.\n"
+                                L"Cannot encode the --root directory as UTF-8.",
+                                absolute_root);
+    free(absolute_root);
+    return utf8_root;
+}
+
+static wchar_t *simulator_prepare_startup(void)
+{
+    char *base_path = SDL_GetBasePath();
+    if (!base_path)
+        simulator_startup_error(L"Nie mo\u017cna ustali\u0107 katalogu programu symulatora.\n"
+                                L"Cannot locate the simulator executable directory.",
+                                NULL);
+    wchar_t *directory = simulator_wide_path(base_path);
+    SDL_free(base_path);
+
+    const wchar_t log_name[] = L"simulator.log";
+    size_t directory_length = wcslen(directory);
+    size_t log_length = sizeof(log_name) / sizeof(*log_name);
+    if (directory_length > SIZE_MAX / sizeof(wchar_t) - log_length)
+        simulator_startup_error(L"\u015acie\u017cka katalogu programu symulatora jest zbyt d\u0142uga.\n"
+                                L"The simulator executable directory is too long.",
+                                directory);
+    wchar_t *log_path = malloc((directory_length + log_length) * sizeof(*log_path));
+    if (!log_path)
+        simulator_startup_error(L"Brak pami\u0119ci na \u015bcie\u017ck\u0119 dziennika symulatora.\n"
+                                L"Not enough memory for the simulator log path.",
+                                directory);
+    memcpy(log_path, directory, directory_length * sizeof(*log_path));
+    memcpy(log_path + directory_length, log_name, sizeof(log_name));
+
+    if (!_wfreopen(log_path, L"w", stdout) ||
+        !_wfreopen(log_path, L"a", stderr))
+        simulator_startup_error(L"Nie mo\u017cna otworzy\u0107 pliku simulator.log obok programu.\n"
+                                L"Uruchom symulator z katalogu z prawem zapisu.\n"
+                                L"Nie zostanie u\u017cyty katalog profilu ani katalog tymczasowy.\n\n"
+                                L"Cannot open simulator.log beside the executable.\n"
+                                L"Run the simulator from a writable directory.\n"
+                                L"No profile or temporary directory will be used.",
+                                log_path);
+    if (_dup2(_fileno(stdout), _fileno(stderr)) < 0 ||
+        setvbuf(stdout, NULL, _IONBF, 0) != 0 ||
+        setvbuf(stderr, NULL, _IONBF, 0) != 0)
+        simulator_startup_error(L"Nie mo\u017cna przekierowa\u0107 wyj\u015bcia symulatora do simulator.log.\n"
+                                L"Cannot redirect simulator output to simulator.log.",
+                                log_path);
+    free(log_path);
+    return directory;
+}
+#endif
+
 void sys_handle_argv(int argc, char *argv[])
 {
+#if defined(WIN32) && defined(SIMULATOR) && defined(HAVE_ESPEAK)
+    wchar_t *executable_directory = simulator_prepare_startup();
+    bool explicit_root = false;
+#endif
     if (argc >= 1)
     {
         int x;
         for (x = 1; x < argc; x++)
         {
-#ifdef DEBUG
+#if defined(DEBUG) || defined(SIMULATOR)
             if (!strcmp("--debugaudio", argv[x]))
             {
                 debug_audio = true;
@@ -367,6 +522,9 @@ void sys_handle_argv(int argc, char *argv[])
                 if (x < argc)
                 {
                     sim_root_dir = argv[x];
+#if defined(WIN32) && defined(SIMULATOR) && defined(HAVE_ESPEAK)
+                    explicit_root = true;
+#endif
                     printf("Root directory: %s\n", sim_root_dir);
                 }
             }
@@ -393,7 +551,7 @@ void sys_handle_argv(int argc, char *argv[])
             {
                 printf("rockboxui\n");
                 printf("Arguments:\n");
-#ifdef DEBUG
+#if defined(DEBUG) || defined(SIMULATOR)
                 printf("  --debugaudio \t Write raw PCM data to audiodebug.raw\n");
 #endif
                 printf("  --debugwps \t Print advanced WPS debug info\n");
@@ -410,6 +568,17 @@ void sys_handle_argv(int argc, char *argv[])
             }
         }
     }
+#if defined(WIN32) && defined(SIMULATOR) && defined(HAVE_ESPEAK)
+    if (explicit_root)
+        sim_root_dir = simulator_absolute_root(sim_root_dir);
+    if (_wchdir(executable_directory) != 0)
+        simulator_startup_error(L"Nie mo\u017cna u\u017cy\u0107 katalogu programu symulatora.\n"
+                                L"Nie zostanie u\u017cyty katalog profilu ani katalog tymczasowy.\n\n"
+                                L"Cannot use the simulator executable directory.\n"
+                                L"No profile or temporary directory will be used.",
+                                executable_directory);
+    free(executable_directory);
+#endif
 #if SDL_MAJOR_VERSION > 1
     if (display_zoom != 1) {
         background = false;

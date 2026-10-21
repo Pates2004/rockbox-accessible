@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -34,6 +35,11 @@ void backlight_on_ignore(bool value, int timeout);
 void backlight_on(void);
 void backlight_off(void);
 void backlight_set_timeout(int value);
+
+#if defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+void backlight_set_screen_curtain(bool enabled);
+bool backlight_screen_curtain_active(void);
+#endif
 
 #ifdef HAVE_BACKLIGHT
 void backlight_init(void) INIT_ATTR;
@@ -105,6 +111,9 @@ void buttonlight_off(void);
 void buttonlight_set_timeout(int value);
 
 /* Private API for use in target tree backlight code only */
+#ifdef HAVE_SCREEN_CURTAIN
+void lcd_set_screen_curtain(bool enabled);
+#endif
 #ifdef HAVE_BUTTON_LIGHT
 int  buttonlight_get_current_timeout(void);
 #endif

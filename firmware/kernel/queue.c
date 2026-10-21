@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -704,6 +705,45 @@ bool queue_empty(const struct event_queue* q)
 bool queue_full(const struct event_queue* q)
 {
     return ((q->write - q->read) >= QUEUE_LENGTH);
+}
+
+void queue_remove_except(struct event_queue *queue, long preserved_mask,
+                         long preserved_id)
+{
+    int oldlevel = disable_irq_save();
+    corelock_lock(&queue->cl);
+
+    unsigned int retained = queue->read;
+    const unsigned int end = queue->write;
+    for (unsigned int position = queue->read; position != end; ++position)
+    {
+        unsigned int source = position & QUEUE_LENGTH_MASK;
+        const struct queue_event event = queue->events[source];
+        if ((event.id & preserved_mask) || event.id == preserved_id)
+        {
+            unsigned int destination = retained & QUEUE_LENGTH_MASK;
+            if (destination != source)
+            {
+                queue->events[destination] = event;
+#ifdef HAVE_EXTENDED_MESSAGING_AND_NAME
+                if (queue->send)
+                {
+                    queue->send->senders[destination] = queue->send->senders[source];
+                    queue->send->senders[source] = NULL;
+                }
+#endif
+            }
+            ++retained;
+        }
+        else
+        {
+            queue_do_unblock_sender(queue->send, source);
+        }
+    }
+    queue->write = retained;
+
+    corelock_unlock(&queue->cl);
+    restore_irq(oldlevel);
 }
 
 void queue_clear(struct event_queue* q)

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -35,6 +36,9 @@ enum
     Q_AUDIO_PLAY,
     Q_AUDIO_STOP,
     Q_AUDIO_PAUSE,
+#if (defined(HIBY_R1) && defined(HAVE_ESPEAK) && !defined(SIMULATOR) && !defined(BOOTLOADER)) || defined(HIBY_BT_SERVICE_HOST_TEST)
+    Q_AUDIO_PAUSE_GUARDED,
+#endif
     Q_AUDIO_SKIP,
     Q_AUDIO_PRE_FF_REWIND,
     Q_AUDIO_FF_REWIND,

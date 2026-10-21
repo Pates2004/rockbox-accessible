@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -26,6 +27,9 @@
 
 extern const struct menu_item_ex 
         display_menu,               /* display_menu.c   */
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+        touchscreen_menu,
+#endif
         playback_settings,          /* playback_menu.c  */
 #ifdef HAVE_RECORDING
         recording_settings,         /* recording_menu.c */

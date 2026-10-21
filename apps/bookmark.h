@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -22,6 +23,21 @@
 #define __BOOKMARK_H__
 
 #include <stdbool.h>
+#include <stdint.h>
+#include <sys/types.h>
+
+struct text_bookmark {
+    off_t offset;
+    off_t size;
+    uint32_t signature;
+    int unit;
+};
+
+enum text_bookmark_save_result {
+    TEXT_BOOKMARK_FAILED,
+    TEXT_BOOKMARK_SAVED,
+    TEXT_BOOKMARK_SAVED_LOCAL_ONLY
+};
 
 enum {
     BOOKMARK_FAIL = -1,
@@ -43,6 +59,9 @@ int  bookmark_autoload(const char* file);
 bool bookmark_load(const char* file, bool autoload);
 bool bookmark_exists(void);
 bool bookmark_is_bookmarkable_state(void);
+enum text_bookmark_save_result bookmark_text_create_ex(
+    const char *path, const struct text_bookmark *bookmark);
+bool bookmark_text_create(const char *path, const struct text_bookmark *bookmark);
+int bookmark_text_select(const char *path, struct text_bookmark *bookmark);
 
 #endif /* __BOOKMARK_H__ */
-

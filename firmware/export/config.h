@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -1437,6 +1438,12 @@ Lyre prototype 1 */
 #define HAVE_PCM_FULL_DUPLEX
 #endif
 
+#if CONFIG_CPU == AS3525v2 && defined(HAVE_RECORDING) \
+    && (CONFIG_PLATFORM & PLATFORM_NATIVE) && !defined(SIMULATOR) \
+    && !defined(BOOTLOADER) && !defined(__PCTOOL__)
+#define HAVE_PCM_RECORDING_VOICE
+#endif
+
 #if !defined(BOOTLOADER)
 #define HAVE_PITCHCONTROL
 #endif
@@ -1519,6 +1526,10 @@ Lyre prototype 1 */
 
 #if defined(PCM_NATIVE_BITDEPTH) && (PCM_NATIVE_BITDEPTH > 16)
 #define WANT_SWVOL_32
+#endif
+
+#if defined(HAVE_ESPEAK) && defined(HIBY_R1) && defined(HAVE_BACKLIGHT) && !defined(BOOTLOADER)
+#define HAVE_SCREEN_CURTAIN
 #endif
 
 #endif /* __CONFIG_H__ */

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -33,6 +34,9 @@
 #include "panic.h"
 #include "lcd.h"
 #include "usb.h"
+#if defined(HIBY_R1) && !defined(SIMULATOR)
+#include "usb-storage-hiby.h"
+#endif
 #include "button.h"
 #include "string.h"
 #ifdef HAVE_USBSTACK
@@ -113,6 +117,9 @@ static unsigned int usb_thread_entry = 0;
 static bool usb_monitor_enabled = false;
 static bool exclusive_storage_enabled = false;
 static bool exclusive_storage_requested = false;
+#if defined(HIBY_R1)
+static bool exclusive_storage_recovery = false;
+#endif
 static struct event_queue usb_queue SHAREDBSS_ATTR;
 #ifdef USB_ENABLE_HID
 static bool usb_hid = true;
@@ -268,8 +275,15 @@ static inline void usb_configure_drivers(int for_state)
     }
 }
 
-static inline void usb_slave_mode(bool on)
+static inline bool usb_slave_mode(bool on)
 {
+#if defined(HIBY_R1)
+    if (!on)
+        return hiby_usb_storage_target_restore().success;
+    if (!hiby_usb_storage_target_prepare().success)
+        return false;
+    return hiby_usb_storage_target_export().success;
+#else
     int rc;
 
     if(on)
@@ -283,6 +297,8 @@ static inline void usb_slave_mode(bool on)
         if(rc <= 0) /* no partition */
             panicf("mount: %d",rc);
     }
+    return true;
+#endif
 }
 
 void usb_signal_transfer_completion(
@@ -341,6 +357,10 @@ static inline void usb_configure_drivers(int for_state)
     switch(for_state)
     {
     case USB_POWERED:
+#if defined(HIBY_R1)
+        if (exclusive_storage_enabled || exclusive_storage_recovery)
+            break;
+#endif
         exclusive_storage_requested = false;
         break;
     case USB_INSERTED:
@@ -352,8 +372,15 @@ static inline void usb_configure_drivers(int for_state)
     }
 }
 
-static inline void usb_slave_mode(bool on)
+static inline bool usb_slave_mode(bool on)
 {
+#if defined(HIBY_R1)
+    if (!on)
+        return hiby_usb_storage_target_restore().success;
+    if (!hiby_usb_storage_target_prepare().success)
+        return false;
+    return hiby_usb_storage_target_export().success;
+#else
     int rc;
 
     if(on)
@@ -386,8 +413,33 @@ static inline void usb_slave_mode(bool on)
         if(rc <= 0) /* no partition */
             panicf("mount: %d",rc);
     }
+    return true;
+#endif
 }
 #endif /* HAVE_USBSTACK */
+
+static void usb_enter_exclusive_storage(void)
+{
+    if (usb_slave_mode(true))
+    {
+        exclusive_storage_enabled = true;
+#if defined(HIBY_R1)
+        exclusive_storage_recovery = false;
+#endif
+#ifdef USB_ENABLE_STORAGE
+        usb_signal_class_notify(USB_DRIVER_MASS_STORAGE, 0);
+#endif
+        return;
+    }
+#if defined(HIBY_R1)
+    exclusive_storage_recovery = !hiby_usb_storage_target_safe_to_resume();
+    if (exclusive_storage_recovery)
+        return;
+#endif
+    exclusive_storage_requested = false;
+    usb_num_acks_to_expect = 0;
+    queue_broadcast(SYS_USB_DISCONNECTED, 0);
+}
 
 static void usb_set_host_present(bool present)
 {
@@ -511,11 +563,7 @@ static void NORETURN_ATTR usb_thread(void)
 
             DEBUGF("usb: all threads have acknowledged the connect.\n");
             if(usb_host_present && exclusive_storage_requested) {
-                usb_slave_mode(true);
-                exclusive_storage_enabled = true;
-#ifdef USB_ENABLE_STORAGE
-                usb_signal_class_notify(USB_DRIVER_MASS_STORAGE, 0);
-#endif
+                usb_enter_exclusive_storage();
             }
             break;
             /* SYS_USB_CONNECTED_ACK */
@@ -882,11 +930,7 @@ void usb_request_exclusive_storage(void)
     usb_num_acks_to_expect = queue_broadcast(SYS_USB_CONNECTED, usb_broadcast_seqnum) - 1;
     DEBUGF("usb: waiting for %d acks...\n", usb_num_acks_to_expect);
     if(usb_num_acks_to_expect == 0 && usb_host_present) {
-        usb_slave_mode(true);
-        exclusive_storage_enabled = true;
-#ifdef USB_ENABLE_STORAGE
-        usb_signal_class_notify(USB_DRIVER_MASS_STORAGE, 0);
-#endif
+        usb_enter_exclusive_storage();
     }
 }
 
@@ -896,13 +940,20 @@ void usb_release_exclusive_storage(void)
     if(!exclusive_storage_requested) {
         return;
     }
+    if(exclusive_storage_enabled
+#if defined(HIBY_R1)
+       || exclusive_storage_recovery
+#endif
+       ) {
+        if (!usb_slave_mode(false))
+            return;
+    }
     exclusive_storage_requested = false;
     usb_num_acks_to_expect = 0;
-
-    if(exclusive_storage_enabled) {
-        usb_slave_mode(false);
-    }
     exclusive_storage_enabled = false;
+#if defined(HIBY_R1)
+    exclusive_storage_recovery = false;
+#endif
 
     /* Tell all threads that we are back in business */
     bccount = queue_broadcast(SYS_USB_DISCONNECTED, 0) - 1;

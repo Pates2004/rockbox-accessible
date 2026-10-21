@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -147,6 +148,15 @@
 #endif
 
 #define SCREEN_MAX_CHARS (LCD_WIDTH / SYSFONT_WIDTH)
+
+#ifdef HIBY_R1
+#include "hiby_power.h"
+
+static bool hiby_wifi_startup_debug(void)
+{
+    return hiby_power_status_menu() != 0;
+}
+#endif
 
 static const char* threads_getname(int selected_item, void *data,
                                    char *buffer, size_t buffer_len)
@@ -2915,6 +2925,9 @@ static const struct {
     unsigned char *desc; /* string or ID */
     bool (*function) (void); /* return true if USB was connected */
 } menuitems[] = {
+#ifdef HIBY_R1
+        { ID2P(LANG_HIBY_WIFI_STARTUP), hiby_wifi_startup_debug },
+#endif
 #if defined(CPU_COLDFIRE) || \
     (defined(CPU_PP) && !(CONFIG_STORAGE & STORAGE_SD)) || \
     CONFIG_CPU == IMX31L || defined(CPU_TCC780X) || CONFIG_CPU == AS3525v2 || \
@@ -3074,7 +3087,7 @@ static const char* menu_get_name(int item, void * data,
 static int menu_get_talk(int item, void *data)
 {
     (void)data;
-    if (global_settings.talk_menu && menuitems[item].desc)
+    if (talk_menus_enabled(&global_settings) && menuitems[item].desc)
     {
         talk_number(item + 1, true);
         talk_id(VOICE_PAUSE, true);

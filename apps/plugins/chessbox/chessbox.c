@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
 *             __________               __   ___.
 *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -202,7 +203,7 @@ void cb_talk(short x, short y)
 
 /* ---- Switch mark on board ---- */
 static void cb_switch ( short x , short y ) {
-    if (rb->global_settings->talk_menu)
+    if (talk_menus_enabled(rb->global_settings))
         cb_talk(x, y);
     rb->lcd_set_drawmode ( DRMODE_COMPLEMENT );
     rb->lcd_drawrect ( XOFS + x*TILE_WIDTH + 1 ,
@@ -688,7 +689,7 @@ static bool cb_start_viewer(const char* filename){
                             rb->splash ( HZ*2 , ID2P(LANG_CHESSBOX_GAME_END) );
                             break;
                         }
-                        if (rb->global_settings->talk_menu) {
+                        if (talk_menus_enabled(rb->global_settings)) {
                             rb->talk_id (VOICE_WHITE + curr_ply->player, false);
                             if (curr_ply->castle){
                                 rb->talk_id (VOICE_CHESSBOX_CASTLE, true);
@@ -744,7 +745,7 @@ static bool cb_start_viewer(const char* filename){
                             color[locn[curr_ply->row_from][curr_ply->column_to]] = neutral;
                         }
                         if (curr_ply->promotion){
-                            if (rb->global_settings->talk_menu)
+                            if (talk_menus_enabled(rb->global_settings))
                                 rb->talk_id (VOICE_PAWN +
                                              curr_ply->promotion_piece - 1,
                                              true);
@@ -878,7 +879,7 @@ static struct cb_command cb_getcommand (void) {
                 }
                 if ( marked && ( marked_x == x ) && ( marked_y == y ) ) {
                     from_marked = true ;
-                    if (rb->global_settings->talk_menu) {
+                    if (talk_menus_enabled(rb->global_settings)) {
                         cb_talk(x, y);
                         rb->talk_id(VOICE_MARKED, true);
                     }
@@ -900,7 +901,7 @@ static struct cb_command cb_getcommand (void) {
                 }
                 if ( marked && ( marked_x == x ) && ( marked_y == y ) ) {
                     from_marked = true ;
-                    if (rb->global_settings->talk_menu) {
+                    if (talk_menus_enabled(rb->global_settings)) {
                         cb_talk(x, y);
                         rb->talk_id(VOICE_MARKED, true);
                     }
@@ -922,7 +923,7 @@ static struct cb_command cb_getcommand (void) {
                 }
                 if ( marked && ( marked_x == x ) && ( marked_y == y ) ) {
                     from_marked = true ;
-                    if (rb->global_settings->talk_menu) {
+                    if (talk_menus_enabled(rb->global_settings)) {
                         cb_talk(x, y);
                         rb->talk_id(VOICE_MARKED, true);
                     }
@@ -944,7 +945,7 @@ static struct cb_command cb_getcommand (void) {
                 }
                 if ( marked && ( marked_x == x ) && ( marked_y == y ) ) {
                     from_marked = true ;
-                    if (rb->global_settings->talk_menu) {
+                    if (talk_menus_enabled(rb->global_settings)) {
                         cb_talk(x, y);
                         rb->talk_id(VOICE_MARKED, true);
                     }
@@ -966,14 +967,14 @@ static struct cb_command cb_getcommand (void) {
                         from_marked = true ;
                         marked_x = x;
                         marked_y = y;
-                        if (rb->global_settings->talk_menu)
+                        if (talk_menus_enabled(rb->global_settings))
                             rb->talk_id(VOICE_MARKED, false);
                     }
                 } else {
                     if ( ( marked_x == x ) && ( marked_y == y ) ) {
                         marked = false;
                         from_marked = false;
-                        if (rb->global_settings->talk_menu)
+                        if (talk_menus_enabled(rb->global_settings))
                             rb->talk_id(VOICE_UNMARKED, false);
                     } else {
                         xy2cr ( marked_x , marked_y , &c , &r );
@@ -1000,7 +1001,7 @@ static struct cb_command cb_getcommand (void) {
 /* Talk a move */
 static void talk_move(char *move_buffer)
 {
-    if (rb->global_settings->talk_menu) {
+    if (talk_menus_enabled(rb->global_settings)) {
         rb->talk_id (VOICE_PAWN +
                      board[locn[move_buffer[3]-'1'][move_buffer[2]-'a']] - 1,
                      false);

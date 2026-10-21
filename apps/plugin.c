@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -37,6 +38,12 @@
 #include "logf.h"
 #include "option_select.h"
 #include "talk.h"
+#ifdef HAVE_ESPEAK
+#include "tts.h"
+#ifdef HIBY_R1
+#include "accessibility.h"
+#endif
+#endif
 #include "version.h"
 #include "storage.h"
 #include "pcmbuf.h"
@@ -72,6 +79,58 @@
 #endif
 
 #define WRAPPER(_x_) _x_ ## _wrapper
+
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+static long plugin_button_filter(long button)
+{
+    if (button != BUTTON_NONE && button != BUTTON_REDRAW &&
+        !(button & (SYS_EVENT | BUTTON_MULTIMEDIA)) &&
+        accessibility_curtain_escape((int)button))
+    {
+        accessibility_reset();
+        return BUTTON_NONE;
+    }
+    return button;
+}
+
+static long plugin_button_get(bool block)
+{
+    for (;;)
+    {
+        long button = button_get(block);
+        long result = plugin_button_filter(button);
+        if (result != BUTTON_NONE || button == BUTTON_NONE || !block)
+            return result;
+    }
+}
+
+static long plugin_button_get_w_tmo(int ticks)
+{
+    uint32_t started = (uint32_t)current_tick;
+    int remaining = ticks;
+    for (;;)
+    {
+        long button = button_get_w_tmo(remaining);
+        long result = plugin_button_filter(button);
+        if (result != BUTTON_NONE || button == BUTTON_NONE || ticks == 0)
+            return result;
+        if (ticks > 0)
+        {
+            uint32_t elapsed = (uint32_t)current_tick - started;
+            if (elapsed >= (uint32_t)ticks)
+                return BUTTON_NONE;
+            remaining = ticks - (int)elapsed;
+        }
+    }
+}
+
+static void plugin_button_clear_queue(void)
+{
+    button_clear_queue();
+    accessibility_curtain_clear_queue();
+    accessibility_reset();
+}
+#endif
 
 #if (CONFIG_PLATFORM & PLATFORM_HOSTED)
 static unsigned char pluginbuf[PLUGIN_BUFFER_SIZE];
@@ -397,14 +456,23 @@ static const struct plugin_api rockbox_api = {
     core_set_keyremap,
 
     /* button */
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+    plugin_button_get,
+    plugin_button_get_w_tmo,
+#else
     button_get,
     button_get_w_tmo,
+#endif
     button_status,
 #ifdef HAVE_BUTTON_DATA
     button_get_data,
     button_status_wdata,
 #endif
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+    plugin_button_clear_queue,
+#else
     button_clear_queue,
+#endif
     button_queue_count,
 #ifdef HAS_BUTTON_HOLD
     button_hold,
@@ -953,7 +1021,11 @@ int plugin_load(const char* plugin, const void* parameter)
     strcpy(current_plugin, plugin);
     current_plugin_handle = lc_open(plugin, pluginbuf, PLUGIN_BUFFER_SIZE);
     if (current_plugin_handle == NULL) {
-        if (global_settings.talk_menu)
+        if (talk_menus_enabled(&global_settings)
+#ifdef HAVE_ESPEAK
+            && !tts_is_available()
+#endif
+            )
         {
             talk_id(LANG_PLUGIN_CANT_OPEN, false);
             talk_spell(plugin, true);
@@ -1025,7 +1097,7 @@ int plugin_load(const char* plugin, const void* parameter)
 #endif
 
     /* allow voice to back off if the plugin needs lots of memory */
-    if (!global_settings.talk_menu)
+    if (!talk_menus_enabled(&global_settings))
         talk_buffer_set_policy(TALK_BUFFER_LOOSE);
 
     screen_helper_setfont(FONT_UI);

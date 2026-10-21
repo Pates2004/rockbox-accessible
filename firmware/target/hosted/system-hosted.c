@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -34,6 +35,13 @@
 #include "lcd.h"
 #include "filesystem-hosted.h"
 #include "logf.h"
+#if defined(HIBY_R1) && !defined(BOOTLOADER)
+#include "power-control-hiby.h"
+#include "panic.h"
+#include <pthread.h>
+#include "backlight.h"
+static pthread_mutex_t poweroff_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 /* to make thread-internal.h happy */
 uintptr_t *stackbegin;
@@ -92,6 +100,21 @@ static void sig_handler(int sig, siginfo_t *siginfo, void *context)
 
 void power_off(void)
 {
+#if defined(HIBY_R1) && !defined(BOOTLOADER)
+    int lock_error = pthread_mutex_lock(&poweroff_mutex);
+    struct hiby_poweroff_result result = { .reboot_error = lock_error };
+    if (!lock_error)
+    {
+        backlight_hw_off();
+        result = hiby_poweroff();
+    }
+#ifdef HAVE_SCREEN_CURTAIN
+    backlight_set_screen_curtain(false);
+#endif
+    backlight_hw_on();
+    panicf("Power off failed: reboot=%d command=%d wait=%d", result.reboot_error,
+        result.command_error, result.child_error);
+#else
     backlight_hw_off();
     button_close_device();
     sync();
@@ -100,6 +123,7 @@ void power_off(void)
         // Make sure we're not throttling the cpu
         usleep(1000);
     }
+#endif
 }
 
 void system_init(void)
@@ -117,9 +141,15 @@ void system_init(void)
     sigaction(SIGFPE, &sa, NULL);
     sigaction(SIGSEGV, &sa, NULL);
     sigaction(SIGPIPE, &sa, NULL);
-    sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGBUS, &sa, NULL);
+#ifdef HIBY_R1
+    struct sigaction termination = {0};
+    sigemptyset(&termination.sa_mask);
+    termination.sa_handler = SIG_DFL;
+    sigaction(SIGTERM, &termination, NULL);
+#else
     sigaction(SIGTERM, &sa, NULL);
+#endif
 }
 
 void system_reboot(void)
@@ -143,10 +173,30 @@ void system_exception_wait(void)
 #else
 #define BDATA
 #endif
-    while(button_read_device(BDATA) != 0) {}
-    while(button_read_device(BDATA) == 0) {}
-    while(button_read_device(BDATA) != 0) {}
-    while(button_read_device(BDATA) == 0) {}
+    while(button_read_device(BDATA) != 0)
+    {
+#ifdef HIBY_R1
+        usleep(20000);
+#endif
+    }
+    while(button_read_device(BDATA) == 0)
+    {
+#ifdef HIBY_R1
+        usleep(20000);
+#endif
+    }
+    while(button_read_device(BDATA) != 0)
+    {
+#ifdef HIBY_R1
+        usleep(20000);
+#endif
+    }
+    while(button_read_device(BDATA) == 0)
+    {
+#ifdef HIBY_R1
+        usleep(20000);
+#endif
+    }
 }
 
 bool hostfs_removable(IF_MD_NONVOID(int drive))

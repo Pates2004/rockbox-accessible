@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -24,8 +25,18 @@
 #include "button-sdl.h"
 #include "lcd-sdl.h"
 #include "screendump.h"
+#include "backlight.h"
+#ifdef HAVE_SCREEN_CURTAIN
+#include "panic.h"
+#endif
 
 SDL_Surface* lcd_surface;
+#ifdef HAVE_SCREEN_CURTAIN
+static SDL_mutex *lcd_curtain_mutex;
+#if SDL_MAJOR_VERSION > 1
+static int sim_backlight_value = 100;
+#endif
+#endif
 
 #if LCD_DEPTH <= 8
 #ifdef HAVE_BACKLIGHT
@@ -130,8 +141,27 @@ void lcd_update(void)
     lcd_update_rect(0, 0, LCD_WIDTH, LCD_HEIGHT);
 }
 
+#ifdef HAVE_SCREEN_CURTAIN
+static void lcd_update_rect_locked(int x_start, int y_start, int width, int height)
+#else
 void lcd_update_rect(int x_start, int y_start, int width, int height)
+#endif
 {
+#ifdef HAVE_SCREEN_CURTAIN
+    if (backlight_screen_curtain_active())
+    {
+#if SDL_MAJOR_VERSION > 1
+        SDL_SetSurfaceAlphaMod(lcd_surface, 255);
+#else
+        SDL_SetAlpha(lcd_surface, 0, 255);
+#endif
+        SDL_FillRect(lcd_surface, NULL, SDL_MapRGB(lcd_surface->format, 0, 0, 0));
+        sdl_gui_update(lcd_surface, 0, 0, SIM_LCD_WIDTH, SIM_LCD_HEIGHT,
+                       SIM_LCD_WIDTH, SIM_LCD_HEIGHT,
+                       background ? UI_LCD_POSX : 0, background ? UI_LCD_POSY : 0);
+        return;
+    }
+#endif
 #ifdef HAVE_LCD_FLIP
     if (sim_lcd_flipped)
     {
@@ -162,9 +192,30 @@ void lcd_update_rect(int x_start, int y_start, int width, int height)
                    background ? UI_LCD_POSX : 0, background? UI_LCD_POSY : 0);
 }
 
-#if defined(HAVE_BACKLIGHT) && (SDL_MAJOR_VERSION > 1)
-void sim_backlight(int value)
+#ifdef HAVE_SCREEN_CURTAIN
+void lcd_update_rect(int x_start, int y_start, int width, int height)
 {
+    SDL_LockMutex(lcd_curtain_mutex);
+    lcd_update_rect_locked(x_start, y_start, width, height);
+    SDL_UnlockMutex(lcd_curtain_mutex);
+}
+#endif
+
+#if defined(HAVE_BACKLIGHT) && (SDL_MAJOR_VERSION > 1)
+#ifdef HAVE_SCREEN_CURTAIN
+static void sim_backlight_locked(int value)
+#else
+void sim_backlight(int value)
+#endif
+{
+#ifdef HAVE_SCREEN_CURTAIN
+    sim_backlight_value = value;
+    if (backlight_screen_curtain_active())
+    {
+        lcd_update_rect_locked(0, 0, LCD_WIDTH, LCD_HEIGHT);
+        return;
+    }
+#endif
 #if LCD_DEPTH <= 8
     if (value > 0) {
         sdl_set_gradient(lcd_surface, &lcd_bl_color_dark,
@@ -197,11 +248,39 @@ void sim_backlight(int value)
                    SIM_LCD_WIDTH, SIM_LCD_HEIGHT,
                    background ? UI_LCD_POSX : 0, background? UI_LCD_POSY : 0);
 }
+#ifdef HAVE_SCREEN_CURTAIN
+void sim_backlight(int value)
+{
+    SDL_LockMutex(lcd_curtain_mutex);
+    sim_backlight_locked(value);
+    SDL_UnlockMutex(lcd_curtain_mutex);
+}
+#endif
 #endif /* HAVE_BACKLIGHT */
+
+#ifdef HAVE_SCREEN_CURTAIN
+void lcd_set_screen_curtain(bool enabled)
+{
+    SDL_LockMutex(lcd_curtain_mutex);
+#if SDL_MAJOR_VERSION > 1
+    if (!enabled)
+        sim_backlight_locked(sim_backlight_value);
+#else
+    (void)enabled;
+#endif
+    lcd_update_rect_locked(0, 0, LCD_WIDTH, LCD_HEIGHT);
+    SDL_UnlockMutex(lcd_curtain_mutex);
+}
+#endif
 
 /* initialise simulator lcd driver */
 void lcd_init_device(void)
 {
+#ifdef HAVE_SCREEN_CURTAIN
+    lcd_curtain_mutex = SDL_CreateMutex();
+    if (lcd_curtain_mutex == NULL)
+        panicf("Cannot create LCD curtain mutex");
+#endif
 #if LCD_DEPTH >= 16
     lcd_surface = SDL_CreateRGBSurface(SDL_SWSURFACE, SIM_LCD_WIDTH, SIM_LCD_HEIGHT,
                                        LCD_DEPTH, 0, 0, 0, 0);

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -27,6 +28,11 @@
 #endif
 #include "lang.h"
 #include "usb.h"
+#if defined(HIBY_R1) && !defined(SIMULATOR)
+#include <errno.h>
+#include "usb-storage-hiby.h"
+#include "splash.h"
+#endif
 #if defined(HAVE_USBSTACK)
 #include "usb_core.h"
 #ifdef USB_ENABLE_HID
@@ -278,6 +284,9 @@ void gui_usb_screen_run(bool early_usb, intptr_t seqnum)
     usb_acknowledge(SYS_USB_CONNECTED_ACK, seqnum);
     usb_screens_draw(usb_screen_vps_ar);
     handle_usb_events(title);
+#if defined(HIBY_R1) && !defined(SIMULATOR)
+    struct hiby_usb_storage_status storage_status = hiby_usb_storage_target_status();
+#endif
 
 #if defined(USB_ENABLE_HID)
     if (global_settings.usb_hid)
@@ -308,6 +317,17 @@ void gui_usb_screen_run(bool early_usb, intptr_t seqnum)
         viewportmanager_theme_undo(i, false);
     }
 
+#if defined(HIBY_R1) && !defined(SIMULATOR)
+    if (storage_status.safe_to_resume &&
+        storage_status.error != HIBY_USB_STORAGE_ERROR_NONE)
+    {
+        int message = storage_status.error == HIBY_USB_STORAGE_ERROR_UNVERIFIED ?
+                      LANG_HIBY_USB_UNVERIFIED :
+                      storage_status.system_error == EBUSY ? LANG_HIBY_USB_BUSY :
+                      LANG_HIBY_USB_FAILED;
+        splash(HZ * 3, ID2P(message));
+    }
+#endif
     pop_current_activity();
 #ifdef SIMULATOR
     in_usb_screen = false;

@@ -1,4 +1,5 @@
 #!/bin/sh
+# Modified for Rockbox Accessible; change notice dated 2026-10-21.
 #             __________               __   ___.
 #   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
 #   Source     |       _//  _ \_/ ___\|  |/ /| __ \ /  _ \  \/  /
@@ -1523,6 +1524,7 @@ help() {
     --thumb           Build with -mthumb (for ARM builds)
     --no-thumb        The opposite of --thumb (don't use thumb even for targets
                       where this is the default
+    --integrated-espeak  Enable in-process eSpeak (SDL, Clip+/Clip Zip or HiBy R1)
     --sdl-threads     Force use of SDL threads. They have inferior performance,
                       but are better debuggable with GDB and valgrind
     --no-sdl-threads  Disallow use of SDL threads. This prevents the default
@@ -1562,6 +1564,7 @@ ARG_ADDR_SAN=
 ARG_UBSAN=
 ARG_STACK_PROTECTOR=
 ARG_PLUGINS=
+ARG_ESPEAK=
 err=
 for arg in "$@"; do
 	case "$arg" in
@@ -1579,6 +1582,7 @@ for arg in "$@"; do
 		--type=*)     ARG_TYPE=`echo "$arg" | cut -d = -f 2`;;
 		--voice=*)    ARG_VOICE=`echo "$arg" | cut -d = -f 2`;;
 		--plugins=*)  ARG_PLUGINS=`echo "$arg" | cut -d = -f 2`;;
+        --integrated-espeak) ARG_ESPEAK=1;;
 		--thumb)      ARG_ARM_THUMB=1;;
 		--no-thumb)   ARG_ARM_THUMB=0;;
 		--32-bit)     ARG_32BIT=1;;
@@ -4781,10 +4785,28 @@ if [ "$apps" = "bootloader" -o "$app_type" = "checkwps" -o "$app_type" = "warble
     no_utf8proc=1
 fi
 
+espeak_define=
+if [ "$ARG_ESPEAK" = "1" ]; then
+    if [ "$apps" = "bootloader" ] ||
+       { [ "$app_type" != "sdl-sim" ] &&
+         [ "$app_type:$modelname" != "hibyos:hibyr1" ] &&
+         { [ -n "$app_type" ] ||
+           { [ "$modelname" != "sansaclipplus" ] && [ "$modelname" != "sansaclipzip" ]; }; }; }; then
+        echo "Integrated eSpeak supports SDL simulators and experimental Clip+/Clip Zip and HiBy R1 builds only."
+        exit 1
+    fi
+    espeak_define="#define HAVE_ESPEAK 1
+#define TARGET_EXTRA_THREADS 1"
+    if [ "$winbuild" = "yes" ]; then
+        LDOPTS=`echo "$LDOPTS" | sed -e 's/-mconsole/-mwindows/g'`
+    fi
+fi
+
 cat > autoconf.h.new <<EOF
 /* This header was made by configure */
 #ifndef __BUILD_AUTOCONF_H
 #define __BUILD_AUTOCONF_H
+${espeak_define}
 
 /* lower case names match the what's exported in the Makefile
  * upper case name looks nicer in the code */
@@ -4947,6 +4969,8 @@ cat > Makefile <<EOF
 ## Automatically generated. http://www.rockbox.org/
 
 export SELECTED_PLUGINS_SRC=${selected_src}
+export ESPEAK=${ARG_ESPEAK}
+export CROSS_COMPILE=${CROSS_COMPILE}
 export SELECTED_PLUGINS_SUBDIRS=${selected_subdirs}
 
 export ROOTDIR=${rootdir}

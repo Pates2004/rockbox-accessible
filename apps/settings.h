@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -676,6 +677,23 @@ struct user_settings
     bool talk_battery_level;
     int  talk_mixer_amp; /* Relative volume of voices, MIX_AMP_MPUTE->MIX_AMP_UNITY */
 
+#ifdef HAVE_ESPEAK
+    bool tts_enabled;
+    int tts_rate;
+    int tts_rate_scale;
+    int tts_pitch;
+    int tts_volume;
+    int tts_range;
+    int tts_wordgap;
+    int tts_punctuation;
+    bool tts_ducking;
+    int tts_ducking_level;
+    int tts_reader_unit;
+    int tts_reader_page_lines;
+    char tts_language[40];
+    char tts_variant[40];
+#endif
+
     /* file browser sorting */
     bool sort_case; /* dir sort order: 0=case insensitive, 1=sensitive */
     int sort_dir;   /* 0=alpha, 1=date (old first), 2=date (new first) */
@@ -944,7 +962,95 @@ struct user_settings
 #if defined(HAVE_GENERAL_PURPOSE_LED)
     bool use_led_indicators;
 #endif
+#ifdef HAVE_ESPEAK
+    int list_boundary_feedback;
+    int tts_announce_position;
+    bool tts_announce_dynamic;
+    bool accessibility_shortcut_enabled;
+    bool accessibility_shortcut_espeak;
+    bool accessibility_shortcut_voice_files;
+#ifdef HAVE_TOUCHSCREEN
+    bool accessibility_shortcut_touch;
+#ifdef HAVE_SCREEN_CURTAIN
+    bool accessibility_shortcut_curtain;
+#endif
+#endif
+#endif
 };
+
+#ifdef HAVE_ESPEAK
+enum tts_position_mode
+{
+    TTS_POSITION_EVERYWHERE = 0,
+    TTS_POSITION_INTERFACE,
+    TTS_POSITION_FILES,
+    TTS_POSITION_EXCEPT_SLIDERS,
+    TTS_POSITION_OFF
+};
+#endif
+
+static inline bool talk_tts_enabled(const struct user_settings *settings)
+{
+#ifdef HAVE_ESPEAK
+    return settings->tts_enabled;
+#else
+    (void)settings;
+    return false;
+#endif
+}
+
+static inline bool talk_menus_enabled(const struct user_settings *settings)
+{
+    return talk_tts_enabled(settings) || settings->talk_menu;
+}
+
+#ifdef HAVE_ESPEAK
+static inline bool talk_list_position_enabled(const struct user_settings *settings,
+                                              enum list_position_source source)
+{
+    if ((unsigned int)source > LIST_POSITION_SLIDER)
+        return false;
+
+    switch (settings->tts_announce_position)
+    {
+        case TTS_POSITION_EVERYWHERE:
+            return true;
+        case TTS_POSITION_INTERFACE:
+            return source != LIST_POSITION_FILE;
+        case TTS_POSITION_FILES:
+            return source == LIST_POSITION_FILE;
+        case TTS_POSITION_EXCEPT_SLIDERS:
+            return source != LIST_POSITION_SLIDER;
+        case TTS_POSITION_OFF:
+        default:
+            return false;
+    }
+}
+#endif
+
+static inline bool talk_dynamic_enabled(const struct user_settings *settings)
+{
+#ifdef HAVE_ESPEAK
+    if (talk_tts_enabled(settings))
+        return settings->tts_announce_dynamic;
+#endif
+    return talk_menus_enabled(settings);
+}
+
+static inline bool talk_file_names_enabled(const struct user_settings *settings)
+{
+    return talk_tts_enabled(settings) || settings->talk_file;
+}
+
+static inline bool talk_directory_names_enabled(const struct user_settings *settings)
+{
+    return talk_tts_enabled(settings) || settings->talk_dir;
+}
+
+static inline bool talk_file_types_enabled(const struct user_settings *settings)
+{
+    return talk_tts_enabled(settings) || settings->talk_filetype;
+}
 
 /* global settings */
 extern struct user_settings global_settings;

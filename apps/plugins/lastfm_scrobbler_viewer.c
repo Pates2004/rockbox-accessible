@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -119,7 +120,7 @@ static void config_set_defaults(void)
     gConfig.col_width = MIN(LCD_WIDTH, 128);
     gConfig.hidecol_flags = 0;
     gConfig.separator = true;
-    gConfig.talk = rb->global_settings->talk_menu;
+    gConfig.talk = talk_menus_enabled(rb->global_settings);
 }
 
 static void config_save(void)

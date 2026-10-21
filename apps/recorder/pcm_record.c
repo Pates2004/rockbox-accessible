@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -26,6 +27,8 @@
 #include "panic.h"
 #include "string-extra.h"
 #include "pcm_record.h"
+#include "pcm_mixer.h"
+#include "voice_thread.h"
 #include "codecs.h"
 #include "logf.h"
 #include "thread.h"
@@ -785,6 +788,10 @@ static void check_spdif_samplerate(void)
     if (sampr == sample_rate)
         return;
 
+#if defined(HAVE_ESPEAK) && defined(HAVE_PCM_RECORDING_VOICE)
+    voice_stop();
+    mixer_reset();
+#endif
     codec_stop();
     pcm_stop_recording();
     reset_fifos(true);
@@ -957,6 +964,10 @@ unsigned long pcm_rec_sample_rate(void)
 /* Initializes recording - call before calling any other recording function */
 void audio_init_recording(void)
 {
+#if defined(HAVE_ESPEAK) && defined(HAVE_PCM_RECORDING_VOICE)
+    voice_stop();
+    mixer_reset();
+#endif
     LOGFQUEUE("audio >| pcmrec Q_AUDIO_INIT_RECORDING");
     audio_queue_send(Q_AUDIO_INIT_RECORDING, 1);
 }
@@ -964,6 +975,10 @@ void audio_init_recording(void)
 /* Closes recording - call audio_stop_recording first or risk data loss */
 void audio_close_recording(void)
 {
+#if defined(HAVE_ESPEAK) && defined(HAVE_PCM_RECORDING_VOICE)
+    voice_stop();
+    mixer_reset();
+#endif
     LOGFQUEUE("audio >| pcmrec Q_AUDIO_CLOSE_RECORDING");
     audio_queue_send(Q_AUDIO_CLOSE_RECORDING, 0);
 }
@@ -971,6 +986,10 @@ void audio_close_recording(void)
 /* Sets recording parameters */
 void audio_set_recording_options(struct audio_recording_options *options)
 {
+#if defined(HAVE_ESPEAK) && defined(HAVE_PCM_RECORDING_VOICE)
+    voice_stop();
+    mixer_reset();
+#endif
     LOGFQUEUE("audio >| pcmrec Q_AUDIO_RECORDING_OPTIONS");
     audio_queue_send(Q_AUDIO_RECORDING_OPTIONS, (intptr_t)options);
 }
@@ -1490,8 +1509,6 @@ static void on_recording_options(struct audio_recording_options *options)
     pre_record_seconds = options->rec_prerecord_time;
     enc_config         = options->enc_config;
     enc_config.afmt    = afmt;
-
-    queue_reply(&audio_queue, 0);  /* Let caller go */
 
     /* Pick appropriate PCM copy routine */
     pcm_copyfn = memcpy;

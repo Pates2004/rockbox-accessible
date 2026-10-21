@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -89,6 +90,10 @@ MENUITEM_FUNCTION(presetclear_item, 0, ID2P(LANG_FM_PRESET_CLEAR),
 
 MENUITEM_SETTING(set_region, &global_settings.fm_region, NULL);
 MENUITEM_SETTING(force_mono, &global_settings.fm_force_mono, NULL);
+#ifdef HAVE_RDS_CAP
+MENUITEM_FUNCTION(rds_info_item, MENU_FUNC_CHECK_RETVAL, ID2P(LANG_FM_RDS_INFO),
+                  radio_show_info, NULL, Icon_Radio_screen);
+#endif
 #if defined(HAVE_RDS_CAP) && defined(CONFIG_RTC)
 MENUITEM_SETTING(sync_rds_time, &global_settings.sync_rds_time, NULL);
 #endif
@@ -156,6 +161,9 @@ MAKE_MENU(radio_settings_menu, ID2P(LANG_FM_MENU), NULL,
 #endif
 #if defined(HAVE_RDS_CAP) && defined(CONFIG_RTC)
             &sync_rds_time,
+#endif
+#ifdef HAVE_RDS_CAP
+            &rds_info_item,
 #endif
             &scan_presets_item);
 

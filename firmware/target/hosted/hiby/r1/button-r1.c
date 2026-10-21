@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -54,14 +55,22 @@ int button_map(int keycode)
             return BUTTON_POWER;
         case BTN_TOUCH:
         {
+#if defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+            if (touchscreen_wake_enabled())
+                return BUTTON_TOUCH;
+#endif
 #ifdef HAVE_BACKLIGHT
+#ifdef HAVE_SCREEN_CURTAIN
+            if (backlight_screen_curtain_active())
+                return BUTTON_TOUCH;
+#endif
             if (is_backlight_on(true)) {
                 return BUTTON_TOUCH;
             }
             // Ignore
             return 0;
 #else
-            return BUTTON_TOUCH
+            return BUTTON_TOUCH;
 #endif
         }
         default:

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -33,6 +34,7 @@
  *  /t will start a new line and indent the string on that line
  */
 extern void splashf(int ticks, const char *fmt, ...) ATTRIBUTE_PRINTF(2, 3);
+extern void splashf_silent(int ticks, const char *fmt, ...) ATTRIBUTE_PRINTF(2, 3);
 
 /*
  * Puts a splash message centered on all the screens for a given period

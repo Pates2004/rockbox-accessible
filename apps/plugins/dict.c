@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -19,7 +20,6 @@
  ****************************************************************************/
 
 #include "plugin.h"
-#include "lib/simple_viewer.h"
 
 
 
@@ -40,20 +40,17 @@
 struct stWord
 {
     char word[WORDLEN];
-    long offset;
+    uint32_t offset;
 } STRUCT_PACKED;
 
 /* for endian problems */
 #ifdef ROCKBOX_BIG_ENDIAN
 #define reverse(x) x
 #else
-static long reverse (long N) {
-    unsigned char B[4];
-    B[0] = (N & 0x000000FF) >> 0;
-    B[1] = (N & 0x0000FF00) >> 8;
-    B[2] = (N & 0x00FF0000) >> 16;
-    B[3] = (N & 0xFF000000) >> 24;
-    return ((B[0] << 24) | (B[1] << 16) | (B[2] << 8) | (B[3] << 0));
+static uint32_t reverse(uint32_t value)
+{
+    return ((value & 0xff) << 24) | ((value & 0xff00) << 8) |
+           ((value & 0xff0000) >> 8) | ((value & 0xff000000) >> 24);
 }
 #endif
 
@@ -61,6 +58,79 @@ static long reverse (long N) {
 /* data files */
 #define DICT_INDEX PLUGIN_APPS_DIR "/dict.index"
 #define DICT_DESC PLUGIN_APPS_DIR "/dict.desc"
+
+#define DEFINITION_LINE_BYTES 180
+
+static const char *definition_next_line(const char *text)
+{
+    const char *end = text;
+    while (*end && *end != '\n' && end - text < DEFINITION_LINE_BYTES)
+        end++;
+    if (*end && *end != '\n')
+    {
+        while (end > text && ((unsigned char)*end & 0xc0) == 0x80)
+            end--;
+        const char *space = end;
+        while (space > text && !isspace((unsigned char)*space))
+            space--;
+        if (space > text)
+            end = space;
+    }
+    if (end == text && *end && !isspace((unsigned char)*end))
+        end++;
+    while (isspace((unsigned char)*end))
+        end++;
+    return end;
+}
+
+static const char *definition_get_name(int selected_item, void *data,
+                                       char *buffer, size_t buffer_len)
+{
+    if (selected_item < 0 || buffer_len == 0)
+        return NULL;
+    const char *text = data;
+    while (isspace((unsigned char)*text))
+        text++;
+    while (selected_item-- > 0 && *text)
+        text = definition_next_line(text);
+    if (!*text)
+        return NULL;
+    const char *end = definition_next_line(text);
+    while (end > text && isspace((unsigned char)end[-1]))
+        end--;
+    size_t length = MIN((size_t)(end - text), buffer_len - 1);
+    while (length > 0 && ((unsigned char)text[length] & 0xc0) == 0x80)
+        length--;
+    rb->memcpy(buffer, text, length);
+    buffer[length] = '\0';
+    return buffer;
+}
+
+static enum plugin_status show_definition(const char *word, char *description)
+{
+    int line_count = 0;
+    const char *text = description;
+    while (isspace((unsigned char)*text))
+        text++;
+    while (*text)
+    {
+        line_count++;
+        text = definition_next_line(text);
+    }
+    struct simplelist_info list;
+    rb->simplelist_info_init(&list, (char *)word, line_count, description);
+    list.get_name = definition_get_name;
+    return rb->simplelist_show_list(&list) ? PLUGIN_USB_CONNECTED : PLUGIN_OK;
+}
+
+static bool read_index_word(int descriptor, int index, struct stWord *word)
+{
+    if (index < 0 || rb->lseek(descriptor,
+                             (off_t)sizeof(*word) * index, SEEK_SET) < 0)
+        return false;
+    return rb->read(descriptor, word, sizeof(*word)) == (ssize_t)sizeof(*word) &&
+           rb->memchr(word->word, '\0', sizeof(word->word)) != NULL;
+}
 
 /* the main plugin function */
 enum plugin_status plugin_start(const void* parameter)
@@ -103,6 +173,12 @@ enum plugin_status plugin_start(const void* parameter)
     }
 
     filesize = rb->ffilesize(fIndex); /* get filesize */
+    if (filesize < 0 || filesize % sizeof(struct stWord) != 0)
+    {
+        rb->close(fIndex);
+        rb->splash(HZ*2, ID2P(LANG_FILE_ERROR));
+        return PLUGIN_ERROR;
+    }
 
     DEBUGF("Filesize: %d bytes = %d words \n", filesize,
            (filesize / (int)sizeof(struct stWord)));
@@ -116,8 +192,12 @@ enum plugin_status plugin_start(const void* parameter)
         probe = (high + low) / 2;
 
         /* Jump to word pointed by probe, and read it. */
-        rb->lseek(fIndex, sizeof(struct stWord) * probe, SEEK_SET);
-        rb->read(fIndex, &word, sizeof(struct stWord));
+        if (!read_index_word(fIndex, probe, &word))
+        {
+            rb->close(fIndex);
+            rb->splash(HZ*2, ID2P(LANG_FILE_ERROR));
+            return PLUGIN_ERROR;
+        }
 
         /* jump according to the found word. */
         if (rb->strcasecmp(searchword, word.word) < 0)
@@ -131,19 +211,18 @@ enum plugin_status plugin_start(const void* parameter)
     }
 
     /* read in the word */
-    rb->lseek(fIndex, sizeof(struct stWord) * low, SEEK_SET);
-    rb->read(fIndex, &word, sizeof(struct stWord));
+    bool found = read_index_word(fIndex, low, &word);
     rb->close(fIndex);
 
     /* Check if we found something */
-    if (low == -1 || rb->strcasecmp(searchword, word.word) != 0)
+    if (!found || rb->strcasecmp(searchword, word.word) != 0)
     {
         DEBUGF("Not found.\n");
         rb->splash(HZ*2, "Not found.");
         return PLUGIN_OK;
     }
 
-    DEBUGF("Found %s at offset %ld\n", word.word, reverse(word.offset));
+    DEBUGF("Found %s at offset %lu\n", word.word, (unsigned long)reverse(word.offset));
 
     /* now open the description file */
     fData = rb->open(DICT_DESC, O_RDONLY);
@@ -155,10 +234,21 @@ enum plugin_status plugin_start(const void* parameter)
     }
 
     /* seek to the right offset */
-    rb->lseek(fData, (off_t)reverse(word.offset), SEEK_SET);
+    if (rb->lseek(fData, (off_t)reverse(word.offset), SEEK_SET) < 0)
+    {
+        rb->close(fData);
+        rb->splash(HZ*2, ID2P(LANG_FILE_ERROR));
+        return PLUGIN_ERROR;
+    }
 
     /* Read in the description */
-    rb->read_line(fData, description, buffer_size);
+    description[0] = '\0';
+    if (rb->read_line(fData, description, buffer_size) < 0)
+    {
+        rb->close(fData);
+        rb->splash(HZ*2, ID2P(LANG_FILE_ERROR));
+        return PLUGIN_ERROR;
+    }
 
     /* And print it to debug. */
     DEBUGF("Description: %s\n", description);
@@ -166,7 +256,5 @@ enum plugin_status plugin_start(const void* parameter)
     rb->close(fData);
 
     /* display description. */
-    view_text(searchword, description);
-
-    return PLUGIN_OK;
+    return show_definition(searchword, description);
 }

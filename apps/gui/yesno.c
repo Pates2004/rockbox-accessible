@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -24,7 +25,11 @@
 #include "misc.h"
 #include "lang.h"
 #include "action.h"
+#include "accessibility.h"
 #include "talk.h"
+#ifdef HAVE_ESPEAK
+#include "tts.h"
+#endif
 #include "settings.h"
 #include "viewport.h"
 #include "appevents.h"
@@ -43,17 +48,77 @@ struct gui_yesno
     enum yesno_res tmo_default_res;
 };
 
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+static void gui_yesno_explore(struct gui_yesno *dialog)
+{
+    static const struct gui_yesno *last_dialog;
+    static int last_target;
+    int touch_x, touch_y;
+    bool force;
+    if (!accessibility_explore_point(&touch_x, &touch_y, &force))
+        return;
+    int target = -1;
+    int label = -1;
+    const char *text = NULL;
+    if (viewport_point_within_vp(&dialog->vp, touch_x, touch_y))
+    {
+        if (touch_y - dialog->vp.y >= dialog->vp.height / 2)
+        {
+            bool accept = touch_x - dialog->vp.x < dialog->vp.width / 2;
+            target = dialog->main_message->nb_lines + (accept ? 0 : 1);
+            label = accept ? LANG_SET_BOOL_YES : LANG_SET_BOOL_NO;
+        }
+        else
+        {
+            int height = dialog->display->getcharheight();
+            int shift = dialog->main_message->nb_lines + 3 < dialog->vp_lines ? 1 : 0;
+            if (height > 0)
+            {
+                int row = (touch_y - dialog->vp.y) / height - shift;
+                if (row >= 0 && row < dialog->main_message->nb_lines)
+                {
+                    text = dialog->main_message->message_lines[row];
+                    if (text && *P2STR((const unsigned char *)text))
+                        target = row;
+                }
+            }
+        }
+    }
+    accessibility_explore_feedback(dialog, target, target >= 0);
+    if (!force && last_dialog == dialog && last_target == target)
+        return;
+    last_dialog = dialog;
+    last_target = target;
+    if (label >= 0)
+        talk_id(label, false);
+    else if (target >= 0)
+        talk_spell(P2STR((const unsigned char *)text), false);
+    else
+        accessibility_speak_empty();
+}
+#endif
+
 static void talk_text_message(const struct text_message * message, bool enqueue)
 {
     int line;
     for(line=0; line < message->nb_lines; line++)
     {
-        long id = P2ID((unsigned char *)message->message_lines[line]);
+        const char *text = message->message_lines[line];
+        if (text == NULL)
+            continue;
+        long id = P2ID((const unsigned char *)text);
         if(id>=0)
         {
             talk_id(id, enqueue);
             enqueue = true;
         }
+#ifdef HAVE_ESPEAK
+        else if (tts_is_available() && *text != '\0')
+        {
+            talk_spell(text, enqueue);
+            enqueue = true;
+        }
+#endif
     }
 }
 
@@ -224,7 +289,8 @@ enum yesno_res gui_syncyesno_run_w_tmo(int ticks, enum yesno_res tmo_default_res
     #define YESNO_NONE (-1)
     int action;
     bool backlight_on;
-    bool talk_menu = global_settings.talk_menu;
+    bool talk_menu = talk_menus_enabled(&global_settings);
+    bool repeat_question = true;
     int result = YESNO_NONE;
     struct gui_yesno yn[NB_SCREENS];
     long talked_tick = current_tick - 1;
@@ -270,18 +336,32 @@ enum yesno_res gui_syncyesno_run_w_tmo(int ticks, enum yesno_res tmo_default_res
             gui_yesno_draw(&yn[i]);
 
         /* Repeat the question every 5secs (more or less) */
-        if (talk_menu && TIME_AFTER(current_tick, talked_tick))
+        if (talk_menu && repeat_question && TIME_AFTER(current_tick, talked_tick))
         {
             talked_tick = current_tick + (HZ*5);
             talk_text_message(main_message, false);
+#ifdef HAVE_ESPEAK
+            repeat_question = !tts_is_available();
+#endif
         }
         backlight_on = is_backlight_on(false);
-        action = get_action(CONTEXT_YESNOSCREEN, HZ / 2); /* for statubar and tmo */
+        action = get_action(
+#if defined(HIBY_R1)
+                            ALLOW_SOFTLOCK |
+#endif
+                            CONTEXT_YESNOSCREEN, HZ / 2); /* for statubar and tmo */
         switch (action)
         {
 #ifdef HAVE_TOUCHSCREEN
             case ACTION_TOUCHSCREEN:
             {
+#ifdef HAVE_ESPEAK
+                if (accessibility_enabled())
+                {
+                    gui_yesno_explore(&yn[0]);
+                    break;
+                }
+#endif
                 struct gesture_event gevent;
                 if (action_gesture_get_event_in_vp(&gevent, &yn[0].vp) &&
                     gevent.id == GESTURE_TAP)

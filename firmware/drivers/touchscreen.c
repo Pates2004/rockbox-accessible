@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -25,12 +26,46 @@
 #include "string.h"
 #include "logf.h"
 #include "lcd.h"
+#if defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+#include "backlight.h"
+#endif
 
 /* Size of the 'dead zone' around each 3x3 button */
 #define BUTTON_MARGIN_X (int)(LCD_WIDTH * 0.03)
 #define BUTTON_MARGIN_Y (int)(LCD_HEIGHT * 0.03)
 
 static bool touch_enabled = true;
+#if defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+static bool touch_wake_enabled;
+static bool touch_wake_locked;
+
+void touchscreen_set_wake_enabled(bool enabled)
+{
+    __atomic_store_n(&touch_wake_enabled, enabled, __ATOMIC_RELEASE);
+}
+
+bool touchscreen_wake_enabled(void)
+{
+    return __atomic_load_n(&touch_wake_enabled, __ATOMIC_ACQUIRE);
+}
+
+void touchscreen_set_wake_locked(bool locked)
+{
+    __atomic_store_n(&touch_wake_locked, locked, __ATOMIC_RELEASE);
+}
+
+bool touchscreen_wake_filter_needed(void)
+{
+    if (!touchscreen_wake_enabled())
+        return false;
+    bool locked = __atomic_load_n(&touch_wake_locked, __ATOMIC_ACQUIRE);
+#ifdef HAVE_BACKLIGHT
+    return locked || (!is_backlight_on(false) && !backlight_screen_curtain_active());
+#else
+    return locked;
+#endif
+}
+#endif
 static enum touchscreen_mode current_mode = TOUCHSCREEN_POINT;
 static const int touchscreen_buttons[3][3] =
 {
@@ -128,7 +163,11 @@ int touchscreen_to_pixels(int x, int y, int *data)
 
     map_pixels(&x, &y);
 
-    if (current_mode == TOUCHSCREEN_BUTTON)
+    if (current_mode == TOUCHSCREEN_BUTTON
+#if defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+        && !touchscreen_wake_filter_needed()
+#endif
+       )
     {
         int column = 0, row = 0;
 

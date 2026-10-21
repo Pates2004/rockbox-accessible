@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -48,7 +49,7 @@
 /*#define LOGF_ENABLE*/
 #include "logf.h"
 
-#ifdef DEBUG
+#if defined(DEBUG) || defined(SIMULATOR)
 extern bool debug_audio;
 #endif
 
@@ -72,10 +73,58 @@ static struct pcm_udata
     Uint8 *stream;
     Uint32 num_in;
     Uint32 num_out;
-#ifdef DEBUG
+#if defined(DEBUG) || defined(SIMULATOR)
     FILE  *debug;
 #endif
 } udata;
+
+#if defined(DEBUG) || defined(SIMULATOR)
+static void audio_debug_open(struct pcm_udata *data, bool append)
+{
+    if (!debug_audio || data->debug != NULL)
+        return;
+#ifdef WIN32
+    const char *mode = append ? "abN" : "wbN";
+#else
+    const char *mode = append ? "abe" : "wbe";
+#endif
+    data->debug = fopen("audiodebug.raw", mode);
+    if (data->debug == NULL)
+    {
+        debug_audio = false;
+        DEBUGF("Audio debug file open failed\n");
+        return;
+    }
+    DEBUGF("Audio debug file open\n");
+}
+
+static void audio_debug_close(struct pcm_udata *data)
+{
+    if (data->debug == NULL)
+        return;
+    FILE *stream = data->debug;
+    data->debug = NULL;
+    if (fclose(stream) != 0)
+    {
+        debug_audio = false;
+        DEBUGF("Audio debug file close failed\n");
+        return;
+    }
+    DEBUGF("Audio debug file closed\n");
+}
+
+static void audio_debug_write(struct pcm_udata *data, const void *buffer, size_t bytes)
+{
+    if (!debug_audio || data->debug == NULL)
+        return;
+    if (fwrite(buffer, 1, bytes, data->debug) != bytes || ferror(data->debug))
+    {
+        debug_audio = false;
+        DEBUGF("Audio debug file write failed\n");
+        audio_debug_close(data);
+    }
+}
+#endif
 
 static SDL_AudioSpec obtained;
 static SDL_AudioCVT cvt;
@@ -158,6 +207,13 @@ static void sink_set_freq_nolock(uint16_t freq)
     }
     pcm_sample_bytes = obtained.channels * pcm_channel_bytes;
 
+#if defined(DEBUG) || defined(SIMULATOR)
+    if (debug_audio)
+        DEBUGF("Audio debug format: rate=%d format=%u channels=%u frame_bytes=%lu\n",
+               obtained.freq, (unsigned)obtained.format, (unsigned)obtained.channels,
+               (unsigned long)pcm_sample_bytes);
+#endif
+
     cvt_status = SDL_BuildAudioCVT(&cvt, AUDIO_S16SYS, 2, pcm_sampr,
                     obtained.format, obtained.channels, obtained.freq);
 
@@ -193,22 +249,15 @@ static void sink_dma_stop(void)
     SDL_PauseAudio(1);
 #endif
 
-#ifdef DEBUG
-    if (udata.debug != NULL) {
-        fclose(udata.debug);
-        udata.debug = NULL;
-        DEBUGF("Audio debug file closed\n");
-    }
+#if defined(DEBUG) || defined(SIMULATOR)
+    audio_debug_close(&udata);
 #endif
 }
 
 static void write_to_soundcard(struct pcm_udata *udata)
 {
-#ifdef DEBUG
-    if (debug_audio && (udata->debug == NULL)) {
-        udata->debug = fopen("audiodebug.raw", "abe");
-        DEBUGF("Audio debug file open\n");
-    }
+#if defined(DEBUG) || defined(SIMULATOR)
+    audio_debug_open(udata, true);
 #endif
     if (cvt.needed) {
         Uint32 rd = udata->num_in;
@@ -243,10 +292,8 @@ static void write_to_soundcard(struct pcm_udata *udata)
             udata->num_in = cvt.len / pcm_sample_bytes;
             udata->num_out = cvt.len_cvt / pcm_sample_bytes;
 
-#ifdef DEBUG
-            if (udata->debug != NULL) {
-               fwrite(cvt.buf, sizeof(Uint8), cvt.len_cvt, udata->debug);
-            }
+#if defined(DEBUG) || defined(SIMULATOR)
+            audio_debug_write(udata, cvt.buf, cvt.len_cvt);
 #endif
             free(cvt.buf);
         } else {
@@ -272,21 +319,16 @@ static void write_to_soundcard(struct pcm_udata *udata)
                 break;
                 }
             }
-#ifdef DEBUG
-            if (udata->debug != NULL) {
-               fwrite(udata->stream, sizeof(Uint8), wr, udata->debug);
-            }
+#if defined(DEBUG) || defined(SIMULATOR)
+            audio_debug_write(udata, udata->stream, wr * pcm_sample_bytes);
 #endif
         }
     } else {
         udata->num_in = udata->num_out = MIN(udata->num_in, udata->num_out);
         pcm_copy_buffer(udata->stream, pcm_data,
                         udata->num_out * pcm_sample_bytes);
-#ifdef DEBUG
-        if (udata->debug != NULL) {
-           fwrite(pcm_data, sizeof(Uint8), udata->num_out * pcm_sample_bytes,
-                  udata->debug);
-        }
+#if defined(DEBUG) || defined(SIMULATOR)
+        audio_debug_write(udata, pcm_data, udata->num_out * pcm_sample_bytes);
 #endif
     }
 }
@@ -431,12 +473,9 @@ static void sink_dma_init(void)
         return;
     }
 
-#ifdef DEBUG
+#if defined(DEBUG) || defined(SIMULATOR)
     udata.debug = NULL;
-    if (debug_audio) {
-        udata.debug = fopen("audiodebug.raw", "wbe");
-        DEBUGF("Audio debug file open\n");
-    }
+    audio_debug_open(&udata, false);
 #endif
 }
 

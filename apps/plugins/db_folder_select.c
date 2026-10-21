@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -604,6 +605,9 @@ bool folder_select(char * header_text, char* setting, int setting_len)
     uint32_t hash = save_folders(root, hashed.buf, setting_len);
     rb->simplelist_info_init(&info, header_text,
             count_items(root), root);
+#ifdef HAVE_ESPEAK
+    info.position_source = LIST_POSITION_FILE;
+#endif
     info.get_name = folder_get_name;
     info.action_callback = folder_action_callback;
     info.get_icon = folder_get_icon;

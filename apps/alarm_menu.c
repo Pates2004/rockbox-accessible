@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -66,7 +67,7 @@ int alarm_screen(void)
                 rtc_init();
                 rtc_set_alarm(atm.tm_hour,atm.tm_min);
                 rtc_enable_alarm(true);
-                if (global_settings.talk_menu)
+                if (talk_menus_enabled(&global_settings))
                 {
                     talk_id(LANG_ALARM_MOD_TIME_TO_GO, true);
                     talk_value(mins_togo / 60, UNIT_HOUR, true);

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -36,6 +37,12 @@
 #include "sound.h"
 #include "misc.h"
 #include "talk.h"
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+#include "accessibility.h"
+#endif
+#ifdef HAVE_ESPEAK
+#include "tts.h"
+#endif
 #include "viewport.h"
 #include "appevents.h"
 #include "statusbar-skinned.h"
@@ -129,9 +136,16 @@ static void gui_synclist_init_display_settings(struct gui_synclist * list)
     list->scrollbar = gs->scrollbar;
     list->show_icons = gs->show_icons;
     list->scroll_paginated = gs->scroll_paginated;
+#ifdef HAVE_ESPEAK
+    list->keyclick = true;
+    list->talk_menu = true;
+    list->wraparound = true;
+    list->boundary_speech_pending = false;
+#else
     list->keyclick = gs->keyclick;
-    list->talk_menu = gs->talk_menu;
+    list->talk_menu = talk_menus_enabled(gs);
     list->wraparound = gs->list_wraparound;
+#endif
     list->cursor_style = gs->cursor_style;
 }
 
@@ -153,10 +167,16 @@ void gui_synclist_init(struct gui_synclist * gui_list,
     int selected_size, struct viewport list_parent[NB_SCREENS]
     )
 {
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    accessibility_set_target(gui_list);
+#endif
     gui_list->callback_get_item_icon = NULL;
     gui_list->callback_get_item_name = callback_get_item_name;
     gui_list->callback_speak_item = NULL;
     gui_list->callback_draw_item = NULL;
+#ifdef HAVE_ESPEAK
+    gui_list->position_source = LIST_POSITION_INTERFACE;
+#endif
     gui_list->nb_items = 0;
     gui_list->selected_item = 0;
     gui_synclist_init_display_settings(gui_list);
@@ -284,8 +304,34 @@ static void gui_list_put_selection_on_screen(struct gui_synclist * gui_list,
 #endif
 }
 
-static void edge_beep(struct gui_synclist * gui_list, bool wrap)
+static void edge_beep(struct gui_synclist * gui_list, bool wrap, bool at_end)
 {
+#ifdef HAVE_ESPEAK
+    int feedback = global_settings.list_boundary_feedback;
+    bool sound = (feedback == 0 || feedback == 1) && gui_list->keyclick &&
+                 keyclick_list_boundary_enabled() && global_settings.keyclick;
+    bool speech = (feedback == 0 || feedback == 2) && gui_list->talk_menu &&
+                  talk_menus_enabled(&global_settings);
+    if (speech)
+    {
+        if (talk_id(at_end ? LANG_ACCESSIBILITY_LIST_END : LANG_ACCESSIBILITY_LIST_START,
+                    !wrap && gui_list->boundary_speech_pending) >= 0)
+        {
+            gui_list->boundary_speech_pending = true;
+            gui_list->scheduled_talk_tick = 0;
+        }
+    }
+    if (sound)
+    {
+        system_sound_play(wrap ? SOUND_LIST_EDGE_BEEP_WRAP : SOUND_LIST_EDGE_BEEP_NOWRAP);
+        if (wrap)
+        {
+            gui_list->boundary_speech_pending = true;
+            gui_list->scheduled_talk_tick = 0;
+        }
+    }
+#else
+    (void)at_end;
     if (gui_list->keyclick)
     {
         enum system_sound sound = SOUND_LIST_EDGE_BEEP_WRAP;
@@ -321,42 +367,132 @@ static void edge_beep(struct gui_synclist * gui_list, bool wrap)
         else
             system_sound_play(sound);
     }
+#endif
 }
 
-static void _gui_synclist_speak_item(struct gui_synclist *lists)
+#ifdef HAVE_ESPEAK
+static void gui_synclist_clear_boundary_speech(struct gui_synclist *lists)
+{
+    if (lists->boundary_speech_pending)
+    {
+        lists->boundary_speech_pending = false;
+        talk_force_shutup();
+        talk_cancel_enqueue_next();
+    }
+}
+
+static void gui_synclist_talk_text(struct gui_synclist *lists)
+{
+    char buffer[MAX_PATH];
+    int count = MIN(lists->selected_size, lists->nb_items - lists->selected_item);
+
+    for (int offset = 0; offset < count; offset++)
+    {
+        buffer[0] = '\0';
+        const char *text = lists->callback_get_item_name(
+            lists->selected_item + offset, lists->data, buffer, sizeof(buffer));
+        if (text != NULL)
+        {
+            int identifier = P2ID((const unsigned char *)text);
+            if (identifier >= 0)
+                talk_id(identifier, true);
+            else if (*text != '\0')
+                talk_spell(text, true);
+        }
+    }
+}
+
+static void gui_synclist_talk_position(struct gui_synclist *lists)
+{
+    if (!lists->talk_menu ||
+        !talk_list_position_enabled(&global_settings, lists->position_source) ||
+        !tts_is_available())
+        return;
+
+    int item_size = MAX(1, lists->selected_size);
+    const char *connector = tts_get_voice_text(VOICE_OF);
+    if (!connector || !*connector)
+        return;
+
+    char text[96];
+    int length = snprintf(text, sizeof(text), "%d %s %d",
+                          lists->selected_item / item_size + 1, connector,
+                          (lists->nb_items - 1) / item_size + 1);
+    if (length >= 0 && (size_t)length < sizeof(text))
+        talk_spell(text, true);
+}
+#endif
+
+static void _gui_synclist_speak_item(struct gui_synclist *lists, bool immediate)
 {
     list_speak_item *cb = lists->callback_speak_item;
-    if (cb && lists->nb_items != 0)
+    bool can_speak = cb != NULL;
+#ifdef HAVE_ESPEAK
+    can_speak |= lists->talk_menu && talk_menus_enabled(&global_settings) && tts_is_available() &&
+                 lists->callback_get_item_name != NULL;
+#endif
+    if (!can_speak || lists->selected_item < 0 ||
+        lists->selected_item >= lists->nb_items)
     {
+        lists->scheduled_talk_tick = 0;
+        return;
+    }
+
+#ifdef HAVE_ESPEAK
+    if (!lists->boundary_speech_pending)
+#endif
         talk_shutup();
-        /* If we have just very recently started talking, then we want
-           to stay silent for a while until things settle. Likewise if
-           we already had a pending scheduled announcement not yet due
-           we need to reschedule it. */
-        if ((lists->scheduled_talk_tick &&
-                TIME_BEFORE(current_tick, lists->scheduled_talk_tick)) ||
-            (lists->last_talked_tick &&
-                TIME_BEFORE(current_tick, lists->last_talked_tick + HZ/5)))
-        {
-            lists->scheduled_talk_tick = current_tick + HZ/5;
-        }
+    if (!immediate && ((lists->scheduled_talk_tick &&
+            TIME_BEFORE(current_tick, lists->scheduled_talk_tick)) ||
+        (lists->last_talked_tick &&
+            TIME_BEFORE(current_tick, lists->last_talked_tick + HZ/5))))
+    {
+        lists->scheduled_talk_tick = current_tick + HZ/5;
+    }
+    else
+    {
+        lists->scheduled_talk_tick = 0;
+#ifdef HAVE_ESPEAK
+        bool preserve_boundary = lists->boundary_speech_pending;
+        if (preserve_boundary)
+            talk_force_enqueue_next();
+        int speech_result = 0;
+        if (cb)
+            speech_result = cb(lists->selected_item, lists->data);
         else
-        {
-            lists->scheduled_talk_tick = 0; /* work done */
+            gui_synclist_talk_text(lists);
+        if (speech_result >= 0)
+            gui_synclist_talk_position(lists);
+#else
+        if (cb)
             cb(lists->selected_item, lists->data);
-            lists->last_talked_tick = current_tick;
+#endif
+#ifdef HAVE_ESPEAK
+        if (preserve_boundary)
+        {
+            talk_cancel_enqueue_next();
+            lists->boundary_speech_pending = false;
         }
+#endif
+        lists->last_talked_tick = current_tick;
     }
 }
 
 void gui_synclist_speak_item(struct gui_synclist *lists)
 {
-    if (lists->talk_menu)
+#ifdef HAVE_ESPEAK
+    gui_synclist_clear_boundary_speech(lists);
+#endif
+    if (lists->talk_menu
+#ifdef HAVE_ESPEAK
+        && talk_menus_enabled(&global_settings)
+#endif
+       )
     {
         if (lists->nb_items == 0)
             talk_id(VOICE_EMPTY_LIST, true);
         else
-            _gui_synclist_speak_item(lists);
+            _gui_synclist_speak_item(lists, false);
     }
 }
 
@@ -365,22 +501,58 @@ void gui_synclist_speak_item(struct gui_synclist *lists)
  *  - gui_list : the list structure
  *  - item_number : the number of the item which will be selected
  */
-void gui_synclist_select_item(struct gui_synclist * gui_list, int item_number)
+static void gui_synclist_select_item_internal(struct gui_synclist *gui_list,
+                                              int item_number, bool preserve_boundary)
 {
     if (item_number >= gui_list->nb_items || item_number < 0)
         return;
     if (item_number != gui_list->selected_item)
     {
+#ifdef HAVE_ESPEAK
+        if (!preserve_boundary)
+            gui_synclist_clear_boundary_speech(gui_list);
+#endif
         gui_list->selected_item = item_number;
-        _gui_synclist_speak_item(gui_list);
+        _gui_synclist_speak_item(gui_list, preserve_boundary);
     }
     FOR_NB_SCREENS(i)
         gui_list_put_selection_on_screen(gui_list, i);
 }
 
+void gui_synclist_select_item(struct gui_synclist *gui_list, int item_number)
+{
+    gui_synclist_select_item_internal(gui_list, item_number, false);
+}
+
 static void gui_list_select_at_offset(struct gui_synclist * gui_list,
                                       int offset, bool allow_wrap)
 {
+#ifdef HAVE_ESPEAK
+    if (gui_list->nb_items <= 0 || gui_list->selected_size <= 0 || !offset)
+        return;
+    int last = (gui_list->nb_items - 1) / gui_list->selected_size * gui_list->selected_size;
+    bool at_end = offset > 0 && gui_list->selected_item >= last;
+    bool at_start = offset < 0 && gui_list->selected_item <= 0;
+    allow_wrap = allow_wrap && global_settings.list_wraparound;
+    bool wrapping = (at_start || at_end) && allow_wrap;
+    int new_selection;
+    if (at_start || at_end)
+    {
+        if (wrapping)
+        {
+            gui_synclist_clear_boundary_speech(gui_list);
+            talk_shutup();
+        }
+        edge_beep(gui_list, allow_wrap, at_end);
+        new_selection = at_end ? (allow_wrap ? 0 : last) : (allow_wrap ? last : 0);
+    }
+    else
+    {
+        int64_t requested = (int64_t)gui_list->selected_item + (int64_t)offset * gui_list->selected_size;
+        new_selection = requested < 0 ? 0 : requested > last ? last : (int)requested;
+    }
+    gui_synclist_select_item_internal(gui_list, new_selection, wrapping);
+#else
     if (gui_list->selected_size > 1)
     {
         offset *= gui_list->selected_size;
@@ -392,16 +564,45 @@ static void gui_list_select_at_offset(struct gui_synclist * gui_list,
     if (new_selection >= gui_list->nb_items)
     {
         new_selection = allow_wrap ? 0 : remain;
-        edge_beep(gui_list, allow_wrap);
+        edge_beep(gui_list, allow_wrap, true);
     }
     else if (new_selection < 0)
     {
         new_selection = allow_wrap ? remain : 0;
-        edge_beep(gui_list, allow_wrap);
+        edge_beep(gui_list, allow_wrap, false);
     }
 
     gui_synclist_select_item(gui_list, new_selection);
+#endif
 }
+
+#ifdef HAVE_ESPEAK
+static void gui_synclist_select_endpoint(struct gui_synclist *lists, int action, enum screen_type screen)
+{
+    if (lists->nb_items <= 0 || lists->selected_size <= 0)
+    {
+        gui_synclist_speak_item(lists);
+        return;
+    }
+    int last = (lists->nb_items - 1) / lists->selected_size * lists->selected_size;
+    int target = action == ACTION_LIST_LAST ? last : 0;
+    if (action == ACTION_LIST_PAGE_FIRST || action == ACTION_LIST_PAGE_LAST)
+    {
+        int first = MIN(last, MAX(0, lists->start_item[screen]));
+        int lines = MAX(1, list_get_nb_lines(lists, screen));
+        if (action == ACTION_LIST_PAGE_FIRST)
+            target = (int)MIN(((int64_t)first + lists->selected_size - 1) /
+                             lists->selected_size * lists->selected_size, last);
+        else
+            target = (int)MIN((int64_t)first + lines - 1, last) / lists->selected_size * lists->selected_size;
+        target = MIN(target, last);
+    }
+    if (target == lists->selected_item)
+        gui_synclist_speak_item(lists);
+    else
+        gui_synclist_select_item(lists, target);
+}
+#endif
 
 /*
  * Adds an item to the list (the callback will be asked for one more item)
@@ -560,6 +761,20 @@ bool gui_synclist_keyclick_callback(int action, void* data)
 {
     struct gui_synclist *lists = (struct gui_synclist *)data;
 
+#ifdef HAVE_ESPEAK
+    if (lists->nb_items <= 0 || lists->selected_size <= 0)
+        return action != ACTION_STD_PREV && action != ACTION_STD_PREVREPEAT &&
+               action != ACTION_STD_NEXT && action != ACTION_STD_NEXTREPEAT &&
+               action != ACTION_LISTTREE_PGUP && action != ACTION_LISTTREE_PGDOWN &&
+               action != ACTION_NONE && !IS_SYSEVENT(action);
+    int last = (lists->nb_items - 1) / lists->selected_size * lists->selected_size;
+    if (lists->selected_item <= 0 &&
+        (action == ACTION_STD_PREV || action == ACTION_STD_PREVREPEAT || action == ACTION_LISTTREE_PGUP))
+        return false;
+    if (lists->selected_item >= last &&
+        (action == ACTION_STD_NEXT || action == ACTION_STD_NEXTREPEAT || action == ACTION_LISTTREE_PGDOWN))
+        return false;
+#else
     /* Block the beep if we're at the end of the list and we're not wrapping. */
     if (lists->selected_item == 0)
     {
@@ -576,6 +791,7 @@ bool gui_synclist_keyclick_callback(int action, void* data)
         if (action == ACTION_STD_NEXT && !lists->wraparound)
             return false;
     }
+#endif
 
     return action != ACTION_NONE && !IS_SYSEVENT(action);
 }
@@ -658,6 +874,23 @@ bool gui_synclist_do_button(struct gui_synclist * lists, int *actionptr)
 
     switch (action)
     {
+#ifdef HAVE_ESPEAK
+        case ACTION_LIST_FIRST:
+        case ACTION_LIST_LAST:
+        case ACTION_LIST_PAGE_FIRST:
+        case ACTION_LIST_PAGE_LAST:
+        {
+            int screen = SCREEN_MAIN;
+#ifdef HAVE_REMOTE_LCD
+            if (get_action_statuscode(NULL) & ACTION_REMOTE)
+                screen = SCREEN_REMOTE;
+#endif
+            gui_synclist_select_endpoint(lists, action, screen);
+            gui_synclist_draw(lists);
+            yield();
+            return true;
+        }
+#endif
         case ACTION_REDRAW:
             gui_synclist_draw(lists);
             return true;
@@ -786,7 +1019,7 @@ bool gui_synclist_do_button(struct gui_synclist * lists, int *actionptr)
     if(lists->scheduled_talk_tick
        && TIME_AFTER(current_tick, lists->scheduled_talk_tick))
         /* scheduled postponed item announcement is due */
-        _gui_synclist_speak_item(lists);
+        _gui_synclist_speak_item(lists, false);
     return false;
 }
 
@@ -843,10 +1076,8 @@ int simplelist_get_line_count(void)
 /* set/edit a line pointer in the list. */
 void simplelist_setline(const char *text)
 {
-    int line_number = simplelist_line_count++;
-    if (simplelist_line_count >= SIMPLELIST_MAX_LINES)
-        simplelist_line_count = 0;
-    simplelist_text[line_number] = text;
+    if (simplelist_line_count < SIMPLELIST_MAX_LINES)
+        simplelist_text[simplelist_line_count++] = text;
 }
 
 /* add/edit a line in the list.
@@ -855,15 +1086,20 @@ void simplelist_setline(const char *text)
 void simplelist_addline(const char *fmt, ...)
 {
     va_list ap;
-    size_t len = simplelist_line_remaining;
+    if (simplelist_line_count >= SIMPLELIST_MAX_LINES ||
+        simplelist_line_remaining <= 1)
+        return;
 
     char *bufpos = &simplelist_buffer[simplelist_line_pos];
-    simplelist_setline(bufpos);
 
     va_start(ap, fmt);
-    len = vsnprintf(bufpos, simplelist_line_remaining, fmt, ap);
+    int written = vsnprintf(bufpos, simplelist_line_remaining, fmt, ap);
     va_end(ap);
-    len++;
+    if (written < 0)
+        return;
+
+    size_t len = MIN((size_t)written, (size_t)simplelist_line_remaining - 1) + 1;
+    simplelist_setline(bufpos);
     simplelist_line_remaining -= len;
     simplelist_line_pos += len;
 }
@@ -906,6 +1142,9 @@ bool simplelist_show_list(struct simplelist_info *info)
 
     gui_synclist_init(&lists, getname,  info->callback_data,
                       info->scroll_all, info->selection_size, NULL);
+#ifdef HAVE_ESPEAK
+    lists.position_source = info->position_source;
+#endif
 
     if (info->title)
         gui_synclist_set_title(&lists, info->title, info->title_icon);
@@ -921,9 +1160,14 @@ bool simplelist_show_list(struct simplelist_info *info)
     if (info->action_callback)
         info->action_callback(ACTION_REDRAW, &lists);
 
+    if (info->get_name == NULL)
+        line_count = simplelist_line_count;
+
     gui_synclist_set_nb_items(&lists, line_count*info->selection_size);
 
-    gui_synclist_select_item(&lists, info->selection);
+    if (info->selection >= 0 && info->selection < lists.nb_items)
+        lists.selected_item = info->selection;
+    gui_synclist_select_item(&lists, lists.selected_item);
 
     gui_synclist_draw(&lists);
 
@@ -1012,6 +1256,9 @@ void simplelist_info_init(struct simplelist_info *info, char* title,
     info->scroll_all = false;
     info->hide_theme = false;
     info->speak_onshow = true;
+#ifdef HAVE_ESPEAK
+    info->position_source = LIST_POSITION_INTERFACE;
+#endif
     info->timeout = HZ/10;
     info->selection = 0;
     info->action_callback = NULL;
@@ -1024,5 +1271,5 @@ void simplelist_info_init(struct simplelist_info *info, char* title,
     info->selection_color = NULL;
 #endif
     info->callback_data = data;
-    simplelist_line_count = 0;
+    simplelist_reset_lines();
 }

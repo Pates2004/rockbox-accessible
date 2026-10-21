@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -72,5 +73,12 @@ bool touchscreen_is_enabled(void);
 #endif
 
 void touchscreen_last_state(int *x, int *y, int *state);
+
+#if defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+void touchscreen_set_wake_enabled(bool enabled);
+bool touchscreen_wake_enabled(void);
+void touchscreen_set_wake_locked(bool locked);
+bool touchscreen_wake_filter_needed(void);
+#endif
 
 #endif /* __TOUCHSCREEN_INCLUDE_H_ */

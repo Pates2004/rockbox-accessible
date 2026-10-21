@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -64,6 +65,10 @@ static void cpuboost(int onoff)
 
 static char* _do_action(int action, char* str, int line)
 {
+    if (line < 0 || line > line_count ||
+        (action != ACTION_INSERT && line == line_count) ||
+        (action == ACTION_CONCAT && line == 0))
+        return NULL;
     int len, lennew;
     int i=0,c=0;
     if (line>=last_action_line)
@@ -139,12 +144,82 @@ static const char* list_get_name_cb(int selected_item, void* data,
 {
     (void)data;
     char *b = do_action(ACTION_GET, 0, selected_item);
+    if (b == NULL || buf_len == 0)
+        return NULL;
     /* strlcpy(dst, src, siz) returns strlen(src) */
     if (rb->strlcpy(buf, b, buf_len) >= buf_len)
     {
-        rb->strcpy(&buf[buf_len-10], " ...");
+        if (buf_len >= 5)
+            rb->strcpy(&buf[buf_len-5], " ...");
     }
     return buf;
+}
+
+static int speak_editor_line(int selected_item, void *data)
+{
+    (void)data;
+    if (!talk_menus_enabled(rb->global_settings) || selected_item < 0 ||
+        selected_item >= line_count)
+        return 0;
+
+    const char *text = do_action(ACTION_GET, NULL, selected_item);
+    if (!text[0])
+        return rb->talk_id(VOICE_BLANK, false);
+#ifdef HAVE_ESPEAK
+    if (rb->global_settings->tts_enabled)
+    {
+        char chunk[769];
+        bool enqueue = false;
+        while (*text && talk_menus_enabled(rb->global_settings))
+        {
+            size_t length = MIN(rb->strlen(text), sizeof(chunk) - 1);
+            while (length > 0 && ((unsigned char)text[length] & 0xc0) == 0x80)
+                length--;
+            if (length == 0)
+                return -1;
+            rb->memcpy(chunk, text, length);
+            chunk[length] = '\0';
+            int result = rb->talk_spell(chunk, enqueue);
+            if (result < 0)
+                return result;
+            text += length;
+            enqueue = true;
+        }
+        return 0;
+    }
+#endif
+    return rb->talk_spell(text, false);
+}
+
+static int read_editor_line(int descriptor)
+{
+    int result = rb->read_line(descriptor, temp_line, MAX_LINE_LEN);
+    if (result <= 0 || rb->strlen(temp_line) != MAX_LINE_LEN - 1)
+        return result;
+
+    off_t position = rb->lseek(descriptor, 0, SEEK_CUR);
+    if (position < 0)
+        return -1;
+
+    char next;
+    ssize_t count = rb->read(descriptor, &next, 1);
+    if (count < 0)
+        return -1;
+    if (count == 0)
+        return result;
+    if (next == '\n')
+        return result + 1;
+    if (next == '\r')
+    {
+        count = rb->read(descriptor, &next, 1);
+        if (count < 0)
+            return -1;
+        if (count > 0 && next == '\n')
+            return result + 2;
+    }
+    if (rb->lseek(descriptor, position, SEEK_SET) < 0)
+        return -1;
+    return result;
 }
 
 static void get_eol_string(char* fn)
@@ -226,9 +301,21 @@ static bool save_changes(int overwrite)
 static void setup_lists(struct gui_synclist *lists, int sel)
 {
     rb->gui_synclist_init(lists,list_get_name_cb,0, false, 1, NULL);
+    rb->gui_synclist_set_voice_callback(lists, speak_editor_line);
     rb->gui_synclist_set_nb_items(lists,line_count);
+    lists->selected_item = sel;
     rb->gui_synclist_select_item(lists, sel);
     rb->gui_synclist_draw(lists);
+    rb->gui_synclist_speak_item(lists);
+}
+
+static void refresh_editor_list(int previous_selection, bool speak)
+{
+    rb->gui_synclist_set_nb_items(&lists, line_count);
+    if (line_count > 0 && line_count <= previous_selection)
+        rb->gui_synclist_select_item(&lists, line_count - 1);
+    if (speak && previous_selection == rb->gui_synclist_get_sel_pos(&lists))
+        rb->gui_synclist_speak_item(&lists);
 }
 
 enum {
@@ -291,12 +378,16 @@ static int do_item_menu(int cur_sel)
             break;
         }
         case 1: /* cut */
+            if (!line_count)
+                break;
             rb->strlcpy(copy_buffer, do_action(ACTION_GET, 0, cur_sel),
                         MAX_LINE_LEN);
             do_action(ACTION_REMOVE, 0, cur_sel);
             ret = MENU_RET_UPDATE;
         break;
         case 2: /* copy */
+            if (!line_count)
+                break;
             rb->strlcpy(copy_buffer, do_action(ACTION_GET, 0, cur_sel),
                         MAX_LINE_LEN);
             ret = MENU_RET_NO_UPDATE;
@@ -312,7 +403,7 @@ static int do_item_menu(int cur_sel)
         case 4: /* insert below */
             if (!rb->kbd_input(copy_buffer,MAX_LINE_LEN, NULL))
             {
-                do_action(ACTION_INSERT,copy_buffer,cur_sel+1);
+                do_action(ACTION_INSERT,copy_buffer,line_count ? cur_sel+1 : 0);
                 copy_buffer[0]='\0';
                 ret = MENU_RET_UPDATE;
             }
@@ -419,7 +510,8 @@ enum plugin_status plugin_start(const void* parameter)
             audio_buf = true;
         }
         /* read in the file */
-        while (rb->read_line(fd,temp_line,MAX_LINE_LEN) > 0)
+        int bytes_read;
+        while ((bytes_read = read_editor_line(fd)) > 0)
         {
             if (!do_action(ACTION_INSERT,temp_line,line_count))
             {
@@ -429,6 +521,12 @@ enum plugin_status plugin_start(const void* parameter)
             }
         }
         rb->close(fd);
+        if (bytes_read < 0)
+        {
+            cpuboost(0);
+            rb->splash(HZ*2, ID2P(LANG_FILE_ERROR));
+            return PLUGIN_ERROR;
+        }
         newfile = false;
     }
     else
@@ -446,18 +544,23 @@ enum plugin_status plugin_start(const void* parameter)
     rb->lcd_update();
     while (!exit)
     {
+        bool speak_selection = false;
         rb->gui_synclist_draw(&lists);
         cur_sel = rb->gui_synclist_get_sel_pos(&lists);
-        button = rb->get_action(CONTEXT_LIST,TIMEOUT_BLOCK);
+        button = rb->get_action(CONTEXT_LIST,
+                               lists.scheduled_talk_tick ? HZ/5 + 1 : TIMEOUT_BLOCK);
         if (rb->gui_synclist_do_button(&lists, &button))
             continue;
         switch (button)
         {
             case ACTION_STD_OK:
             {
+                speak_selection = true;
                 if (line_count)
                     rb->strlcpy(temp_line, do_action(ACTION_GET, 0, cur_sel),
                                 MAX_LINE_LEN);
+                else
+                    temp_line[0] = '\0';
 #ifdef HAVE_LCD_COLOR
                 if (edit_colors_file && line_count)
                 {
@@ -519,10 +622,12 @@ enum plugin_status plugin_start(const void* parameter)
                             MAX_LINE_LEN);
                 do_action(ACTION_REMOVE, 0, cur_sel);
                 changed = true;
+                speak_selection = true;
             break;
             case ACTION_STD_MENU:
 #endif
             {
+                speak_selection = true;
                 rb->gui_synclist_scroll_stop(&lists);
                 /* do the item menu */
                 switch (do_item_menu(cur_sel))
@@ -542,6 +647,7 @@ enum plugin_status plugin_start(const void* parameter)
             case ACTION_STD_CANCEL:
                 if (changed)
                 {
+                    speak_selection = true;
                     rb->gui_synclist_scroll_stop(&lists);
                     MENUITEM_STRINGLIST(menu, "Text Editor", NULL,
                                         "Return",
@@ -578,9 +684,7 @@ enum plugin_status plugin_start(const void* parameter)
                 else exit=1;
             break;
         }
-        rb->gui_synclist_set_nb_items(&lists,line_count);
-        if(line_count > 0 && line_count <= cur_sel)
-            rb->gui_synclist_select_item(&lists,line_count-1);
+        refresh_editor_list(cur_sel, speak_selection && !exit);
     }
     return PLUGIN_OK;
 }

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "engine_revision": "a14831fd3af6b3df77ef23b854cd05ee05b12851",
+  "engine_version": "1.44.05-r34 Windows x64",
+  "source_repository": "https://github.com/Pates2004/espeak-1.44.05-x64",
+  "supplied_working_tree": "D:/Rockbox/espeak-1.44.05-source",
+  "data_manifest_sha256": "8ed383e197973f4699c4f6499c20eed3d34e725d044b97531098d84ba2055132",
+  "upstream_manifest_sha256": "b980492ecd8fc75ad954752b70986f1daf09dbeb9cafed897d30d61bd585f584",
+  "runtime_file_count": 283,
+  "dictionary_source_file_count": 88,
+  "previous_delivery": {
+    "archive": "rockbox-hibyr1-espeak-r34-alpha11-20261017-source.tar.gz",
+    "sha256": "cc742fb6f7449212bafc2bcace70499cea7b84e3a952da449739cc8cf82897e1",
+    "version": "r34-alpha11-20261017"
+  },
+  "changed_since_previous_delivery": [
+    {
+      "path": "dictsource/pl_list",
+      "previous_bytes": 46363,
+      "previous_sha256": "d74869cedd46121226fd1ee92d13d02476edf577aec6dfc303a59b824a0d23b2",
+      "bytes": 46346,
+      "sha256": "c401e56f6467d9fb51b253b333a6da5ff3de4c9425a6cef43e4eb7915d594180"
+    },
+    {
+      "path": "espeak-data/pl_dict",
+      "previous_bytes": 38352,
+      "previous_sha256": "0856492b1a316c26eda88c28f0732ce7a0314c96b17b5741867114f295b7670c",
+      "bytes": 38350,
+      "sha256": "4ba408bc999a1a63e68ce610dbecd956fd989467c2202e58f4a6dae03def5217"
+    }
+  ],
+  "unchanged_polish_rules": {
+    "path": "dictsource/pl_rules",
+    "bytes": 13464,
+    "sha256": "98912b94bd1c6787502a3e5f88cf0c6a9e4252339de1615491e92cee8872eb2a",
+    "note": "Byte-identical to alpha11; only the supplied minus-name dictionary exception and compiled dictionary changed."
+  },
+  "integration_policy": "Read exact working-tree runtime bytes from espeak-data and ship matching dictsource in corresponding source. Do not import unrelated README, workflows or Windows build changes into the vendored engine."
+}

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -83,6 +84,10 @@ static unsigned int idle_counter = 0;
 
 static inline unsigned int max_idle_frames(void)
 {
+#ifdef HAVE_PCM_RECORDING_VOICE
+    if (pcm_is_recording())
+        return 3;
+#endif
     return SAMPR_NUM(pcm_get_frequency()) * 3 / (mix_frame_size / 4);
 }
 
@@ -118,9 +123,15 @@ static void channel_stopped(struct mixer_channel *chan)
     chan->status = CHANNEL_STOPPED;
 }
 
+static enum pcm_dma_status MIXER_CALLBACK_ICODE
+mixer_buffer_callback(enum pcm_dma_status status);
+
 /* Main PCM callback - sends the current prepared frame to play */
 static void mixer_pcm_callback(const void **addr, size_t *size)
 {
+    if (next_size == 0 && active_channels[0] != NULL)
+        mixer_buffer_callback(PCM_DMAST_STARTED);
+
     *addr = downmix_buf[downmix_index];
     *size = next_size;
 }
@@ -270,7 +281,14 @@ static void mixer_start_pcm(void)
 
 #if defined(HAVE_RECORDING)
     if (pcm_is_recording())
+    {
+#ifdef HAVE_PCM_RECORDING_VOICE
+        if (channels[PCM_MIXER_CHAN_VOICE].status != CHANNEL_PLAYING)
+            return;
+#else
         return;
+#endif
+    }
 #endif
 
     /* Prepare initial frames and set up the double buffer */

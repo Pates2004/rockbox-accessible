@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -38,6 +39,10 @@
 #include "file.h"
 #include "splash.h"
 #include "core_alloc.h"
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+#include "accessibility.h"
+#include "accessibility_typing.h"
+#endif
 
 #ifndef O_BINARY
 #define O_BINARY 0
@@ -132,6 +137,9 @@ struct keyboard_parameters
     bool line_edit;
 #ifdef HAVE_TOUCHSCREEN
     bool show_buttons;
+#ifdef HAVE_ESPEAK
+    int typing_control;
+#endif
 #endif
 };
 
@@ -142,6 +150,7 @@ struct edit_state
     int len_utf8;
     int editpos;        /* Edit position on all screens */
     bool cur_blink;     /* Cursor on/off flag */
+    bool redraw;
     bool hangul;
     ucschar_t hlead, hvowel, htail;
 #ifdef HAVE_MORSE_INPUT
@@ -331,12 +340,19 @@ int load_kbd(unsigned char* filename)
 /* helper function to spell a char */
 static void kbd_spellchar(ucschar_t c)
 {
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    if (accessibility_enabled())
+    {
+        accessibility_typing_speak_character(c == KBD_SPACE ? ' ' : c, false);
+        return;
+    }
+#endif
     unsigned char tmp[5];
     /* store char to pass to talk_spell */
     unsigned char* utf8 = utf8encode(c, tmp);
     *utf8 = 0;
 
-    if (c == ' ')
+    if (c == ' ' || c == KBD_SPACE)
         talk_id(VOICE_BLANK, false);
     else
         talk_spell(tmp, false);
@@ -439,6 +455,11 @@ static void kbd_draw_edit_line(struct keyboard_parameters *pm,
 static void kbd_draw_buttons(struct keyboard_parameters *pm, struct screen *sc);
 static int keyboard_touchscreen(struct keyboard_parameters *pm,
                                 struct screen *sc, struct edit_state *state);
+#ifdef HAVE_ESPEAK
+static int keyboard_accessible_touch(struct keyboard_parameters *pm,
+                                     struct screen *sc, struct edit_state *state);
+static void kbd_speak_typing_target(int target);
+#endif
 #endif
 static void kbd_insert_selected(struct keyboard_parameters *pm,
                                 struct edit_state *state);
@@ -452,10 +473,14 @@ static void kbd_move_picker_vertical(struct keyboard_parameters *pm,
 int kbd_input(char* text, int buflen, ucschar_t *kbd)
 {
     bool done = false;
+    uint32_t blink_tick = (uint32_t)current_tick;
     struct keyboard_parameters * const param = kbd_param;
     struct edit_state state;
     ucschar_t ch;
     int ret = 0; /* assume success */
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    bool echo_word_pending = false;
+#endif
     FOR_NB_SCREENS(l)
     {
         viewportmanager_theme_enable(l, false, NULL);
@@ -463,7 +488,8 @@ int kbd_input(char* text, int buflen, ucschar_t *kbd)
 
     if (kbd_create_viewports(param) <= 0)
     {
-        splash(HZ * 2,"Error: No Viewport Allocated, OOM?");
+        ret = -1;
+        splash(HZ * 2, ID2P(LANG_KBD_UNAVAILABLE));
         goto cleanup;
     }
 
@@ -483,6 +509,7 @@ int kbd_input(char* text, int buflen, ucschar_t *kbd)
     /* Initial edit position is after last character */
     state.editpos = utf8length(state.text);
     state.cur_blink = true;
+    state.redraw = true;
 #ifdef HAVE_MORSE_INPUT
     state.morse_mode = global_settings.morse_input;
     state.morse_reading = false;
@@ -639,6 +666,9 @@ int kbd_input(char* text, int buflen, ucschar_t *kbd)
     {
         struct keyboard_parameters *pm = &param[l];
 
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+        pm->typing_control = ACCESSIBILITY_TYPING_NO_TARGET;
+#endif
         if(kbd) /* user supplied custom layout */
             pm->kbd_buf_ptr = kbd;
         else
@@ -656,7 +686,7 @@ int kbd_input(char* text, int buflen, ucschar_t *kbd)
         pm->kbd_viewports[eKBD_VP_PICKER].height = pm->main_y;
     }
 
-    if (global_settings.talk_menu)      /* voice UI? */
+    if (talk_menus_enabled(&global_settings))      /* voice UI? */
         talk_spell(state.text, true);   /* spell initial text */
 
     while (!done)
@@ -674,31 +704,54 @@ int kbd_input(char* text, int buflen, ucschar_t *kbd)
 
         state.len_utf8 = utf8length(state.text);
 
-        FOR_NB_SCREENS(l)
+        if ((uint32_t)((uint32_t)current_tick - blink_tick) >= MAX(1, HZ/2))
         {
-            /* declare scoped pointers inside screen loops - hide the
-               declarations from previous block level */
-            struct screen *sc = &screens[l];
-            pm = &param[l];
-            sc->clear_display();
-            kbd_draw_picker(pm, sc, &state);
-            kbd_draw_edit_line(pm, sc, &state);
-#ifdef HAVE_TOUCHSCREEN
-            if (pm->show_buttons)
-                kbd_draw_buttons(pm, sc);
-#endif
+            state.cur_blink = !state.cur_blink;
+            blink_tick = (uint32_t)current_tick;
+            state.redraw = true;
         }
 
-        FOR_NB_SCREENS(l)
-            screens[l].update();
+        if (state.redraw)
+        {
+            FOR_NB_SCREENS(l)
+            {
+                struct screen *sc = &screens[l];
+                pm = &param[l];
+                sc->clear_display();
+                kbd_draw_picker(pm, sc, &state);
+                kbd_draw_edit_line(pm, sc, &state);
+#ifdef HAVE_TOUCHSCREEN
+                if (pm->show_buttons)
+                    kbd_draw_buttons(pm, sc);
+#endif
+            }
+            FOR_NB_SCREENS(l)
+                screens[l].update();
+            state.redraw = false;
+        }
 
-        state.cur_blink = !state.cur_blink;
-
+        int timeout = HZ/2;
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+        bool typing = accessibility_enabled();
+#ifdef HAVE_MORSE_INPUT
+        typing = typing && !state.morse_mode;
+#endif
+        if (typing && !accessibility_typing_active())
+            accessibility_typing_begin();
+        else if (!typing && accessibility_typing_active())
+            accessibility_typing_end();
+        if (accessibility_typing_needs_poll())
+            timeout = MAX(1, HZ/20);
+#endif
         button = get_action(
+#if defined(HIBY_R1)
+                ALLOW_SOFTLOCK |
+#endif
+                (
 #ifdef HAVE_MORSE_INPUT
                 state.morse_mode? CONTEXT_MORSE_INPUT:
 #endif
-                            CONTEXT_KEYBOARD, HZ/2);
+                            CONTEXT_KEYBOARD), timeout);
 #if NB_SCREENS > 1
         button_screen = (get_action_statuscode(NULL) & ACTION_REMOTE) ? 1 : 0;
 #endif
@@ -707,8 +760,22 @@ int kbd_input(char* text, int buflen, ucschar_t *kbd)
         if (button == ACTION_TOUCHSCREEN)
         {
             struct screen *sc = &screens[button_screen];
+#ifdef HAVE_ESPEAK
+            if (accessibility_typing_active())
+                button = keyboard_accessible_touch(pm, sc, &state);
+            else
+#endif
             button = keyboard_touchscreen(pm, sc, &state);
         }
+#ifdef HAVE_ESPEAK
+        if (accessibility_typing_active() && button == ACTION_KBD_SELECT &&
+            pm->typing_control != ACCESSIBILITY_TYPING_NO_TARGET)
+        {
+            button = pm->typing_control == ACCESSIBILITY_TYPING_DONE ? ACTION_KBD_DONE :
+                pm->typing_control == ACCESSIBILITY_TYPING_DELETE ? ACTION_KBD_BACKSPACE :
+                ACTION_KBD_ABORT;
+        }
+#endif
 #endif
 
         /* Remap some buttons to allow to move
@@ -725,9 +792,21 @@ int kbd_input(char* text, int buflen, ucschar_t *kbd)
                 button = ACTION_KBD_CURSOR_RIGHT;
         }
 
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+        bool deletion = button == ACTION_KBD_BACKSPACE ||
+            (button == ACTION_KBD_SELECT && pm->line_edit);
+        uint32_t deleted_character = 0;
+        if (deletion && state.editpos > 0)
+            deleted_character = accessibility_typing_character_before(state.text, state.editpos);
+#endif
         switch ( button )
         {
             case ACTION_KBD_DONE:
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+                if (accessibility_enabled() && echo_word_pending)
+                    accessibility_typing_echo_finish(state.text, state.editpos);
+                echo_word_pending = false;
+#endif
                 /* accepts what was entered and continues */
                 ret = 0;
                 done = true;
@@ -746,6 +825,13 @@ int kbd_input(char* text, int buflen, ucschar_t *kbd)
                 if (++pm->page >= pm->pages)
                     pm->page = 0;
 
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+                if (accessibility_typing_active())
+                {
+                    accessibility_typing_cancel_touch();
+                    pm->typing_control = ACCESSIBILITY_TYPING_NO_TARGET;
+                }
+#endif
                 state.changed = CHANGED_PICKER;
                 break;
 
@@ -860,6 +946,14 @@ int kbd_input(char* text, int buflen, ucschar_t *kbd)
                 {
                     FOR_NB_SCREENS(l)
                         screens[l].setfont(FONT_SYSFIXED);
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+                    if (accessibility_typing_active())
+                    {
+                        ret = -1;
+                        done = true;
+                        accessibility_typing_end();
+                    }
+#endif
                 }
                 break;
 
@@ -868,11 +962,21 @@ int kbd_input(char* text, int buflen, ucschar_t *kbd)
         if (button != ACTION_NONE)
         {
             state.cur_blink = true;
+            blink_tick = (uint32_t)current_tick;
+            state.redraw = true;
         }
-        if (global_settings.talk_menu)  /* voice UI? */
+        if (state.changed)
+            state.redraw = true;
+        if (talk_menus_enabled(&global_settings))  /* voice UI? */
         {
             if (state.changed == CHANGED_PICKER)
             {
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+                if (accessibility_typing_active() &&
+                    pm->typing_control != ACCESSIBILITY_TYPING_NO_TARGET)
+                    kbd_speak_typing_target(pm->typing_control);
+                else
+#endif
                 if (pm->line_edit)
                 {
                     talk_id(VOICE_EDIT, false);
@@ -889,14 +993,46 @@ int kbd_input(char* text, int buflen, ucschar_t *kbd)
             }
             else if (state.changed == CHANGED_CURSOR)
             {
-                int c = utf8seek(state.text, state.editpos);
-                ucschar_t ch;
-                utf8decode(&state.text[c], &ch);
-                kbd_spellchar(ch);
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+                if (accessibility_enabled())
+                {
+                    uint32_t character = accessibility_typing_character_before(
+                        state.text, state.editpos + 1);
+                    if (character)
+                        accessibility_typing_speak_character(character, false);
+                    else
+                        talk_id(LANG_ACCESSIBILITY_TYPING_TEXT_END, false);
+                }
+                else
+#endif
+                {
+                    int c = utf8seek(state.text, state.editpos);
+                    ucschar_t ch;
+                    utf8decode(&state.text[c], &ch);
+                    kbd_spellchar(ch);
+                }
             }
             else if (state.changed == CHANGED_TEXT)
-                talk_spell(state.text, false);  /* speak revised text */
+            {
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+                if (accessibility_enabled())
+                {
+                    echo_word_pending = false;
+                    if (deletion)
+                        accessibility_typing_echo_deleted(deleted_character);
+                    else
+                        echo_word_pending = accessibility_typing_echo_inserted(
+                            state.text, state.editpos);
+                }
+                else
+#endif
+                    talk_spell(state.text, false);
+            }
         }
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+        if (state.changed == CHANGED_CURSOR || deletion || !accessibility_enabled())
+            echo_word_pending = false;
+#endif
         state.changed = 0;
     }
 
@@ -915,6 +1051,18 @@ int kbd_input(char* text, int buflen, ucschar_t *kbd)
     }
 #endif /* HAVE_MORSE_INPUT && KBD_TOGGLE_INPUT */
 cleanup:
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    if (accessibility_typing_active())
+    {
+        accessibility_typing_end();
+#ifndef HIBY_R1
+        action_wait_for_release();
+#endif
+    }
+#endif
+#ifdef HIBY_R1
+    action_wait_for_release();
+#endif
     FOR_NB_SCREENS(l)
     {
         screens[l].setfont(FONT_UI);
@@ -1196,7 +1344,12 @@ static void kbd_draw_picker(struct keyboard_parameters *pm,
             }
         }
 
-        if (!pm->line_edit)
+        if (!pm->line_edit
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+            && (!accessibility_typing_active() ||
+                pm->typing_control == ACCESSIBILITY_TYPING_NO_TARGET)
+#endif
+            )
         {
             /* highlight the focused key; the space bar spans several cells and
              * highlights as one */
@@ -1476,8 +1629,150 @@ static void kbd_draw_buttons(struct keyboard_parameters *pm, struct screen *sc)
     vp.x += vp.width;
     sc->vline(0, 0, button_h);
     sc->putsxy(0, text_y, str(LANG_KBD_CANCEL));
+#ifdef HAVE_ESPEAK
+    if (accessibility_typing_active() &&
+        pm->typing_control <= ACCESSIBILITY_TYPING_DONE &&
+        pm->typing_control >= ACCESSIBILITY_TYPING_CANCEL)
+    {
+        vp.x = (ACCESSIBILITY_TYPING_DONE - pm->typing_control) * (sc_w/3);
+        sc->set_drawmode(DRMODE_COMPLEMENT);
+        sc->fillrect(0, 0, vp.width, button_h);
+        sc->set_drawmode(DRMODE_SOLID);
+    }
+#endif
     sc->set_viewport(last_vp);
 }
+
+#ifdef HAVE_ESPEAK
+static void kbd_speak_typing_target(int target)
+{
+    int label;
+    switch (target)
+    {
+        case ACCESSIBILITY_TYPING_DONE: label = LANG_KBD_OK; break;
+        case ACCESSIBILITY_TYPING_DELETE: label = LANG_KBD_DELETE; break;
+        case ACCESSIBILITY_TYPING_CANCEL: label = LANG_KBD_CANCEL; break;
+        case ACCESSIBILITY_TYPING_PAGE: label = LANG_ACCESSIBILITY_TYPING_PAGE; break;
+        case ACCESSIBILITY_TYPING_CURSOR_LEFT:
+            label = LANG_ACCESSIBILITY_TYPING_CURSOR_LEFT;
+            break;
+        case ACCESSIBILITY_TYPING_CURSOR_RIGHT:
+            label = LANG_ACCESSIBILITY_TYPING_CURSOR_RIGHT;
+            break;
+        default: return;
+    }
+    talk_id(label, false);
+}
+
+static int kbd_typing_hit(struct keyboard_parameters *pm, struct screen *sc,
+                          int x, int y)
+{
+    int width = sc->getwidth(), height = sc->getheight();
+    if (x < 0 || y < 0 || x >= width || y >= height)
+        return ACCESSIBILITY_TYPING_NO_TARGET;
+    int button_height = MAX(MIN_GRID_SIZE*2,
+        GRID_SIZE(sc->screen_type, sc->getcharheight()));
+    if (pm->show_buttons && y >= height - button_height - 1)
+        return x < width/3 ? ACCESSIBILITY_TYPING_DONE :
+            x < (width/3)*2 ? ACCESSIBILITY_TYPING_DELETE : ACCESSIBILITY_TYPING_CANCEL;
+    struct viewport *picker = &pm->kbd_viewports[eKBD_VP_PICKER];
+    int column = (x - picker->x) / pm->font_w;
+    int row = (y - picker->y) / pm->font_h;
+    if (x >= picker->x && y >= picker->y && row < pm->lines)
+    {
+        if (column >= get_kbd_row_len(pm, row))
+            return ACCESSIBILITY_TYPING_NO_TARGET;
+        if (get_kbd_ch(pm, column, row) == KBD_SPACE)
+            while (column > 0 && get_kbd_ch(pm, column - 1, row) == KBD_SPACE)
+                --column;
+        return (pm->page * pm->lines + row) * pm->max_chars + column;
+    }
+    if (pm->show_buttons && pm->pages > 1 && y >= picker->y + pm->lines*pm->font_h &&
+        y < picker->y + pm->lines*pm->font_h +
+            GRID_SIZE(sc->screen_type, sc->getcharheight()))
+        return ACCESSIBILITY_TYPING_PAGE;
+    struct viewport *text = &pm->kbd_viewports[eKBD_VP_TEXT];
+    if (y >= text->y && y < text->y + text->height)
+        return x < width/2 ? ACCESSIBILITY_TYPING_CURSOR_LEFT :
+                            ACCESSIBILITY_TYPING_CURSOR_RIGHT;
+    return ACCESSIBILITY_TYPING_NO_TARGET;
+}
+
+static void kbd_typing_focus(struct keyboard_parameters *pm, int target)
+{
+    pm->typing_control = ACCESSIBILITY_TYPING_NO_TARGET;
+    if (target >= 0)
+    {
+        int row = target / pm->max_chars;
+        pm->page = row / pm->lines;
+        pm->y = row % pm->lines;
+        pm->x = target % pm->max_chars;
+        pm->line_edit = false;
+    }
+    else if (target <= ACCESSIBILITY_TYPING_DONE && target >= ACCESSIBILITY_TYPING_CANCEL)
+    {
+        pm->typing_control = target;
+        pm->line_edit = false;
+    }
+    else if (target == ACCESSIBILITY_TYPING_CURSOR_LEFT ||
+             target == ACCESSIBILITY_TYPING_CURSOR_RIGHT)
+        pm->line_edit = true;
+}
+
+static int keyboard_accessible_touch(struct keyboard_parameters *pm,
+                                     struct screen *sc, struct edit_state *state)
+{
+    struct touchevent event;
+    if (!accessibility_typing_take_touch(&event))
+        return ACTION_NONE;
+    enum accessibility_typing_input input;
+    switch (event.type)
+    {
+        case TOUCHEVENT_PRESS: input = ACCESSIBILITY_TYPING_PRESS; break;
+        case TOUCHEVENT_CONTACT: input = ACCESSIBILITY_TYPING_CONTACT; break;
+        case TOUCHEVENT_RELEASE: input = ACCESSIBILITY_TYPING_RELEASE; break;
+        default: input = ACCESSIBILITY_TYPING_POLL; break;
+    }
+    int target = kbd_typing_hit(pm, sc, event.x, event.y);
+    if (event.type != TOUCHEVENT_NONE)
+    {
+        accessibility_explore_feedback(pm, target,
+            target != ACCESSIBILITY_TYPING_NO_TARGET);
+        if (target == ACCESSIBILITY_TYPING_NO_TARGET)
+            accessibility_speak_empty();
+    }
+    uint32_t milliseconds = (uint32_t)((uint64_t)(uint32_t)event.tick * 1000u / HZ);
+    struct accessibility_typing_result result = accessibility_typing_process(
+        input, target, event.x, event.y, milliseconds);
+    if (result.speak)
+        state->redraw = true;
+    if (result.focus != ACCESSIBILITY_TYPING_NO_TARGET)
+        kbd_typing_focus(pm, result.focus);
+    if (result.speak && talk_menus_enabled(&global_settings))
+    {
+        if (result.focus >= 0)
+            kbd_spellchar(get_kbd_ch(pm, pm->x, pm->y));
+        else
+            kbd_speak_typing_target(result.focus);
+    }
+    int action = ACTION_NONE;
+    if (result.commit >= 0)
+        action = ACTION_KBD_SELECT;
+    switch (result.commit)
+    {
+        case ACCESSIBILITY_TYPING_DONE: action = ACTION_KBD_DONE; break;
+        case ACCESSIBILITY_TYPING_DELETE: action = ACTION_KBD_BACKSPACE; break;
+        case ACCESSIBILITY_TYPING_CANCEL: action = ACTION_KBD_ABORT; break;
+        case ACCESSIBILITY_TYPING_PAGE: action = ACTION_KBD_PAGE_FLIP; break;
+        case ACCESSIBILITY_TYPING_CURSOR_LEFT: action = ACTION_KBD_CURSOR_LEFT; break;
+        case ACCESSIBILITY_TYPING_CURSOR_RIGHT: action = ACTION_KBD_CURSOR_RIGHT; break;
+        default: break;
+    }
+    if (action != ACTION_NONE)
+        keyclick_click_gesture(action);
+    return action;
+}
+#endif
 
 static int keyboard_touchscreen(struct keyboard_parameters *pm,
                                 struct screen *sc, struct edit_state *state)
@@ -1668,12 +1963,14 @@ static void kbd_move_cursor(struct edit_state *state, int dir)
     else if (global_settings.list_wraparound && state->editpos > state->len_utf8)
     {
         state->editpos = 0;
-        if (global_settings.talk_menu) beep_play(1000, 150, 1500);
+        state->changed = CHANGED_CURSOR;
+        if (talk_menus_enabled(&global_settings)) beep_play(1000, 150, 1500);
     }
     else if (global_settings.list_wraparound && state->editpos < 0)
     {
         state->editpos = state->len_utf8;
-        if (global_settings.talk_menu) beep_play(1000, 150, 1500);
+        state->changed = CHANGED_CURSOR;
+        if (talk_menus_enabled(&global_settings)) beep_play(1000, 150, 1500);
     }
     else if (!global_settings.list_wraparound)
         state->editpos -= dir;
@@ -1684,6 +1981,21 @@ static void kbd_move_picker_horizontal(struct keyboard_parameters *pm,
 {
     state->changed = CHANGED_PICKER;
 
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    if (accessibility_typing_active() &&
+        pm->typing_control != ACCESSIBILITY_TYPING_NO_TARGET)
+    {
+        int control = pm->typing_control - dir;
+        if (control > ACCESSIBILITY_TYPING_DONE)
+            control = global_settings.list_wraparound ? ACCESSIBILITY_TYPING_CANCEL :
+                ACCESSIBILITY_TYPING_DONE;
+        if (control < ACCESSIBILITY_TYPING_CANCEL)
+            control = global_settings.list_wraparound ? ACCESSIBILITY_TYPING_DONE :
+                ACCESSIBILITY_TYPING_CANCEL;
+        pm->typing_control = control;
+        return;
+    }
+#endif
     pm->x += dir;
     /* The space bar spans several cells but highlights and inserts as one key,
      * so step over the whole run instead of stopping inside it, which looks
@@ -1734,6 +2046,31 @@ static void kbd_move_picker_vertical(struct keyboard_parameters *pm,
     }
 #endif /* HAVE_MORSE_INPUT */
 
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    if (accessibility_typing_active())
+    {
+        if (pm->typing_control != ACCESSIBILITY_TYPING_NO_TARGET)
+        {
+            if (dir < 0)
+            {
+                pm->typing_control = ACCESSIBILITY_TYPING_NO_TARGET;
+                pm->y = pm->lines - 1;
+            }
+            else if (global_settings.list_wraparound)
+            {
+                pm->typing_control = ACCESSIBILITY_TYPING_NO_TARGET;
+                pm->line_edit = true;
+                pm->y = 0;
+            }
+            return;
+        }
+        if (!pm->line_edit && pm->y + dir >= pm->lines)
+        {
+            pm->typing_control = ACCESSIBILITY_TYPING_DONE;
+            return;
+        }
+    }
+#endif
     pm->y += dir;
 
     if (!global_settings.list_wraparound)

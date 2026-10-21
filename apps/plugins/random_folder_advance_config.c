@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -270,7 +271,11 @@ static const char* list_get_name_cb(int selected_item, void* data,
                                     char* buf, size_t buf_len)
 {
     struct rfa_scan *scan = (struct rfa_scan *)data;
-    rb->strlcpy(buf, scan->dirs->dir[selected_item], buf_len);
+    if (selected_item < 0 || selected_item >= scan->dirs->count)
+        return NULL;
+    rb->strlcpy(buf, scan->dirs->dir[selected_item][0] == ' ' ?
+                (const char *)rb->str(LANG_DELETED) :
+                scan->dirs->dir[selected_item], buf_len);
     return buf;
 }
 
@@ -278,6 +283,7 @@ static int load_dirs(struct rfa_scan *scan)
 {
     char *buf;
     size_t buf_sz;
+    scan->dirs = NULL;
 
     int fd = rb->open(RFA_LIST_DAT , O_RDONLY);
     if (fd < 0)
@@ -285,11 +291,23 @@ static int load_dirs(struct rfa_scan *scan)
 
     buf = rb->plugin_get_audio_buffer(&buf_sz);
     if (!buf)
+    {
+        rb->close(fd);
         return -2;
+    }
 
-    rb->read(fd, buf, buf_sz);
+    ssize_t bytes_read = rb->read(fd, buf, buf_sz);
     rb->close(fd);
-    scan->dirs = (struct rfa_dirs *) buf;
+    if (bytes_read < (ssize_t)sizeof(int))
+        return -3;
+    struct rfa_dirs *dirs = (struct rfa_dirs *)buf;
+    if (dirs->count < 0 ||
+        (size_t)dirs->count > ((size_t)bytes_read - sizeof(int)) / MAX_PATH)
+        return -3;
+    for (int index = 0; index < dirs->count; index++)
+        if (!rb->memchr(dirs->dir[index], '\0', MAX_PATH))
+            return -3;
+    scan->dirs = dirs;
 
     return 0;
 }
@@ -325,6 +343,8 @@ static int save_dirs(struct rfa_scan *scan)
 
 static bool disable_dir(int i, struct rfa_scan *scan)
 {
+    if (i < 0 || i >= scan->dirs->count)
+        return false;
     if (scan->dirs->dir[i][0] != ' ')
     {
         scan->dirty = true;
@@ -370,13 +390,18 @@ static int edit(struct rfa_scan *scan)
     scan->dirty = false;
     rb->gui_synclist_init(&lists, list_get_name_cb, (void *) scan,
                           false, 1, NULL);
+#ifdef HAVE_ESPEAK
+    lists.position_source = LIST_POSITION_FILE;
+#endif
     rb->gui_synclist_set_nb_items(&lists, scan->dirs->count);
     rb->gui_synclist_select_item(&lists, 0);
     set_title(&lists, false, scan->dirs->count);
+    rb->gui_synclist_speak_item(&lists);
     while (true)
     {
         rb->gui_synclist_draw(&lists);
-        button = rb->get_action(CONTEXT_LIST,TIMEOUT_BLOCK);
+        button = rb->get_action(CONTEXT_LIST,
+                               lists.scheduled_talk_tick ? HZ/5 + 1 : TIMEOUT_BLOCK);
         if (rb->gui_synclist_do_button(&lists, &button))
             continue;
         selection = rb->gui_synclist_get_sel_pos(&lists);
@@ -385,6 +410,7 @@ static int edit(struct rfa_scan *scan)
             case ACTION_STD_OK:
                 if (disable_dir(selection, scan))
                     set_title(&lists, true, -1);
+                rb->gui_synclist_speak_item(&lists);
                 break;
             case ACTION_STD_CONTEXT:
             {
@@ -403,7 +429,9 @@ static int edit(struct rfa_scan *scan)
                         len = rb->strlen(scan->path);
                         j = 0;
                         for (i = 0; i < scan->dirs->count; i++)
-                            if (!rb->strncmp(scan->dirs->dir[i], scan->path, len))
+                            if (!rb->strncmp(scan->dirs->dir[i], scan->path, len) &&
+                                (len == 1 || scan->dirs->dir[i][len] == '/' ||
+                                 scan->dirs->dir[i][len] == '\0'))
                                 if (disable_dir(i, scan))
                                     j++;
                         set_title(&lists, true, -j);
@@ -413,6 +441,7 @@ static int edit(struct rfa_scan *scan)
                         break;
                 }
             }
+            rb->gui_synclist_speak_item(&lists);
             break;
             case ACTION_STD_CANCEL:
             {

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -150,13 +151,13 @@ static int item_action_callback(int action, struct gui_synclist *list)
         {
             case EXPANDED:
                 this->state = SELECTED;
-                if (global_settings.talk_menu)
+                if (talk_menus_enabled(&global_settings))
                     talk_id(LANG_ON, false);
                 break;
             case SELECTED:
                 this->state = this->category->children_count == 0 ?
                         DESELECTED : COLLAPSED;
-                if (global_settings.talk_menu && this->category->children_count == 0)
+                if (talk_menus_enabled(&global_settings) && this->category->children_count == 0)
                     talk_id(LANG_OFF, false);
                 break;
             case COLLAPSED:
@@ -164,12 +165,12 @@ static int item_action_callback(int action, struct gui_synclist *list)
                     this->category = root;
                 this->state = this->category->children_count == 0 ?
                         SELECTED : EXPANDED;
-                if (global_settings.talk_menu && this->category->children_count == 0)
+                if (talk_menus_enabled(&global_settings) && this->category->children_count == 0)
                     talk_id(LANG_ON, false);
                 break;
             case DESELECTED:
                 this->state = SELECTED;
-                if (global_settings.talk_menu)
+                if (talk_menus_enabled(&global_settings))
                     talk_id(LANG_ON, false);
                 break;
 
@@ -217,7 +218,7 @@ static int item_get_talk(int selected_item, void *data)
     struct category *root = (struct category*)data;
     struct category *parent;
     struct child *this = find_index(root, selected_item , &parent);
-    if (global_settings.talk_menu && this)
+    if (talk_menus_enabled(&global_settings) && this)
         {
             long id = P2ID((const unsigned char *)(this->name));
             if(id>=0)

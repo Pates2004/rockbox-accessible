@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -27,6 +28,10 @@
 
 int key_to_touch(int keyboard_button, unsigned int mouse_coords)
 {
+#if defined(SIMULATOR) && defined(HIBY_R1)
+    if (key_to_button(keyboard_button) != BUTTON_NONE)
+        return BUTTON_NONE;
+#endif
     int new_btn = BUTTON_NONE;
     switch (keyboard_button)
     {

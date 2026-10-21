@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "purpose": "Local memory safety corrections; supplied source and linguistic data remain unchanged",
+  "original_manifests": {
+    "UPSTREAM.sha256": "b980492ecd8fc75ad954752b70986f1daf09dbeb9cafed897d30d61bd585f584",
+    "SONIC.sha256": "e624eb0dc42b097472821e757519351813621142548b24dcb2c4423975a49056"
+  },
+  "documentation_changes": {
+    "sonic/README.md": {
+      "supplied_sha256": "fb015d72a022a6d86aaaa129fa25e2eb7f544c1345ffe6c8687e9447ecb06dad",
+      "integrated_sha256": "ab9b8f73bf36483bd69e7350cd24ea9d41621ed77ba5b993ab25bc71825e08fc",
+      "notice_date": "2026-10-21",
+      "change": "Append the dated local modification notice; retain the original provenance text"
+    }
+  },
+  "patches": {
+    "engine/compiledict.cpp": {
+      "supplied_path": "src/compiledict.cpp",
+      "supplied_sha256": "2b183c88342e2eddec61334132bb1c79f1afdb13c5906c102fd663bdd42f1e7c",
+      "previous_integrated_sha256": "2b183c88342e2eddec61334132bb1c79f1afdb13c5906c102fd663bdd42f1e7c",
+      "integrated_sha256": "84849dae24db09a93995fc9f207ec3b3c593723324bb3243535d01bf0a343f22",
+      "correction": "Free each completed group's compiled rule allocations after writing the group; preserve dictionary bytes"
+    },
+    "engine/tr_languages.cpp": {
+      "supplied_path": "src/tr_languages.cpp",
+      "supplied_sha256": "ad731364b9a78123e7745073668746c4c2d6c536be8fea0aba27523dedadce4f",
+      "previous_integrated_sha256": "5522cc826e3e584e35b3941a14d60fb8f6b6941d6f8c11c7da41f45bc8b18794",
+      "integrated_sha256": "d29137d5cc2a2af4a44edfd37751752bd5fbe665d42dab68de89ddceffdbd8cc",
+      "correction": "Return NULL when NewTranslator allocation fails before language setup dereferences the translator"
+    },
+    "sonic/sonic.c": {
+      "supplied_path": "platforms/windows/third_party/sonic/sonic.c",
+      "supplied_sha256": "a4d105cfe8f86d2f0f51f0a1587fae8baa238f8a1a7cee5cd4e4a024e89f175b",
+      "previous_integrated_sha256": "a4d105cfe8f86d2f0f51f0a1587fae8baa238f8a1a7cee5cd4e4a024e89f175b",
+      "integrated_sha256": "9c1fe2a380bad7c9953859cbd43f267bce68d90bf95394c51f808372e905c34f",
+      "correction": "Preserve owned input/output buffers and capacities when realloc fails; retain CRLF endings"
+    }
+  }
+}

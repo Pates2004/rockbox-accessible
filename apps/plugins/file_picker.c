@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -271,14 +272,14 @@ enum plugin_status plugin_start(const void* parameter)
 
     if (fpp.title[0] == '\0')
     {
-        if (rb->global_settings->talk_menu)
+        if (talk_menus_enabled(rb->global_settings))
             rb->talk_id(LANG_CHOOSE_FILE, true);
 
         if ((fpp.flags & FIND_EXT) || (fpp.flags & FIND_EXT_IN_LIST))
         {
             rb->snprintf(fpp.title, sizeof(fpp.title),
                          "%s (%s)", rb->str(LANG_CHOOSE_FILE), fpp.file_ext);
-            if (rb->global_settings->talk_menu)
+            if (talk_menus_enabled(rb->global_settings))
                 rb->talk_spell(fpp.file_ext, true);
         }
         else

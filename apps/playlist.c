@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -102,6 +103,9 @@
 
 #include "lang.h"
 #include "talk.h"
+#ifdef HAVE_ESPEAK
+#include "tts.h"
+#endif
 #include "splash.h"
 #include "rbunicode.h"
 #include "root_menu.h"
@@ -672,8 +676,12 @@ static void display_playlist_count(int count, const unsigned char *fmt,
 {
     static long talked_tick = 0;
     long id = P2ID(fmt);
+#ifdef HAVE_ESPEAK
+    bool speak = false;
+#endif
 
-    if(id >= 0 && global_settings.talk_menu)
+    if(id >= 0 && talk_menus_enabled(&global_settings) &&
+       (final || talk_dynamic_enabled(&global_settings)))
     {
         long next_tick = talked_tick + (HZ * 5);
 
@@ -683,22 +691,34 @@ static void display_playlist_count(int count, const unsigned char *fmt,
         if(count && TIME_AFTER(current_tick, next_tick))
         {
             talked_tick = current_tick;
-            if (final)
-            {
-                talk_id(LANG_ALL, false);
-                talk_number(count, true);
-                talk_id(id, true);
-                talk_force_enqueue_next(); /* Don't interrupt final announcement */
-            }
+#ifdef HAVE_ESPEAK
+            if (tts_is_available())
+                speak = true;
             else
+#endif
             {
-                talk_number(count, false);
-                talk_id(id, true);
+                if (final)
+                {
+                    talk_id(LANG_ALL, false);
+                    talk_number(count, true);
+                    talk_id(id, true);
+                    talk_force_enqueue_next();
+                }
+                else
+                {
+                    talk_number(count, false);
+                    talk_id(id, true);
+                }
             }
         }
     }
 
-    splashf(0, P2STR(fmt), count, str(LANG_OFF_ABORT)); /* (voiced above) */
+#ifdef HAVE_ESPEAK
+    if (speak)
+        splashf(0, P2STR(fmt), count, str(LANG_OFF_ABORT));
+    else
+#endif
+        splashf_silent(0, P2STR(fmt), count, str(LANG_OFF_ABORT));
 }
 
 /*

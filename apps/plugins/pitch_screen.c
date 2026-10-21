@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -835,7 +836,7 @@ int gui_syncpitchscreen_run(void)
         pitch_delta = 0;
         new_speed = 0;
 
-        if (rb->global_settings->talk_menu && updated)
+        if (talk_menus_enabled(rb->global_settings) && updated)
         {
             rb->talk_shutup();
             switch (updated)
@@ -871,7 +872,11 @@ int gui_syncpitchscreen_run(void)
         }
         updated = 0;
 
-        button = rb->get_action(CONTEXT_PITCHSCREEN, HZ);
+        button = rb->get_action(
+#if defined(HIBY_R1)
+                                ALLOW_SOFTLOCK |
+#endif
+                                CONTEXT_PITCHSCREEN, HZ);
 
 #ifdef HAVE_TOUCHSCREEN
         if (button == ACTION_TOUCHSCREEN)

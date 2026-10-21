@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -28,6 +29,7 @@
 
 /* open alsa control interface and list all controls, keep control open */
 void alsa_controls_init(const char *name);
+void alsa_controls_init_hw(unsigned int card);
 /* close alsa controls */
 void alsa_controls_close(void);
 

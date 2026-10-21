@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -157,6 +158,7 @@ int talk_time_intervals(long time, int unit_idx, bool enqueue);
 /* Enqueue next utterance even if enqueue parameter is false: don't
    interrupt the current utterance. */
 void talk_force_enqueue_next(void);
+void talk_cancel_enqueue_next(void);
 
 /* speaks one or more IDs (from an array)). */
 int talk_idarray(const long *idarray, bool enqueue);
@@ -168,18 +170,18 @@ int talk_idarray(const long *idarray, bool enqueue);
 /* This version talks only if talking menus are enabled, and does not
    enqueue the initial id. */
 #define cond_talk_ids(ids...) do { \
-        if (global_settings.talk_menu) \
+        if (talk_menus_enabled(&global_settings)) \
             talk_ids(false, ids); \
     } while(0)
 /* And a version that takes the array parameter... */
 #define cond_talk_idarray(idarray) do { \
-        if (global_settings.talk_menu \
+        if (talk_menus_enabled(&global_settings)) \
             talk_idarray(idarray, false); \
     } while(0)
 /* Convenience macro to conditionally speak something and not have
    it interrupted. */
 #define cond_talk_ids_fq(ids...) do { \
-        if (global_settings.talk_menu) { \
+        if (talk_menus_enabled(&global_settings)) { \
             talk_ids(false, ids);                 \
             talk_force_enqueue_next(); \
         } \

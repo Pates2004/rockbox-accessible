@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -331,7 +332,7 @@ static int exit_tsr(bool reenter)
     rb->lcd_puts_scroll(0, 0, "Batt.Bench is currently running.");
     rb->lcd_puts_scroll(0, 1, "Press " BATTERY_OFF_TXT " to cancel the test");
     rb->lcd_puts_scroll(0, 2, "Anything else will resume");
-    if(rb->global_settings->talk_menu)
+    if(talk_menus_enabled(rb->global_settings))
         rb->talk_id(VOICE_BATTERY_BENCH_IS_ALREADY_RUNNING, true);
     rb->lcd_update();
 
@@ -619,7 +620,7 @@ enum plugin_status plugin_start(const void* parameter)
 
     for (i = 0; i<(int)(sizeof(msgs)/sizeof(char *)); i++)
         put_centered_str(msgs[i],rb->lcd_putsxy,LCD_WIDTH,i+1);
-    if(rb->global_settings->talk_menu)
+    if(talk_menus_enabled(rb->global_settings))
         rb->talk_id(VOICE_BAT_BENCH_KEYS, true);
     rb->lcd_update();
 

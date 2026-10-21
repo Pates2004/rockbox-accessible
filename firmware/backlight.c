@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -58,6 +59,18 @@
 #include "backlight-sim.h"
 #endif
 
+#if defined(HAVE_ESPEAK) && !defined(BOOTLOADER) && !defined(HAVE_SCREEN_CURTAIN)
+void backlight_set_screen_curtain(bool enabled)
+{
+    (void)enabled;
+}
+
+bool backlight_screen_curtain_active(void)
+{
+    return false;
+}
+#endif
+
 #if defined(HAVE_BACKLIGHT) && defined(BACKLIGHT_FULL_INIT)
 
 #if (CONFIG_BACKLIGHT_FADING == BACKLIGHT_FADING_SW_SETTING) \
@@ -76,6 +89,9 @@ enum {
     BACKLIGHT_ON,
     BACKLIGHT_OFF,
     BACKLIGHT_TMO_CHANGED,
+#ifdef HAVE_SCREEN_CURTAIN
+    BACKLIGHT_SCREEN_CURTAIN_CHANGED,
+#endif
 #ifdef HAVE_BACKLIGHT_BRIGHTNESS
     BACKLIGHT_BRIGHTNESS_CHANGED,
 #endif
@@ -107,6 +123,10 @@ static void backlight_thread(void);
 static long backlight_stack[DEFAULT_STACK_SIZE/sizeof(long)];
 static const char backlight_thread_name[] = "backlight";
 static struct event_queue backlight_queue SHAREDBSS_ATTR;
+#ifdef HAVE_SCREEN_CURTAIN
+static struct queue_sender_list backlight_queue_sender_list;
+static bool screen_curtain_active;
+#endif
 static bool ignore_backlight_on = false;
 static int backlight_ignored_timer = 0;
 #ifdef BACKLIGHT_DRIVER_CLOSE
@@ -203,6 +223,10 @@ static int lcd_sleep_timer SHAREDBSS_ATTR;
 
 static void backlight_lcd_sleep_countdown(bool start)
 {
+#ifdef HAVE_SCREEN_CURTAIN
+    if (backlight_screen_curtain_active())
+        start = false;
+#endif
     if (!start)
     {
         /* Cancel the LCD sleep countdown */
@@ -482,6 +506,10 @@ static void backlight_setup_fade_down(void)
 
 static inline void do_backlight_off(void)
 {
+#ifdef HAVE_SCREEN_CURTAIN
+    if (backlight_screen_curtain_active())
+        return;
+#endif
     backlight_timer = 0;
 #if BACKLIGHT_FADE_IN_THREAD
     backlight_setup_fade_down();
@@ -498,6 +526,10 @@ static inline void do_backlight_off(void)
 /* Update state of backlight according to timeout setting */
 static void backlight_update_state(void)
 {
+#ifdef HAVE_SCREEN_CURTAIN
+    if (backlight_screen_curtain_active())
+        return;
+#endif
 
     int timeout = backlight_get_current_timeout();
 
@@ -531,6 +563,53 @@ static void backlight_update_state(void)
 #endif
     }
 }
+
+#ifdef HAVE_SCREEN_CURTAIN
+bool backlight_screen_curtain_active(void)
+{
+    return __atomic_load_n(&screen_curtain_active, __ATOMIC_ACQUIRE);
+}
+
+void backlight_set_screen_curtain(bool enabled)
+{
+    queue_send(&backlight_queue, BACKLIGHT_SCREEN_CURTAIN_CHANGED, enabled);
+}
+
+static void backlight_apply_screen_curtain(bool enabled)
+{
+    if (enabled == backlight_screen_curtain_active())
+        return;
+
+#if (CONFIG_BACKLIGHT_FADING == BACKLIGHT_FADING_SW_SETTING) \
+    || (CONFIG_BACKLIGHT_FADING == BACKLIGHT_FADING_SW_HW_REG)
+    backlight_fading_state = NOT_FADING;
+    _backlight_fade_update_state(backlight_brightness);
+#endif
+    backlight_timer = 0;
+#ifdef HAVE_LCD_SLEEP
+    backlight_lcd_sleep_countdown(false);
+#endif
+
+    if (enabled)
+    {
+        __atomic_store_n(&screen_curtain_active, true, __ATOMIC_RELEASE);
+        lcd_set_screen_curtain(true);
+        backlight_hw_on();
+#ifdef HAVE_BACKLIGHT_BRIGHTNESS
+        backlight_hw_brightness(MIN_BRIGHTNESS_SETTING);
+#endif
+    }
+    else
+    {
+#ifdef HAVE_BACKLIGHT_BRIGHTNESS
+        backlight_hw_brightness(backlight_brightness);
+#endif
+        __atomic_store_n(&screen_curtain_active, false, __ATOMIC_RELEASE);
+        backlight_update_state();
+        lcd_set_screen_curtain(false);
+    }
+}
+#endif
 
 #ifdef HAVE_REMOTE_LCD
 /* Update state of remote backlight according to timeout setting */
@@ -572,6 +651,12 @@ void backlight_thread(void)
         backlight_queue_wait(&ev);
         switch(ev.id)
         {   /* These events must always be processed */
+#ifdef HAVE_SCREEN_CURTAIN
+            case BACKLIGHT_SCREEN_CURTAIN_CHANGED:
+                backlight_apply_screen_curtain(ev.data != 0);
+                queue_reply(&backlight_queue, 0);
+                continue;
+#endif
 #ifdef _BACKLIGHT_FADE_BOOST
             case BACKLIGHT_FADE_FINISH:
                 cpu_boost(false);
@@ -643,6 +728,10 @@ void backlight_thread(void)
 #ifdef HAVE_BACKLIGHT_BRIGHTNESS
             case BACKLIGHT_BRIGHTNESS_CHANGED:
                 backlight_brightness = (int)ev.data;
+#ifdef HAVE_SCREEN_CURTAIN
+                if (backlight_screen_curtain_active())
+                    break;
+#endif
                 backlight_hw_brightness((int)ev.data);
 #if  (CONFIG_BACKLIGHT_FADING == BACKLIGHT_FADING_SW_SETTING) \
     || (CONFIG_BACKLIGHT_FADING == BACKLIGHT_FADING_SW_HW_REG)
@@ -653,6 +742,10 @@ void backlight_thread(void)
 #endif /* HAVE_BACKLIGHT_BRIGHTNESS */
 #ifdef HAVE_LCD_SLEEP
             case LCD_SLEEP:
+#ifdef HAVE_SCREEN_CURTAIN
+                if (backlight_screen_curtain_active())
+                    break;
+#endif
                 lcd_sleep();
                 break;
 #endif
@@ -702,6 +795,10 @@ void backlight_thread(void)
 
 static void backlight_timeout_handler(void)
 {
+#ifdef HAVE_SCREEN_CURTAIN
+    if (!backlight_screen_curtain_active())
+    {
+#endif
     if(backlight_timer > 0)
     {
         backlight_timer -= BACKLIGHT_THREAD_TIMEOUT;
@@ -720,6 +817,9 @@ static void backlight_timeout_handler(void)
         }
     }
 #endif /* HAVE_LCD_SLEEP */
+#ifdef HAVE_SCREEN_CURTAIN
+    }
+#endif
 #ifdef HAVE_REMOTE_LCD
     if(remote_backlight_timer > 0)
     {
@@ -791,13 +891,20 @@ void backlight_init(void)
     /* Leave all lights as set by the bootloader here. The settings load will
      * call the appropriate backlight_set_*() functions, only changing light
      * status if necessary. */
-#ifdef BACKLIGHT_DRIVER_CLOSE
-    backlight_thread_id =
+#if defined(BACKLIGHT_DRIVER_CLOSE) || defined(HAVE_SCREEN_CURTAIN)
+    unsigned int thread_id =
 #endif
     create_thread(backlight_thread, backlight_stack,
                   sizeof(backlight_stack), 0, backlight_thread_name
                   IF_PRIO(, PRIORITY_USER_INTERFACE)
                   IF_COP(, CPU));
+#ifdef BACKLIGHT_DRIVER_CLOSE
+    backlight_thread_id = thread_id;
+#endif
+#ifdef HAVE_SCREEN_CURTAIN
+    queue_enable_queue_send(&backlight_queue, &backlight_queue_sender_list,
+                            thread_id);
+#endif
 }
 
 #ifdef BACKLIGHT_DRIVER_CLOSE
@@ -840,6 +947,10 @@ void backlight_off(void)
  * and optionally when it's set to always off. */
 bool is_backlight_on(bool ignore_always_off)
 {
+#ifdef HAVE_SCREEN_CURTAIN
+    if (backlight_screen_curtain_active())
+        return true;
+#endif
     int timeout = backlight_get_current_timeout();
     return (backlight_timer > 0)   /* countdown */
         || (timeout == 0) /* always on */

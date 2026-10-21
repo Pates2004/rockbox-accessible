@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -108,7 +109,13 @@ int list_sc(int *selected_item)
     rb->gui_synclist_set_title(&gui_sc,
         (user_file?"Shortcuts (sealed)":"Shortcuts (editable)"), NOICON);
     rb->gui_synclist_set_nb_items(&gui_sc, sc_file.entry_cnt);
+    if (*selected_item >= sc_file.entry_cnt)
+        *selected_item = sc_file.entry_cnt - 1;
+    if (*selected_item < 0)
+        *selected_item = 0;
+    gui_sc.selected_item = *selected_item;
     rb->gui_synclist_select_item(&gui_sc, *selected_item);
+    rb->gui_synclist_speak_item(&gui_sc);
 
     /* Draw the prepared widget to the LCD now */
     action = draw_sc_list(&gui_sc);

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /*
  * Two Levels Segregate Fit memory allocator (TLSF)
  * Version 2.4.6
@@ -158,6 +159,7 @@ void abort(void);
 /* than 128 bytes */
 #define SMALL_BLOCK     (128)
 #define REAL_FLI        (MAX_FLI - FLI_OFFSET)
+#define MAX_REQUEST_SIZE (((size_t)1 << MAX_FLI) - ((size_t)1 << (MAX_FLI - MAX_LOG2_SLI - 1)))
 #define MIN_BLOCK_SIZE  (sizeof (free_ptr_t))
 #define BHDR_OVERHEAD   (sizeof (bhdr_t) - MIN_BLOCK_SIZE)
 #define TLSF_SIGNATURE  (0x2A59FA59)
@@ -322,13 +324,13 @@ static const int table[] = {
     7, 7, 7, 7, 7, 7, 7
 };
 
-static __inline__ int ls_bit(int i)
+static __inline__ int ls_bit(int value)
 {
-    unsigned int a;
-    unsigned int x = i & -i;
+    unsigned int byte_offset;
+    unsigned int lowest_bit = (unsigned int)value & (0u - (unsigned int)value);
 
-    a = x <= 0xffff ? (x <= 0xff ? 0 : 8) : (x <= 0xffffff ? 16 : 24);
-    return table[x >> a] + a;
+    byte_offset = lowest_bit <= 0xffff ? (lowest_bit <= 0xff ? 0 : 8) : (lowest_bit <= 0xffffff ? 16 : 24);
+    return table[lowest_bit >> byte_offset] + byte_offset;
 }
 
 static __inline__ int ms_bit(int i)
@@ -540,7 +542,7 @@ size_t init_memory_pool(size_t mem_pool_size, void *mem_pool)
         return -1;
     }
 
-    if (((unsigned long) mem_pool & PTR_MASK)) {
+    if (((uintptr_t) mem_pool & PTR_MASK)) {
         ERROR_MSG("init_memory_pool (): mem_pool must be aligned to a word\n");
         return -1;
     }
@@ -600,7 +602,7 @@ size_t add_new_area(void *area, size_t area_size, void *mem_pool)
         lb1 = ptr->end;
 
         /* Merging the new area with the next physically contigous one */
-        if ((unsigned long) ib1 == (unsigned long) lb0 + BHDR_OVERHEAD) {
+        if ((uintptr_t) ib1 == (uintptr_t) lb0 + BHDR_OVERHEAD) {
             if (tlsf->area_head == ptr) {
                 tlsf->area_head = ptr->next;
                 ptr = ptr->next;
@@ -621,7 +623,7 @@ size_t add_new_area(void *area, size_t area_size, void *mem_pool)
 
         /* Merging the new area with the previous physically contigous
            one */
-        if ((unsigned long) lb1->ptr.buffer == (unsigned long) ib0) {
+        if ((uintptr_t) lb1->ptr.buffer == (uintptr_t) ib0) {
             if (tlsf->area_head == ptr) {
                 tlsf->area_head = ptr->next;
                 ptr = ptr->next;
@@ -780,6 +782,9 @@ void *malloc_ex(size_t size, void *mem_pool)
     int fl, sl;
     size_t tmp_size;
 
+    if (size > MAX_REQUEST_SIZE)
+        return NULL;
+
     size = (size < MIN_BLOCK_SIZE) ? MIN_BLOCK_SIZE : ROUNDUP_SIZE(size);
 
     /* Rounding up the requested size and calculating fl and sl */
@@ -911,6 +916,9 @@ void *realloc_ex(void *ptr, size_t new_size, void *mem_pool)
         return NULL;
     }
 
+    if (new_size > MAX_REQUEST_SIZE)
+        return NULL;
+
     b = (bhdr_t *) ((char *) ptr - BHDR_OVERHEAD);
     next_b = GET_NEXT_BLOCK(b->ptr.buffer, b->size & BLOCK_SIZE);
     new_size = (new_size < MIN_BLOCK_SIZE) ? MIN_BLOCK_SIZE : ROUNDUP_SIZE(new_size);
@@ -988,7 +996,7 @@ void *calloc_ex(size_t nelem, size_t elem_size, void *mem_pool)
 /******************************************************************/
     void *ptr;
 
-    if (nelem <= 0 || elem_size <= 0)
+    if (nelem == 0 || elem_size == 0 || nelem > SIZE_MAX / elem_size)
         return NULL;
 
     if (!(ptr = malloc_ex(nelem * elem_size, mem_pool)))

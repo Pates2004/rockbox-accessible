@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -80,6 +81,7 @@ void set_selective_softlock_actions(bool selective, unsigned int mask);
  * load it into unlock_combo if we find it,
  * also arm autolock if enabled. */
 void action_autosoftlock_init(void);
+void action_update_touch_lock(void);
 
 #endif /* !defined(HAS_BUTTON_HOLD) */
 
@@ -379,6 +381,12 @@ enum {
     ACTION_USB_HID_MOUSE_WHEEL_SCROLL_DOWN,
     ACTION_USB_HID_LAST, /* Place holder */
 
+#ifdef HAVE_ESPEAK
+    ACTION_LIST_FIRST,
+    ACTION_LIST_LAST,
+    ACTION_LIST_PAGE_FIRST,
+    ACTION_LIST_PAGE_LAST,
+#endif
     LAST_ACTION_PLACEHOLDER, /* custom actions should be this + something */
 };
 

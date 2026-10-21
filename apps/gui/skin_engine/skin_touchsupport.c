@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -24,6 +25,7 @@
 #include "skin_engine.h"
 #include "wps_internals.h"
 #include "misc.h"
+#include "accessibility.h"
 #include "option_select.h"
 #include "sound.h"
 #include "settings_list.h"
@@ -41,6 +43,42 @@ void skin_disarm_touchregions(struct gui_wps *gwps)
     gesture_reset(&gwps->data->gesture);
 }
 
+#ifdef HAVE_ESPEAK
+static void skin_accessibility_explore(struct gui_wps *gwps)
+{
+    struct wps_data *data = gwps->data;
+    char *skin_buffer = get_skin_buffer(data);
+    int touch_x, touch_y;
+    bool force;
+    if (!accessibility_explore_point(&touch_x, &touch_y, &force))
+        return;
+    int target = -1;
+    int index = 0;
+    struct skin_token_list *hits = SKINOFFSETTOPTR(skin_buffer, data->touchregions);
+    for (; hits; hits = SKINOFFSETTOPTR(skin_buffer, hits->next), ++index)
+    {
+        struct wps_token *token = SKINOFFSETTOPTR(skin_buffer, hits->token);
+        struct touchregion *hit = SKINOFFSETTOPTR(skin_buffer, token->value.data);
+        struct skin_viewport *viewport = SKINOFFSETTOPTR(skin_buffer, hit->wvp);
+        if ((viewport->hidden_flags & VP_DRAW_HIDDEN) || hit->width <= 0 || hit->height <= 0 ||
+            (data->touchscreen_locked && hit->action != ACTION_TOUCH_SOFTLOCK && !hit->allow_while_locked) ||
+            !viewport_point_within_vp(&viewport->vp, touch_x, touch_y))
+            continue;
+        int relative_x = touch_x - viewport->vp.x;
+        int relative_y = touch_y - viewport->vp.y;
+        if (relative_x >= hit->x - hit->wpad && relative_x < hit->x + hit->width + hit->wpad &&
+            relative_y >= hit->y - hit->hpad && relative_y < hit->y + hit->height + hit->hpad)
+        {
+            target = index;
+            break;
+        }
+    }
+    accessibility_explore_feedback(gwps, target, target >= 0);
+    if (target < 0)
+        accessibility_speak_empty();
+}
+#endif
+
 /* Get the touched action.
  * egde_offset is a percentage value for the position of the touch
  * inside the bar for regions which arnt WPS_TOUCHREGION_ACTION type.
@@ -52,6 +90,14 @@ int skin_get_touchaction(struct gui_wps *gwps, int* edge_offset)
     struct touchregion *region = NULL;
     struct touchevent tevent;
     struct gesture_event gevent;
+
+#ifdef HAVE_ESPEAK
+    if (accessibility_enabled())
+    {
+        skin_accessibility_explore(gwps);
+        return ACTION_NONE;
+    }
+#endif
 
     action_get_touch_event(&tevent);
     gesture_process(&data->gesture, &tevent);

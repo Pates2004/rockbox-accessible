@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -43,6 +44,9 @@
 #include "dir.h"
 #include "presets.h"
 #include "core_alloc.h"
+#ifdef HAVE_ESPEAK
+#include "tts.h"
+#endif
 
 static int curr_preset = -1;
 
@@ -215,7 +219,7 @@ void preset_set_current(int preset)
 /* Speak a preset by number or by spelling its name, depending on settings. */
 void preset_talk(int preset, bool fallback, bool enqueue)
 {
-    if (global_settings.talk_file == 1) /* number */
+    if (!talk_tts_enabled(&global_settings) && global_settings.talk_file == 1) /* number */
         talk_number(preset + 1, enqueue);
     else
     { /* spell */
@@ -617,7 +621,7 @@ int handle_radio_presets(void)
 
     gui_synclist_init(&lists, presets_get_name, presets->fmstation, false, 1, NULL);
     gui_synclist_set_title(&lists, str(LANG_PRESET), NOICON);
-    if(global_settings.talk_file)
+    if(talk_file_names_enabled(&global_settings))
         gui_synclist_set_voice_callback(&lists, presets_speak_name);
     gui_synclist_set_nb_items(&lists, num_presets);
     gui_synclist_select_item(&lists, curr_preset<0 ? 0 : curr_preset);
@@ -662,11 +666,132 @@ int handle_radio_presets(void)
 }
 
 
+struct presets_scan_speech
+{
+    bool paused;
+    bool silenced;
+    bool resume_on_release;
+    bool spoke;
+    int pressed_button;
+    int found_frequency;
+    int pending_frequency;
+    long talked_tick;
+};
+
+static void presets_scan_stop_speech(void)
+{
+    talk_cancel_enqueue_next();
+    talk_shutup();
+}
+
+static void presets_scan_speech_action(struct presets_scan_speech *speech,
+                                       int action, int button)
+{
+    int key = button & ~(BUTTON_REL | BUTTON_REPEAT);
+
+    if (action == ACTION_STD_OK && !speech->silenced)
+    {
+        speech->silenced = true;
+        speech->resume_on_release = false;
+        presets_scan_stop_speech();
+    }
+
+    if (button & BUTTON_REL)
+    {
+        if (key == speech->pressed_button)
+        {
+            if (speech->resume_on_release && !speech->silenced &&
+                !(button & BUTTON_REPEAT))
+            {
+                speech->paused = false;
+                speech->pending_frequency = speech->found_frequency;
+            }
+            speech->pressed_button = BUTTON_NONE;
+            speech->resume_on_release = false;
+        }
+        return;
+    }
+
+    if (button & BUTTON_REPEAT)
+    {
+        speech->resume_on_release = false;
+        return;
+    }
+
+    if (key == BUTTON_NONE || key == speech->pressed_button || speech->silenced)
+        return;
+
+    speech->pressed_button = key;
+    speech->resume_on_release = action == ACTION_UNKNOWN && speech->paused;
+    speech->paused = action == ACTION_UNKNOWN || !speech->paused;
+    if (speech->paused)
+        presets_scan_stop_speech();
+    else
+        speech->pending_frequency = speech->found_frequency;
+}
+
+static int presets_scan_action(struct presets_scan_speech *speech)
+{
+    int action = get_custom_action(CONTEXT_STD, TIMEOUT_NOBLOCK, NULL);
+
+    if (action == ACTION_STD_CANCEL)
+    {
+        presets_scan_stop_speech();
+        return action;
+    }
+
+    if (IS_SYSEVENT(action) || (action & BUTTON_MULTIMEDIA))
+    {
+        if (action == SYS_USB_CONNECTED || action == SYS_POWEROFF ||
+            action == SYS_REBOOT || action == SYS_FS_CHANGED)
+            presets_scan_stop_speech();
+
+        long event = default_event_handler(action);
+        if (event == SYS_USB_CONNECTED || action == SYS_POWEROFF ||
+            action == SYS_REBOOT || event == SYS_FS_CHANGED)
+            return action;
+    }
+    else if (action != ACTION_NONE && action != ACTION_REDRAW)
+    {
+        int button;
+        get_action_statuscode(&button);
+        presets_scan_speech_action(speech, action, button);
+    }
+
+    return ACTION_NONE;
+}
+
+static void presets_scan_speak(struct presets_scan_speech *speech)
+{
+    if (speech->paused || speech->silenced || !speech->pending_frequency ||
+        !talk_dynamic_enabled(&global_settings))
+        return;
+
+#ifdef HAVE_ESPEAK
+    if (tts_is_available())
+    {
+        if (tts_is_busy())
+            return;
+    }
+    else
+#endif
+    if (speech->spoke && TIME_BEFORE(current_tick,
+                                   (unsigned long)speech->talked_tick + HZ * 5))
+        return;
+
+    talk_cancel_enqueue_next();
+    talk_value_decimal(speech->pending_frequency, UNIT_INT, 6, false);
+    speech->pending_frequency = 0;
+    speech->talked_tick = current_tick;
+    speech->spoke = true;
+}
+
 int presets_scan(void *viewports)
 {
     bool do_scan = true;
     int curr_freq = radio_get_current_frequency();
-    long talked_tick = 0;
+    int scan_action = ACTION_NONE;
+    struct presets_scan_speech speech = { 0 };
     struct viewport *vp = (struct viewport *)viewports;
 
     FOR_NB_SCREENS(i)
@@ -702,22 +827,15 @@ int presets_scan(void *viewports)
         while(curr_freq <= fmr->freq_max)
         {
             int freq, frac;
-            if(num_presets >= MAX_PRESETS || action_userabort(TIMEOUT_NOBLOCK))
+            scan_action = presets_scan_action(&speech);
+            if(num_presets >= MAX_PRESETS || scan_action != ACTION_NONE)
                 break;
 
             freq = curr_freq / FREQ_DISP_DIVISOR;
             frac = freq % 100;
             freq /= 100;
 
-            if (global_settings.talk_menu &&
-                TIME_AFTER(current_tick, talked_tick + (HZ * 5)))
-            {
-                talked_tick = current_tick;
-                talk_id(LANG_FM_SCANNING, false);
-                talk_value_decimal(curr_freq, UNIT_INT, 6, true);
-            }
-            /* (voiced above) */
-            splashf(0, str(LANG_FM_SCANNING), freq, frac);
+            splashf_silent(0, str(LANG_FM_SCANNING), freq, frac);
 
             if(tuner_set(RADIO_SCAN_FREQUENCY, curr_freq))
             {
@@ -725,15 +843,19 @@ int presets_scan(void *viewports)
                 presets->fmstation[num_presets].name[0] = '\0';
                 presets->fmstation[num_presets].frequency = curr_freq;
                 num_presets++;
+                speech.found_frequency = curr_freq;
+                speech.pending_frequency = curr_freq;
             }
+
+            presets_scan_speak(&speech);
 
             curr_freq += fmr->freq_step;
 
             yield(); /* (voice_thread) */
         }
-        radio_set_current_frequency(curr_freq);
+        presets_scan_stop_speech();
 
-        if (get_radio_status() == FMRADIO_PLAYING)
+        if (!IS_SYSEVENT(scan_action) && get_radio_status() == FMRADIO_PLAYING)
             tuner_set(RADIO_MUTE, 0);
 
         presets_changed = true;
@@ -749,15 +871,24 @@ int presets_scan(void *viewports)
             radio_set_current_frequency(presets->fmstation[0].frequency);
             radio_set_mode(RADIO_PRESET_MODE);
             presets_loaded = true;
-            next_station(0);
+            if (!IS_SYSEVENT(scan_action))
+                next_station(0);
         }
         else
         {
             /* Wrap it to beginning or we'll be past end of band */
             presets_loaded = false;
-            next_station(1);
+            radio_set_current_frequency(fmr->freq_min);
+            if (!IS_SYSEVENT(scan_action))
+                next_station(0);
         }
         presets_put(presets);
+
+        if (scan_action == ACTION_NONE && talk_menus_enabled(&global_settings))
+        {
+            talk_id(LANG_FM_SCAN_COMPLETE, false);
+            talk_force_enqueue_next();
+        }
     }
 
     return 1;

@@ -1,3 +1,4 @@
+# Modified for Rockbox Accessible; change notice dated 2026-10-21.
 #             __________               __   ___.
 #   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
 #   Source     |       _//  _ \_/ ___\|  |/ /| __ \ /  _ \  \/  /
@@ -4277,13 +4278,13 @@
   desc: root of voice menu
   user: core
   <source>
-    *: "Voice"
+    *: "Accessibility"
   </source>
   <dest>
-    *: "Voice"
+    *: "Accessibility"
   </dest>
   <voice>
-    *: "Voice"
+    *: "Accessibility"
   </voice>
 </phrase>
 <phrase>
@@ -4294,10 +4295,10 @@
     *: "Voice Menus"
   </source>
   <dest>
-    *: "Voice Menus"
+    *: "Use voice files to read the interface"
   </dest>
   <voice>
-    *: "Voice Menus"
+    *: "Use voice files to read the interface"
   </voice>
 </phrase>
 <phrase>
@@ -4308,10 +4309,10 @@
     *: "Voice Directories"
   </source>
   <dest>
-    *: "Voice Directories"
+    *: "Read directory names"
   </dest>
   <voice>
-    *: "Voice Directories"
+    *: "Read directory names"
   </voice>
 </phrase>
 <phrase>
@@ -4336,10 +4337,10 @@
     *: "Voice Filenames"
   </source>
   <dest>
-    *: "Voice Filenames"
+    *: "Read file names"
   </dest>
   <voice>
-    *: "Voice Filenames"
+    *: "Read file names"
   </voice>
 </phrase>
 <phrase>
@@ -9258,10 +9259,10 @@
     *: "Voice Prompt Volume"
   </source>
   <dest>
-    *: "Voice Prompt Volume"
+    *: "Voice file volume"
   </dest>
   <voice>
-    *: "Voice Prompt Volume"
+    *: "Voice file volume"
   </voice>
 </phrase>
 <phrase>
@@ -9345,13 +9346,13 @@
   desc: in keyclick settings menu
   user: core
   <source>
-    *: "Keyclick"
+    *: "Interface sounds"
   </source>
   <dest>
-    *: "Keyclick"
+    *: "Interface sounds"
   </dest>
   <voice>
-    *: "Keyclick"
+    *: "Interface sounds"
   </voice>
 </phrase>
 <phrase>
@@ -17229,5 +17230,5568 @@
   <voice>
     *: none
     touchscreen: "Touchscreen Flick Shortcuts"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS
+  desc: eSpeak settings menu
+  user: core
+  <source>
+    *: "eSpeak settings"
+  </source>
+  <dest>
+    *: "eSpeak settings"
+  </dest>
+  <voice>
+    *: "eSpeak settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_ENABLED
+  desc: enable built-in speech synthesis
+  user: core
+  <source>
+    *: "Speech synthesis"
+  </source>
+  <dest>
+    *: "Speech synthesis"
+  </dest>
+  <voice>
+    *: "Speech synthesis"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_LANGUAGE
+  desc: speech synthesis language selection
+  user: core
+  <source>
+    *: "Speech language"
+  </source>
+  <dest>
+    *: "Speech language"
+  </dest>
+  <voice>
+    *: "Speech language"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_VARIANT
+  desc: speech synthesis voice variant selection
+  user: core
+  <source>
+    *: "Voice variant"
+  </source>
+  <dest>
+    *: "Voice variant"
+  </dest>
+  <voice>
+    *: "Voice variant"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_RATE
+  desc: speech synthesis rate setting
+  user: core
+  <source>
+    *: "Speech rate"
+  </source>
+  <dest>
+    *: "Speech rate"
+  </dest>
+  <voice>
+    *: "Speech rate"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_PITCH
+  desc: speech synthesis pitch setting
+  user: core
+  <source>
+    *: "Pitch"
+  </source>
+  <dest>
+    *: "Pitch"
+  </dest>
+  <voice>
+    *: "Pitch"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_VOLUME
+  desc: speech synthesis volume setting
+  user: core
+  <source>
+    *: "Speech volume"
+  </source>
+  <dest>
+    *: "Speech volume"
+  </dest>
+  <voice>
+    *: "Speech volume"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_RANGE
+  desc: speech synthesis modulation setting
+  user: core
+  <source>
+    *: "Modulation"
+  </source>
+  <dest>
+    *: "Modulation"
+  </dest>
+  <voice>
+    *: "Modulation"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_WORDGAP
+  desc: speech synthesis word gap setting
+  user: core
+  <source>
+    *: "Word gap"
+  </source>
+  <dest>
+    *: "Word gap"
+  </dest>
+  <voice>
+    *: "Word gap"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_ERROR
+  desc: speech synthesis initialization or runtime failure
+  user: core
+  <source>
+    *: "Speech synthesis unavailable"
+  </source>
+  <dest>
+    *: "Speech synthesis unavailable"
+  </dest>
+  <voice>
+    *: "Speech synthesis unavailable"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_READER
+  desc: text reader action
+  user: core
+  <source>
+    *: "Read text"
+  </source>
+  <dest>
+    *: "Read text"
+  </dest>
+  <voice>
+    *: "Read text"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_READING
+  desc: text reader active state
+  user: core
+  <source>
+    *: "Reading"
+  </source>
+  <dest>
+    *: "Reading"
+  </dest>
+  <voice>
+    *: "Reading"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_PAUSED
+  desc: text reader paused state
+  user: core
+  <source>
+    *: "Paused"
+  </source>
+  <dest>
+    *: "Paused"
+  </dest>
+  <voice>
+    *: "Paused"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_FINISHED
+  desc: text reader completion message
+  user: core
+  <source>
+    *: "End of text"
+  </source>
+  <dest>
+    *: "End of text"
+  </dest>
+  <voice>
+    *: "End of text"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KBD_UNAVAILABLE
+  desc: keyboard cannot create its views and returns cancellation
+  user: core
+  <source>
+    *: "Cannot open keyboard"
+  </source>
+  <dest>
+    *: "Cannot open keyboard"
+  </dest>
+  <voice>
+    *: "Cannot open keyboard"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_INVALID_TEXT
+  desc: text reader unsupported encoding error
+  user: core
+  <source>
+    *: "Unsupported text encoding"
+  </source>
+  <dest>
+    *: "Unsupported text encoding"
+  </dest>
+  <voice>
+    *: "Unsupported text encoding"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_DEFAULT_VARIANT
+  desc: default speech synthesis voice variant
+  user: core
+  <source>
+    *: "Default variant"
+  </source>
+  <dest>
+    *: "Default variant"
+  </dest>
+  <voice>
+    *: "Default variant"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_SYSTEM
+  desc: follow the current Rockbox interface language
+  user: core
+  <source>
+    *: "Follow system language"
+  </source>
+  <dest>
+    *: "Follow system language"
+  </dest>
+  <voice>
+    *: "Follow system language"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_RATE_SCALE
+  desc: speech rate display and editing scale
+  user: core
+  <source>
+    *: "Speech rate scale"
+  </source>
+  <dest>
+    *: "Speech rate scale"
+  </dest>
+  <voice>
+    *: "Speech rate scale"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_RATE_PERCENT
+  desc: speech rate percent scale
+  user: core
+  <source>
+    *: "Percent"
+  </source>
+  <dest>
+    *: "Percent"
+  </dest>
+  <voice>
+    *: "Percent"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_RATE_WPM
+  desc: speech rate words per minute scale
+  user: core
+  <source>
+    *: "WPM"
+  </source>
+  <dest>
+    *: "WPM"
+  </dest>
+  <voice>
+    *: "Words per minute"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_RATE_WPM_UNIT
+  desc: speech rate words per minute unit
+  user: core
+  <source>
+    *: "words/min"
+  </source>
+  <dest>
+    *: "words/min"
+  </dest>
+  <voice>
+    *: "Words per minute"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_PUNCTUATION
+  desc: speech punctuation verbosity
+  user: core
+  <source>
+    *: "Punctuation"
+  </source>
+  <dest>
+    *: "Punctuation"
+  </dest>
+  <voice>
+    *: "Punctuation"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_PUNCTUATION_NONE
+  desc: speak no punctuation
+  user: core
+  <source>
+    *: "None"
+  </source>
+  <dest>
+    *: "None"
+  </dest>
+  <voice>
+    *: "None"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_PUNCTUATION_SOME
+  desc: speak selected punctuation
+  user: core
+  <source>
+    *: "Some"
+  </source>
+  <dest>
+    *: "Some"
+  </dest>
+  <voice>
+    *: "Some"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_PUNCTUATION_MOST
+  desc: speak most punctuation
+  user: core
+  <source>
+    *: "Most"
+  </source>
+  <dest>
+    *: "Most"
+  </dest>
+  <voice>
+    *: "Most"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_PUNCTUATION_ALL
+  desc: speak all punctuation
+  user: core
+  <source>
+    *: "All"
+  </source>
+  <dest>
+    *: "All"
+  </dest>
+  <voice>
+    *: "All"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_READER_SETTINGS
+  desc: eSpeak text reader
+  user: core
+  <source>
+    *: "Text reading settings"
+  </source>
+  <dest>
+    *: "Text reading settings"
+  </dest>
+  <voice>
+    *: "Text reading settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_READER_UNIT
+  desc: eSpeak text reader
+  user: core
+  <source>
+    *: "Navigation unit"
+  </source>
+  <dest>
+    *: "Navigation unit"
+  </dest>
+  <voice>
+    *: "Navigation unit"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_READER_PAGE_LINES
+  desc: eSpeak text reader
+  user: core
+  <source>
+    *: "Lines per page"
+  </source>
+  <dest>
+    *: "Lines per page"
+  </dest>
+  <voice>
+    *: "Lines per page"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_UNIT_CHARACTER
+  desc: eSpeak text reader
+  user: core
+  <source>
+    *: "Characters"
+  </source>
+  <dest>
+    *: "Characters"
+  </dest>
+  <voice>
+    *: "Characters"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_UNIT_WORD
+  desc: eSpeak text reader
+  user: core
+  <source>
+    *: "Words"
+  </source>
+  <dest>
+    *: "Words"
+  </dest>
+  <voice>
+    *: "Words"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_UNIT_LINE
+  desc: eSpeak text reader
+  user: core
+  <source>
+    *: "Lines"
+  </source>
+  <dest>
+    *: "Lines"
+  </dest>
+  <voice>
+    *: "Lines"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_UNIT_PARAGRAPH
+  desc: eSpeak text reader
+  user: core
+  <source>
+    *: "Paragraphs"
+  </source>
+  <dest>
+    *: "Paragraphs"
+  </dest>
+  <voice>
+    *: "Paragraphs"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_UNIT_PAGE
+  desc: eSpeak text reader
+  user: core
+  <source>
+    *: "Pages"
+  </source>
+  <dest>
+    *: "Pages"
+  </dest>
+  <voice>
+    *: "Pages"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_NEWLINE
+  desc: newline character in eSpeak text reader
+  user: core
+  <source>
+    *: "New line"
+  </source>
+  <dest>
+    *: "New line"
+  </dest>
+  <voice>
+    *: "New line"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_DUCKING
+  desc: reduce playback volume during speech
+  user: core
+  <source>
+    *: "Audio ducking"
+  </source>
+  <dest>
+    *: "Audio ducking"
+  </dest>
+  <voice>
+    *: "Audio ducking"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_DUCKING_LEVEL
+  desc: remaining playback volume during speech
+  user: core
+  <source>
+    *: "Audio level during speech"
+  </source>
+  <dest>
+    *: "Audio level during speech"
+  </dest>
+  <voice>
+    *: "Audio level during speech"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_RECORDER_UNAVAILABLE
+  desc: integrated simulator has no recording backend
+  user: core
+  <source>
+    *: "Recording is unavailable in the simulator"
+  </source>
+  <dest>
+    *: "Recording is unavailable in the simulator"
+  </dest>
+  <voice>
+    *: "Recording is unavailable in the simulator"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_READER_MENU
+  desc: integrated text reader bookmarks and context menu
+  user: core
+  <source>
+    *: "Text options"
+  </source>
+  <dest>
+    *: "Text options"
+  </dest>
+  <voice>
+    *: "Text options"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_RESUME
+  desc: integrated text reader bookmarks and context menu
+  user: core
+  <source>
+    *: "Resume reading"
+  </source>
+  <dest>
+    *: "Resume reading"
+  </dest>
+  <voice>
+    *: "Resume reading"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_BEGINNING
+  desc: integrated text reader bookmarks and context menu
+  user: core
+  <source>
+    *: "Go to beginning"
+  </source>
+  <dest>
+    *: "Go to beginning"
+  </dest>
+  <voice>
+    *: "Go to beginning"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_END
+  desc: integrated text reader bookmarks and context menu
+  user: core
+  <source>
+    *: "Go to end"
+  </source>
+  <dest>
+    *: "Go to end"
+  </dest>
+  <voice>
+    *: "Go to end"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_BYTES
+  desc: integrated text reader bookmarks and context menu
+  user: core
+  <source>
+    *: "bytes"
+  </source>
+  <dest>
+    *: "bytes"
+  </dest>
+  <voice>
+    *: "bytes"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_TEXT_BOOKMARK
+  desc: integrated text reader bookmarks and context menu
+  user: core
+  <source>
+    *: "Text bookmark"
+  </source>
+  <dest>
+    *: "Text bookmark"
+  </dest>
+  <voice>
+    *: "Text bookmark"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_POSITION
+  desc: integrated text reader bookmarks and context menu
+  user: core
+  <source>
+    *: "Position"
+  </source>
+  <dest>
+    *: "Position"
+  </dest>
+  <voice>
+    *: "Position"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_BOOKMARK_CHANGED
+  desc: integrated text reader bookmarks and context menu
+  user: core
+  <source>
+    *: "The text has changed or the bookmark is invalid"
+  </source>
+  <dest>
+    *: "The text has changed or the bookmark is invalid"
+  </dest>
+  <voice>
+    *: "The text has changed or the bookmark is invalid"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DICE_TITLE
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Dice"
+  </source>
+  <dest>
+    *: "Dice"
+  </dest>
+  <voice>
+    *: "Dice"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DICE_ROLL
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Roll dice"
+  </source>
+  <dest>
+    *: "Roll dice"
+  </dest>
+  <voice>
+    *: "Roll dice"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DICE_COUNT
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Number of dice"
+  </source>
+  <dest>
+    *: "Number of dice"
+  </dest>
+  <voice>
+    *: "Number of dice"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DICE_SIDES
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Number of sides"
+  </source>
+  <dest>
+    *: "Number of sides"
+  </dest>
+  <voice>
+    *: "Number of sides"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DICE_RESULTS
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Results"
+  </source>
+  <dest>
+    *: "Results"
+  </dest>
+  <voice>
+    *: "Results"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_DICE_TOTAL
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Total"
+  </source>
+  <dest>
+    *: "Total"
+  </dest>
+  <voice>
+    *: "Total"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_MEMORY_RECALL
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Recall memory"
+  </source>
+  <dest>
+    *: "Recall memory"
+  </dest>
+  <voice>
+    *: "Recall memory"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_MEMORY_ADD
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Add to memory"
+  </source>
+  <dest>
+    *: "Add to memory"
+  </dest>
+  <voice>
+    *: "Add to memory"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_SCIENTIFIC
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Scientific functions"
+  </source>
+  <dest>
+    *: "Scientific functions"
+  </dest>
+  <voice>
+    *: "Scientific functions"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_BASIC
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Basic functions"
+  </source>
+  <dest>
+    *: "Basic functions"
+  </dest>
+  <voice>
+    *: "Basic functions"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_CLEAR_ENTRY
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Clear entry"
+  </source>
+  <dest>
+    *: "Clear entry"
+  </dest>
+  <voice>
+    *: "Clear entry"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_DIVIDE
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Divide"
+  </source>
+  <dest>
+    *: "Divide"
+  </dest>
+  <voice>
+    *: "Divide"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_SQRT
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Square root"
+  </source>
+  <dest>
+    *: "Square root"
+  </dest>
+  <voice>
+    *: "Square root"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_MULTIPLY
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Multiply"
+  </source>
+  <dest>
+    *: "Multiply"
+  </dest>
+  <voice>
+    *: "Multiply"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_SQUARE
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Square"
+  </source>
+  <dest>
+    *: "Square"
+  </dest>
+  <voice>
+    *: "Square"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_RECIPROCAL
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Reciprocal"
+  </source>
+  <dest>
+    *: "Reciprocal"
+  </dest>
+  <voice>
+    *: "Reciprocal"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_SIGN
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Change sign"
+  </source>
+  <dest>
+    *: "Change sign"
+  </dest>
+  <voice>
+    *: "Change sign"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_DECIMAL
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Decimal separator"
+  </source>
+  <dest>
+    *: "Decimal separator"
+  </dest>
+  <voice>
+    *: "Decimal separator"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_EQUALS
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Equals"
+  </source>
+  <dest>
+    *: "Equals"
+  </dest>
+  <voice>
+    *: "Equals"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_FACTORIAL
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Factorial"
+  </source>
+  <dest>
+    *: "Factorial"
+  </dest>
+  <voice>
+    *: "Factorial"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_PI
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Pi"
+  </source>
+  <dest>
+    *: "Pi"
+  </dest>
+  <voice>
+    *: "Pi"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_SINE
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Sine"
+  </source>
+  <dest>
+    *: "Sine"
+  </dest>
+  <voice>
+    *: "Sine"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_ASINE
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Arc sine"
+  </source>
+  <dest>
+    *: "Arc sine"
+  </dest>
+  <voice>
+    *: "Arc sine"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_COSINE
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Cosine"
+  </source>
+  <dest>
+    *: "Cosine"
+  </dest>
+  <voice>
+    *: "Cosine"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_ACOSINE
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Arc cosine"
+  </source>
+  <dest>
+    *: "Arc cosine"
+  </dest>
+  <voice>
+    *: "Arc cosine"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_TANGENT
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Tangent"
+  </source>
+  <dest>
+    *: "Tangent"
+  </dest>
+  <voice>
+    *: "Tangent"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_ATANGENT
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Arc tangent"
+  </source>
+  <dest>
+    *: "Arc tangent"
+  </dest>
+  <voice>
+    *: "Arc tangent"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_LN
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Natural logarithm"
+  </source>
+  <dest>
+    *: "Natural logarithm"
+  </dest>
+  <voice>
+    *: "Natural logarithm"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_EXP
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Exponential"
+  </source>
+  <dest>
+    *: "Exponential"
+  </dest>
+  <voice>
+    *: "Exponential"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_LOG
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Base ten logarithm"
+  </source>
+  <dest>
+    *: "Base ten logarithm"
+  </dest>
+  <voice>
+    *: "Base ten logarithm"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_POWER
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Raise to a power"
+  </source>
+  <dest>
+    *: "Raise to a power"
+  </dest>
+  <voice>
+    *: "Raise to a power"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_RESULT
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Result"
+  </source>
+  <dest>
+    *: "Result"
+  </dest>
+  <voice>
+    *: "Result"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CALCULATOR_EXPONENT
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Times ten to the power"
+  </source>
+  <dest>
+    *: "Times ten to the power"
+  </dest>
+  <voice>
+    *: "Times ten to the power"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STOPWATCH_LAP
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Lap"
+  </source>
+  <dest>
+    *: "Lap"
+  </dest>
+  <voice>
+    *: "Lap"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_STOPWATCH_SPLIT
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Split time"
+  </source>
+  <dest>
+    *: "Split time"
+  </dest>
+  <voice>
+    *: "Split time"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_METRONOME_TEMPO
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Tempo, beats per minute"
+  </source>
+  <dest>
+    *: "Tempo, beats per minute"
+  </dest>
+  <voice>
+    *: "Tempo, beats per minute"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_METRONOME_METER
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Meter"
+  </source>
+  <dest>
+    *: "Meter"
+  </dest>
+  <voice>
+    *: "Meter"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_METRONOME_PART
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Part"
+  </source>
+  <dest>
+    *: "Part"
+  </dest>
+  <voice>
+    *: "Part"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_METRONOME_BAR
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Bar"
+  </source>
+  <dest>
+    *: "Bar"
+  </dest>
+  <voice>
+    *: "Bar"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_PLUGIN_STATS_IMAGES
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Images"
+  </source>
+  <dest>
+    *: "Images"
+  </dest>
+  <voice>
+    *: "Images"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_PLUGIN_STATS_VIDEOS
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Videos"
+  </source>
+  <dest>
+    *: "Videos"
+  </dest>
+  <voice>
+    *: "Videos"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_PLUGIN_STATS_MAX_FILES
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Maximum files in one directory"
+  </source>
+  <dest>
+    *: "Maximum files in one directory"
+  </dest>
+  <voice>
+    *: "Maximum files in one directory"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ALARMCLOCK
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Alarm clock"
+  </source>
+  <dest>
+    *: "Alarm clock"
+  </dest>
+  <voice>
+    *: "Alarm clock"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ALARMCLOCK_ARMED
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Alarm armed"
+  </source>
+  <dest>
+    *: "Alarm armed"
+  </dest>
+  <voice>
+    *: "Alarm armed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ALARMCLOCK_WAKEUP
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Wake up"
+  </source>
+  <dest>
+    *: "Wake up"
+  </dest>
+  <voice>
+    *: "Wake up"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CHESSCLOCK
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Chess clock"
+  </source>
+  <dest>
+    *: "Chess clock"
+  </dest>
+  <voice>
+    *: "Chess clock"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CHESSCLOCK_PLAYER
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Player"
+  </source>
+  <dest>
+    *: "Player"
+  </dest>
+  <voice>
+    *: "Player"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CHESSCLOCK_DELETE_PLAYER
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Delete player"
+  </source>
+  <dest>
+    *: "Delete player"
+  </dest>
+  <voice>
+    *: "Delete player"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CHESSCLOCK_RESTART_ROUND
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Restart round"
+  </source>
+  <dest>
+    *: "Restart round"
+  </dest>
+  <voice>
+    *: "Restart round"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CHESSCLOCK_TOTAL_TIME
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Total time"
+  </source>
+  <dest>
+    *: "Total time"
+  </dest>
+  <voice>
+    *: "Total time"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CHESSCLOCK_MAX_ROUND_TIME
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Maximum round time"
+  </source>
+  <dest>
+    *: "Maximum round time"
+  </dest>
+  <voice>
+    *: "Maximum round time"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CHESSCLOCK_ROUND_TIME
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Round time"
+  </source>
+  <dest>
+    *: "Round time"
+  </dest>
+  <voice>
+    *: "Round time"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CHESSCLOCK_SET_TOTAL_TIME
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Set total time"
+  </source>
+  <dest>
+    *: "Set total time"
+  </dest>
+  <voice>
+    *: "Set total time"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CHESSCLOCK_SET_ROUND_TIME
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Set round time"
+  </source>
+  <dest>
+    *: "Set round time"
+  </dest>
+  <voice>
+    *: "Set round time"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CHESSCLOCK_ROUND_FINISHED
+  desc: accessible plugin controls and speech
+  user: core
+  <source>
+    *: "Round finished"
+  </source>
+  <dest>
+    *: "Round finished"
+  </dest>
+  <voice>
+    *: "Round finished"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "Touch exploration settings"
+  </source>
+  <dest>
+    *: "Touch exploration settings"
+  </dest>
+  <voice>
+    *: "Touch exploration settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_ENABLED
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "Explore by touch"
+  </source>
+  <dest>
+    *: "Explore by touch"
+  </dest>
+  <voice>
+    *: "Explore by touch"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_EMPTY
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "No item here"
+  </source>
+  <dest>
+    *: "No item here"
+  </dest>
+  <voice>
+    *: "No item here"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_GESTURES
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "Gesture assignments"
+  </source>
+  <dest>
+    *: "Gesture assignments"
+  </dest>
+  <voice>
+    *: "Gesture assignments"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DOUBLE_TAP
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "Double tap"
+  </source>
+  <dest>
+    *: "Double tap"
+  </dest>
+  <voice>
+    *: "Double tap"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_HOLD
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "Hold current item (optional)"
+  </source>
+  <dest>
+    *: "Hold current item (optional)"
+  </dest>
+  <voice>
+    *: "Hold current item (optional)"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_KEY_REMAP
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "Physical buttons: Key Remap plugin"
+  </source>
+  <dest>
+    *: "Physical buttons: Key Remap plugin"
+  </dest>
+  <voice>
+    *: "Physical buttons: Key Remap plugin"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TRIAL
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "Try the new settings. Keep them? Confirm within 20 seconds; otherwise previous settings return. Physical buttons still work."
+  </source>
+  <dest>
+    *: "Try the new settings. Keep them? Confirm within 20 seconds; otherwise previous settings return. Physical buttons still work."
+  </dest>
+  <voice>
+    *: "Try the new settings. Keep them? Confirm within 20 seconds; otherwise previous settings return. Physical buttons still work."
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_ROLLED_BACK
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "Previous touch settings restored"
+  </source>
+  <dest>
+    *: "Previous touch settings restored"
+  </dest>
+  <voice>
+    *: "Previous touch settings restored"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_NONE
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "No action"
+  </source>
+  <dest>
+    *: "No action"
+  </dest>
+  <voice>
+    *: "No action"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_UP
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "Up arrow"
+  </source>
+  <dest>
+    *: "Up arrow"
+  </dest>
+  <voice>
+    *: "Up arrow"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DOWN
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "Down arrow"
+  </source>
+  <dest>
+    *: "Down arrow"
+  </dest>
+  <voice>
+    *: "Down arrow"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_ACTIVATE
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "Activate current item"
+  </source>
+  <dest>
+    *: "Activate current item"
+  </dest>
+  <voice>
+    *: "Activate current item"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_CONTEXT
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "Context menu"
+  </source>
+  <dest>
+    *: "Context menu"
+  </dest>
+  <voice>
+    *: "Context menu"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_VOLUME_UP
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "Increase volume"
+  </source>
+  <dest>
+    *: "Increase volume"
+  </dest>
+  <voice>
+    *: "Increase volume"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_VOLUME_DOWN
+  desc: touch accessibility configuration and speech
+  user: core
+  <source>
+    *: "Decrease volume"
+  </source>
+  <dest>
+    *: "Decrease volume"
+  </dest>
+  <voice>
+    *: "Decrease volume"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_BOOKMARK_LOCAL_ONLY
+  desc: text bookmark saved but recent bookmark update failed
+  user: core
+  <source>
+    *: "Bookmark saved, but recent bookmarks could not be updated"
+  </source>
+  <dest>
+    *: "Bookmark saved, but recent bookmarks could not be updated"
+  </dest>
+  <voice>
+    *: "Bookmark saved, but recent bookmarks could not be updated"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_UNASSIGNED
+  desc: unassigned gesture consumes recognized input without fallback
+  user: core
+  <source>
+    *: "Unassigned"
+  </source>
+  <dest>
+    *: "Unassigned"
+  </dest>
+  <voice>
+    *: "Unassigned"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_TITLE
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Bluetooth"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Bluetooth"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Bluetooth"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_ENABLE
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Enable Bluetooth"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Enable Bluetooth"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Enable Bluetooth"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_SCAN
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Search for devices"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Search for devices"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Search for devices"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_DEVICES
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Devices"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Devices"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Devices"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_DISCONNECT
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Disconnect"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Disconnect"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Disconnect"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_DISABLE
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Disable Bluetooth"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Disable Bluetooth"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Disable Bluetooth"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_STATUS
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Bluetooth status"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Bluetooth status"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Bluetooth status"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_CONNECT
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Pair and connect"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Pair and connect"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Pair and connect"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_REMOVE
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Forget device"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Forget device"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Forget device"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_PAIRED
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Paired"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Paired"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Paired"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_CONNECTED
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Connected"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Connected"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Connected"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_ENABLED
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Bluetooth enabled"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Bluetooth enabled"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Bluetooth enabled"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_DISABLED
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Bluetooth disabled"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Bluetooth disabled"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Bluetooth disabled"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_WORKING
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Working"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Working"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Working"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_UNAVAILABLE
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Bluetooth unavailable in this system or simulator"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Bluetooth unavailable in this system or simulator"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Bluetooth unavailable in this system or simulator"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_CANCELLED
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Cancelled"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Cancelled"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Cancelled"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_TIMEOUT
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Bluetooth operation timed out"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Bluetooth operation timed out"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Bluetooth operation timed out"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_INVALID_ADDRESS
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Invalid Bluetooth address"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Invalid Bluetooth address"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Invalid Bluetooth address"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_COMMAND_FAILED
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Bluetooth service or command failed"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Bluetooth service or command failed"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Bluetooth service or command failed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_PAIR_FAILED
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Pairing failed"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Pairing failed"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Pairing failed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_PIN_UNSUPPORTED
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "PIN or passkey confirmation is not supported"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "PIN or passkey confirmation is not supported"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "PIN or passkey confirmation is not supported"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_CONNECT_FAILED
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Headphones disconnected or audio endpoint unavailable"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Headphones disconnected or audio endpoint unavailable"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Headphones disconnected or audio endpoint unavailable"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_AUDIO_FAILED
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Cannot switch audio output"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Cannot switch audio output"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Cannot switch audio output"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_BUSY
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Another Bluetooth operation is running"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Another Bluetooth operation is running"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Another Bluetooth operation is running"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_THREAD_FAILED
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Cannot start Bluetooth worker"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Cannot start Bluetooth worker"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Cannot start Bluetooth worker"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_DONE
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Done"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Done"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Done"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_EMPTY
+  desc: HiBy Bluetooth control and status
+  user: core
+  <source>
+    *: none
+    hibyr1: "No Bluetooth devices found"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "No Bluetooth devices found"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "No Bluetooth devices found"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_USB_UNVERIFIED
+  desc: HiBy safe USB file transfer status
+  user: core
+  <source>
+    *: none
+    hibyr1: "Safe USB file transfer is unavailable for this firmware"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "Safe USB file transfer is unavailable for this firmware"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "Safe USB file transfer is unavailable for this firmware"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_USB_BUSY
+  desc: HiBy safe USB file transfer status
+  user: core
+  <source>
+    *: none
+    hibyr1: "The card is busy. USB file transfer was not started"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "The card is busy. USB file transfer was not started"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "The card is busy. USB file transfer was not started"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_USB_FAILED
+  desc: HiBy safe USB file transfer status
+  user: core
+  <source>
+    *: none
+    hibyr1: "USB file transfer failed. The card remains available locally"
+  </source>
+  <dest>
+    *: none
+    hibyr1: "USB file transfer failed. The card remains available locally"
+  </dest>
+  <voice>
+    *: none
+    hibyr1: "USB file transfer failed. The card remains available locally"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SOURCES
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Interface sounds for"
+  </source>
+  <dest>
+    *: "Interface sounds for"
+  </dest>
+  <voice>
+    *: "Interface sounds for"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_BOTH
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Physical buttons and gestures"
+  </source>
+  <dest>
+    *: "Physical buttons and gestures"
+  </dest>
+  <voice>
+    *: "Physical buttons and gestures"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_PHYSICAL
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Physical buttons only"
+  </source>
+  <dest>
+    *: "Physical buttons only"
+  </dest>
+  <voice>
+    *: "Physical buttons only"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_GESTURES
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Gestures only"
+  </source>
+  <dest>
+    *: "Gestures only"
+  </dest>
+  <voice>
+    *: "Gestures only"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_BUTTONS
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Physical button settings"
+  </source>
+  <dest>
+    *: "Physical button settings"
+  </dest>
+  <voice>
+    *: "Physical button settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_LEFT
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe left"
+  </source>
+  <dest>
+    *: "Swipe left"
+  </dest>
+  <voice>
+    *: "Swipe left"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_RIGHT
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe right"
+  </source>
+  <dest>
+    *: "Swipe right"
+  </dest>
+  <voice>
+    *: "Swipe right"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_UP
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe up"
+  </source>
+  <dest>
+    *: "Swipe up"
+  </dest>
+  <voice>
+    *: "Swipe up"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_DOWN
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe down"
+  </source>
+  <dest>
+    *: "Swipe down"
+  </dest>
+  <voice>
+    *: "Swipe down"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_LEFT_RIGHT
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe left, then right"
+  </source>
+  <dest>
+    *: "Swipe left, then right"
+  </dest>
+  <voice>
+    *: "Swipe left, then right"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_LEFT_UP
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe left, then up"
+  </source>
+  <dest>
+    *: "Swipe left, then up"
+  </dest>
+  <voice>
+    *: "Swipe left, then up"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_LEFT_DOWN
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe left, then down"
+  </source>
+  <dest>
+    *: "Swipe left, then down"
+  </dest>
+  <voice>
+    *: "Swipe left, then down"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_RIGHT_LEFT
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe right, then left"
+  </source>
+  <dest>
+    *: "Swipe right, then left"
+  </dest>
+  <voice>
+    *: "Swipe right, then left"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_RIGHT_UP
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe right, then up"
+  </source>
+  <dest>
+    *: "Swipe right, then up"
+  </dest>
+  <voice>
+    *: "Swipe right, then up"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_RIGHT_DOWN
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe right, then down"
+  </source>
+  <dest>
+    *: "Swipe right, then down"
+  </dest>
+  <voice>
+    *: "Swipe right, then down"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_UP_LEFT
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe up, then left"
+  </source>
+  <dest>
+    *: "Swipe up, then left"
+  </dest>
+  <voice>
+    *: "Swipe up, then left"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_UP_RIGHT
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe up, then right"
+  </source>
+  <dest>
+    *: "Swipe up, then right"
+  </dest>
+  <voice>
+    *: "Swipe up, then right"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_UP_DOWN
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe up, then down"
+  </source>
+  <dest>
+    *: "Swipe up, then down"
+  </dest>
+  <voice>
+    *: "Swipe up, then down"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_DOWN_LEFT
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe down, then left"
+  </source>
+  <dest>
+    *: "Swipe down, then left"
+  </dest>
+  <voice>
+    *: "Swipe down, then left"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_DOWN_RIGHT
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe down, then right"
+  </source>
+  <dest>
+    *: "Swipe down, then right"
+  </dest>
+  <voice>
+    *: "Swipe down, then right"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SWIPE_DOWN_UP
+  desc: accessibility input configuration
+  user: core
+  <source>
+    *: "Swipe down, then up"
+  </source>
+  <dest>
+    *: "Swipe down, then up"
+  </dest>
+  <voice>
+    *: "Swipe down, then up"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_APPLICATIONS
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "Plugins and applications"
+  </source>
+  <dest>
+    *: "Plugins and applications"
+  </dest>
+  <voice>
+    *: "Plugins and applications"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_BATTERY
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "Speak battery status"
+  </source>
+  <dest>
+    *: "Speak battery status"
+  </dest>
+  <voice>
+    *: "Speak battery status"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_BUTTON_NEXT
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "Next track button"
+  </source>
+  <dest>
+    *: "Next track button"
+  </dest>
+  <voice>
+    *: "Next track button"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_BUTTON_PLAY
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "Play button"
+  </source>
+  <dest>
+    *: "Play button"
+  </dest>
+  <voice>
+    *: "Play button"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_BUTTON_POWER
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "Power button"
+  </source>
+  <dest>
+    *: "Power button"
+  </dest>
+  <voice>
+    *: "Power button"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_BUTTON_VOLUME_DOWN
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "Volume down button"
+  </source>
+  <dest>
+    *: "Volume down button"
+  </dest>
+  <voice>
+    *: "Volume down button"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_BUTTON_VOLUME_UP
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "Volume up button"
+  </source>
+  <dest>
+    *: "Volume up button"
+  </dest>
+  <voice>
+    *: "Volume up button"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DOUBLE_PRESS
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "Double press"
+  </source>
+  <dest>
+    *: "Double press"
+  </dest>
+  <voice>
+    *: "Double press"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_HOLD_TIME
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "Button hold time"
+  </source>
+  <dest>
+    *: "Button hold time"
+  </dest>
+  <voice>
+    *: "Button hold time"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_LAUNCH
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "Open shortcut or application"
+  </source>
+  <dest>
+    *: "Open shortcut or application"
+  </dest>
+  <voice>
+    *: "Open shortcut or application"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_LOCK
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "Lock or unlock screen"
+  </source>
+  <dest>
+    *: "Lock or unlock screen"
+  </dest>
+  <voice>
+    *: "Lock or unlock screen"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHUTDOWN
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "Shut down device"
+  </source>
+  <dest>
+    *: "Shut down device"
+  </dest>
+  <voice>
+    *: "Shut down device"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SINGLE_PRESS
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "Single press"
+  </source>
+  <dest>
+    *: "Single press"
+  </dest>
+  <voice>
+    *: "Single press"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SYSTEM_DEFAULT
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "Default Rockbox controls"
+  </source>
+  <dest>
+    *: "Default Rockbox controls"
+  </dest>
+  <voice>
+    *: "Default Rockbox controls"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SYSTEM_SCREENS
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "System screens"
+  </source>
+  <dest>
+    *: "System screens"
+  </dest>
+  <voice>
+    *: "System screens"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TRIPLE_PRESS
+  desc: accessibility button configuration and shared actions
+  user: core
+  <source>
+    *: "Triple press"
+  </source>
+  <dest>
+    *: "Triple press"
+  </dest>
+  <voice>
+    *: "Triple press"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_LEFT
+  desc: accessibility action name or screen curtain safety message
+  user: core
+  <source>
+    *: "Left arrow"
+  </source>
+  <dest>
+    *: "Left arrow"
+  </dest>
+  <voice>
+    *: "Left arrow"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_RIGHT
+  desc: accessibility action name or screen curtain safety message
+  user: core
+  <source>
+    *: "Right arrow"
+  </source>
+  <dest>
+    *: "Right arrow"
+  </dest>
+  <voice>
+    *: "Right arrow"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_CURTAIN
+  desc: accessibility action name or screen curtain safety message
+  user: core
+  <source>
+    *: "Screen curtain"
+  </source>
+  <dest>
+    *: "Screen curtain"
+  </dest>
+  <voice>
+    *: "Screen curtain"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_CURTAIN_REQUIRES_SPEECH
+  desc: accessibility action name or screen curtain safety message
+  user: core
+  <source>
+    *: "Enable Talkbox before using screen curtain"
+  </source>
+  <dest>
+    *: "Enable Talkbox before using screen curtain"
+  </dest>
+  <voice>
+    *: "Enable Talkbox before using screen curtain"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_CURTAIN_UNAVAILABLE
+  desc: accessibility action name or screen curtain safety message
+  user: core
+  <source>
+    *: "This display does not support screen curtain"
+  </source>
+  <dest>
+    *: "This display does not support screen curtain"
+  </dest>
+  <voice>
+    *: "This display does not support screen curtain"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_LAUNCH_CAPACITY
+  desc: bounded pool of distinct assigned application paths is full
+  user: core
+  <source>
+    *: "Four different plugins are already assigned"
+  </source>
+  <dest>
+    *: "Four different plugins are already assigned"
+  </dest>
+  <voice>
+    *: "Four different plugins are already assigned"
+  </voice>
+</phrase>
+
+<phrase>
+  id: LANG_ACCESSIBILITY_TYPING_SETTINGS
+  desc: accessible keyboard typing settings and spoken controls
+  user: core
+  <source>
+    *: "Typing settings"
+  </source>
+  <dest>
+    *: "Typing settings"
+  </dest>
+  <voice>
+    *: "Typing settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TYPING_LIFT
+  desc: accessible keyboard typing settings and spoken controls
+  user: core
+  <source>
+    *: "Explore and type on lift"
+  </source>
+  <dest>
+    *: "Explore and type on lift"
+  </dest>
+  <voice>
+    *: "Explore and type on lift"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TYPING_DOUBLE_TAP
+  desc: accessible keyboard typing settings and spoken controls
+  user: core
+  <source>
+    *: "Explore and double-tap to type"
+  </source>
+  <dest>
+    *: "Explore and double-tap to type"
+  </dest>
+  <voice>
+    *: "Explore and double-tap to type"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TYPING_ARROWS
+  desc: accessible keyboard typing settings and spoken controls
+  user: core
+  <source>
+    *: "Arrows and Enter; hold Enter to finish"
+  </source>
+  <dest>
+    *: "Arrows and Enter; hold Enter to finish"
+  </dest>
+  <voice>
+    *: "Arrows and Enter; hold Enter to finish"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TYPING_PAGE
+  desc: accessible keyboard typing settings and spoken controls
+  user: core
+  <source>
+    *: "Next keyboard page"
+  </source>
+  <dest>
+    *: "Next keyboard page"
+  </dest>
+  <voice>
+    *: "Next keyboard page"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TYPING_CURSOR_LEFT
+  desc: accessible keyboard typing settings and spoken controls
+  user: core
+  <source>
+    *: "Move text cursor left"
+  </source>
+  <dest>
+    *: "Move text cursor left"
+  </dest>
+  <voice>
+    *: "Move text cursor left"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TYPING_CURSOR_RIGHT
+  desc: accessible keyboard typing settings and spoken controls
+  user: core
+  <source>
+    *: "Move text cursor right"
+  </source>
+  <dest>
+    *: "Move text cursor right"
+  </dest>
+  <voice>
+    *: "Move text cursor right"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TYPING_TEXT_END
+  desc: accessible keyboard typing settings and spoken controls
+  user: core
+  <source>
+    *: "End of text"
+  </source>
+  <dest>
+    *: "End of text"
+  </dest>
+  <voice>
+    *: "End of text"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_CONTROLS_GUIDE
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Default button guide"
+  </source>
+  <dest>
+    *: "Default button guide"
+  </dest>
+  <voice>
+    *: "Default button guide"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_IN_MENU
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Default in menus"
+  </source>
+  <dest>
+    *: "Default in menus"
+  </dest>
+  <voice>
+    *: "Default in menus"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_MULTICLICK
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "No separate multi-press function"
+  </source>
+  <dest>
+    *: "No separate multi-press function"
+  </dest>
+  <voice>
+    *: "No separate multi-press function"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_NO_ACTION
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "No separate action on this screen"
+  </source>
+  <dest>
+    *: "No separate action on this screen"
+  </dest>
+  <voice>
+    *: "No separate action on this screen"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_POWER_HOLD
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Power off after a longer hold"
+  </source>
+  <dest>
+    *: "Power off after a longer hold"
+  </dest>
+  <voice>
+    *: "Power off after a longer hold"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_MENUS
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Menus and lists"
+  </source>
+  <dest>
+    *: "Menus and lists"
+  </dest>
+  <voice>
+    *: "Menus and lists"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_MUSIC
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Music playback"
+  </source>
+  <dest>
+    *: "Music playback"
+  </dest>
+  <voice>
+    *: "Music playback"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_TEXT
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Text reading"
+  </source>
+  <dest>
+    *: "Text reading"
+  </dest>
+  <voice>
+    *: "Text reading"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_KEYBOARD
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Keyboard"
+  </source>
+  <dest>
+    *: "Keyboard"
+  </dest>
+  <voice>
+    *: "Keyboard"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_TEXT_PREVIOUS
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Previous text unit"
+  </source>
+  <dest>
+    *: "Previous text unit"
+  </dest>
+  <voice>
+    *: "Previous text unit"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_TEXT_NEXT
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Next text unit"
+  </source>
+  <dest>
+    *: "Next text unit"
+  </dest>
+  <voice>
+    *: "Next text unit"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_TEXT_PAUSE
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Pause or resume reading"
+  </source>
+  <dest>
+    *: "Pause or resume reading"
+  </dest>
+  <voice>
+    *: "Pause or resume reading"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_RANGE_PREVIOUS
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Previous navigation unit"
+  </source>
+  <dest>
+    *: "Previous navigation unit"
+  </dest>
+  <voice>
+    *: "Previous navigation unit"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_RANGE_NEXT
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Next navigation unit"
+  </source>
+  <dest>
+    *: "Next navigation unit"
+  </dest>
+  <voice>
+    *: "Next navigation unit"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_MUSIC_PAUSE
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Play or pause music"
+  </source>
+  <dest>
+    *: "Play or pause music"
+  </dest>
+  <voice>
+    *: "Play or pause music"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_TRACK_PREVIOUS
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Previous track or track start"
+  </source>
+  <dest>
+    *: "Previous track or track start"
+  </dest>
+  <voice>
+    *: "Previous track or track start"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_TRACK_NEXT
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Next track"
+  </source>
+  <dest>
+    *: "Next track"
+  </dest>
+  <voice>
+    *: "Next track"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_SEEK_BACK
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Seek backward"
+  </source>
+  <dest>
+    *: "Seek backward"
+  </dest>
+  <voice>
+    *: "Seek backward"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_SEEK_FORWARD
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Seek forward"
+  </source>
+  <dest>
+    *: "Seek forward"
+  </dest>
+  <voice>
+    *: "Seek forward"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_CARET_LEFT
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Move text cursor left"
+  </source>
+  <dest>
+    *: "Move text cursor left"
+  </dest>
+  <voice>
+    *: "Move text cursor left"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_CARET_RIGHT
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Move text cursor right"
+  </source>
+  <dest>
+    *: "Move text cursor right"
+  </dest>
+  <voice>
+    *: "Move text cursor right"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_INSERT
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Insert the selected character"
+  </source>
+  <dest>
+    *: "Insert the selected character"
+  </dest>
+  <voice>
+    *: "Insert the selected character"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DEFAULT_FINISH
+  desc: contextual default physical button guide
+  user: core
+  <source>
+    *: "Finish typing"
+  </source>
+  <dest>
+    *: "Finish typing"
+  </dest>
+  <voice>
+    *: "Finish typing"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_INTERFACE_APPEARANCE
+  desc: core interface color presets
+  user: core
+  <source>
+    *: none
+    lcd_color: "Interface color presets"
+  </source>
+  <dest>
+    *: none
+    lcd_color: "Interface color presets"
+  </dest>
+  <voice>
+    *: none
+    lcd_color: "Interface color presets"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_INTERFACE_APPEARANCE_DARK
+  desc: core interface color presets
+  user: core
+  <source>
+    *: none
+    lcd_color: "Dark core interface"
+  </source>
+  <dest>
+    *: none
+    lcd_color: "Dark core interface"
+  </dest>
+  <voice>
+    *: none
+    lcd_color: "Dark core interface"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_INTERFACE_APPEARANCE_LIGHT
+  desc: core interface color presets
+  user: core
+  <source>
+    *: none
+    lcd_color: "Light core interface"
+  </source>
+  <dest>
+    *: none
+    lcd_color: "Light core interface"
+  </dest>
+  <voice>
+    *: none
+    lcd_color: "Light core interface"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_INTERFACE_APPEARANCE_DEFAULT
+  desc: core interface color presets
+  user: core
+  <source>
+    *: none
+    lcd_color: "Default core colors"
+  </source>
+  <dest>
+    *: none
+    lcd_color: "Default core colors"
+  </dest>
+  <voice>
+    *: none
+    lcd_color: "Default core colors"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_WIFI_STARTUP
+  desc: native R1 startup radio policy and diagnostic status
+  user: core
+  <source>
+    *: "Wi-Fi status at startup"
+  </source>
+  <dest>
+    *: "Wi-Fi status at startup"
+  </dest>
+  <voice>
+    *: "Wi-Fi status at startup"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_WIFI_STARTUP_STATE
+  desc: native R1 startup radio policy and diagnostic status
+  user: core
+  <source>
+    *: "Wi-Fi block"
+  </source>
+  <dest>
+    *: "Wi-Fi block"
+  </dest>
+  <voice>
+    *: "Wi-Fi block"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_WIFI_RADIOS
+  desc: native R1 startup radio policy and diagnostic status
+  user: core
+  <source>
+    *: "Wi-Fi radio entries"
+  </source>
+  <dest>
+    *: "Wi-Fi radio entries"
+  </dest>
+  <voice>
+    *: "Wi-Fi radio entries"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_WIFI_INTERFACES
+  desc: native R1 startup radio policy and diagnostic status
+  user: core
+  <source>
+    *: "Inactive Wi-Fi interfaces"
+  </source>
+  <dest>
+    *: "Inactive Wi-Fi interfaces"
+  </dest>
+  <voice>
+    *: "Inactive Wi-Fi interfaces"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_WIFI_RADIO_ERROR
+  desc: native R1 startup radio policy and diagnostic status
+  user: core
+  <source>
+    *: "Radio control error code"
+  </source>
+  <dest>
+    *: "Radio control error code"
+  </dest>
+  <voice>
+    *: "Radio control error code"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_WIFI_INTERFACE_ERROR
+  desc: native R1 startup radio policy and diagnostic status
+  user: core
+  <source>
+    *: "Interface control error code"
+  </source>
+  <dest>
+    *: "Interface control error code"
+  </dest>
+  <voice>
+    *: "Interface control error code"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_WIFI_BLOCKED
+  desc: native R1 startup radio policy and diagnostic status
+  user: core
+  <source>
+    *: "Confirmed"
+  </source>
+  <dest>
+    *: "Confirmed"
+  </dest>
+  <voice>
+    *: "Confirmed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_WIFI_NO_RADIO
+  desc: native R1 startup radio policy and diagnostic status
+  user: core
+  <source>
+    *: "No radio entry; block unconfirmed"
+  </source>
+  <dest>
+    *: "No radio entry; block unconfirmed"
+  </dest>
+  <voice>
+    *: "No radio entry; block unconfirmed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_WIFI_UNCONFIRMED
+  desc: native R1 startup radio policy and diagnostic status
+  user: core
+  <source>
+    *: "Wi-Fi disable not confirmed"
+  </source>
+  <dest>
+    *: "Wi-Fi disable not confirmed"
+  </dest>
+  <voice>
+    *: "Wi-Fi disable not confirmed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_WIFI_SIMULATOR
+  desc: native R1 startup radio policy and diagnostic status
+  user: core
+  <source>
+    *: "Unavailable in this build"
+  </source>
+  <dest>
+    *: "Unavailable in this build"
+  </dest>
+  <voice>
+    *: "Unavailable in this build"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_ACTION_TIME
+  desc: screen state announcements and current time action
+  user: core
+  <source>
+    *: "Announce current time"
+  </source>
+  <dest>
+    *: "Announce current time"
+  </dest>
+  <voice>
+    *: "Announce current time"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SCREEN_STATE
+  desc: screen state announcements and current time action
+  user: core
+  <source>
+    *: "Screen state announcements"
+  </source>
+  <dest>
+    *: "Screen state announcements"
+  </dest>
+  <voice>
+    *: "Screen state announcements"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SCREEN_UNLOCK_NOTICE
+  desc: screen state announcements and current time action
+  user: core
+  <source>
+    *: "On screen unlock"
+  </source>
+  <dest>
+    *: "On screen unlock"
+  </dest>
+  <voice>
+    *: "On screen unlock"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SCREEN_LOCK_NOTICE
+  desc: screen state announcements and current time action
+  user: core
+  <source>
+    *: "On screen lock"
+  </source>
+  <dest>
+    *: "On screen lock"
+  </dest>
+  <voice>
+    *: "On screen lock"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SCREEN_UNLOCKED
+  desc: screen state announcements and current time action
+  user: core
+  <source>
+    *: "Screen unlocked"
+  </source>
+  <dest>
+    *: "Screen unlocked"
+  </dest>
+  <voice>
+    *: "Screen unlocked"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SCREEN_LOCKED
+  desc: screen state announcements and current time action
+  user: core
+  <source>
+    *: "Screen locked"
+  </source>
+  <dest>
+    *: "Screen locked"
+  </dest>
+  <voice>
+    *: "Screen locked"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SCREEN_SAY_UNLOCKED
+  desc: screen state announcements and current time action
+  user: core
+  <source>
+    *: "Say screen unlocked"
+  </source>
+  <dest>
+    *: "Say screen unlocked"
+  </dest>
+  <voice>
+    *: "Say screen unlocked"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SCREEN_SAY_LOCKED
+  desc: screen state announcements and current time action
+  user: core
+  <source>
+    *: "Say screen locked"
+  </source>
+  <dest>
+    *: "Say screen locked"
+  </dest>
+  <voice>
+    *: "Say screen locked"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_NOTICE_TIME_BATTERY
+  desc: screen state announcements and current time action
+  user: core
+  <source>
+    *: "Announce time and battery level"
+  </source>
+  <dest>
+    *: "Announce time and battery level"
+  </dest>
+  <voice>
+    *: "Announce time and battery level"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_NOTICE_ALL
+  desc: screen state announcements and current time action
+  user: core
+  <source>
+    *: "Announce screen state, time and battery level"
+  </source>
+  <dest>
+    *: "Announce screen state, time and battery level"
+  </dest>
+  <voice>
+    *: "Announce screen state, time and battery level"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_NOTICE_SILENT
+  desc: screen state announcements and current time action
+  user: core
+  <source>
+    *: "Say nothing"
+  </source>
+  <dest>
+    *: "Say nothing"
+  </dest>
+  <voice>
+    *: "Say nothing"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Accessibility shortcut"
+  </source>
+  <dest>
+    *: "Accessibility shortcut"
+  </dest>
+  <voice>
+    *: "Accessibility shortcut"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_ENABLED
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Use accessibility shortcut"
+  </source>
+  <dest>
+    *: "Use accessibility shortcut"
+  </dest>
+  <voice>
+    *: "Use accessibility shortcut"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_SERVICE
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Shortcut service"
+  </source>
+  <dest>
+    *: "Shortcut service"
+  </dest>
+  <voice>
+    *: "Shortcut service"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_ESPEAK
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Talkbox"
+  </source>
+  <dest>
+    *: "Talkbox"
+  </dest>
+  <voice>
+    *: "Talkbox"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_VOICE_FILES
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Interface voice files"
+  </source>
+  <dest>
+    *: "Interface voice files"
+  </dest>
+  <voice>
+    *: "Interface voice files"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_ACTIVATE
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Toggle selected service"
+  </source>
+  <dest>
+    *: "Toggle selected service"
+  </dest>
+  <voice>
+    *: "Toggle selected service"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_ESPEAK_ON
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Talkbox enabled"
+  </source>
+  <dest>
+    *: "Talkbox enabled"
+  </dest>
+  <voice>
+    *: "Talkbox enabled"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_ESPEAK_OFF
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Talkbox disabled"
+  </source>
+  <dest>
+    *: "Talkbox disabled"
+  </dest>
+  <voice>
+    *: "Talkbox disabled"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_VOICE_FILES_ON
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Interface voice files enabled"
+  </source>
+  <dest>
+    *: "Interface voice files enabled"
+  </dest>
+  <voice>
+    *: "Interface voice files enabled"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_VOICE_FILES_OFF
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Interface voice files disabled"
+  </source>
+  <dest>
+    *: "Interface voice files disabled"
+  </dest>
+  <voice>
+    *: "Interface voice files disabled"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_FAILED
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Could not enable Talkbox"
+  </source>
+  <dest>
+    *: "Could not enable Talkbox"
+  </dest>
+  <voice>
+    *: "Could not enable Talkbox"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_VOICE_FILE_MISSING
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Could not enable voice files: no valid interface voice file"
+  </source>
+  <dest>
+    *: "Could not enable voice files: no valid interface voice file"
+  </dest>
+  <voice>
+    *: "Could not enable voice files: no valid interface voice file"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SAVE_ERROR
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Could not save accessibility shortcut settings"
+  </source>
+  <dest>
+    *: "Could not save accessibility shortcut settings"
+  </dest>
+  <voice>
+    *: "Could not save accessibility shortcut settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TOGGLE_ESPEAK
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Toggle Talkbox"
+  </source>
+  <dest>
+    *: "Toggle Talkbox"
+  </dest>
+  <voice>
+    *: "Toggle Talkbox"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TOGGLE_VOICE_FILES
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Toggle interface voice files"
+  </source>
+  <dest>
+    *: "Toggle interface voice files"
+  </dest>
+  <voice>
+    *: "Toggle interface voice files"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_POWERED_OFF
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Turn on Bluetooth first"
+  </source>
+  <dest>
+    *: "Turn on Bluetooth first"
+  </dest>
+  <voice>
+    *: "Turn on Bluetooth first"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_AIRPLANE_MODE
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Turn off airplane mode first"
+  </source>
+  <dest>
+    *: "Turn off airplane mode first"
+  </dest>
+  <voice>
+    *: "Turn off airplane mode first"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_INHIBITED
+  desc: Bluetooth operation blocked during connectivity changes or cleanup
+  user: core
+  <source>
+    *: "Bluetooth is temporarily blocked. Check the connectivity settings."
+  </source>
+  <dest>
+    *: "Bluetooth is temporarily blocked. Check the connectivity settings."
+  </dest>
+  <voice>
+    *: "Bluetooth is temporarily blocked. Check the connectivity settings."
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_CONNECTIVITY
+  desc: accessibility services and connectivity controls
+  user: core
+  <source>
+    *: "Connectivity"
+  </source>
+  <dest>
+    *: "Connectivity"
+  </dest>
+  <voice>
+    *: "Connectivity"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_WIFI
+  desc: requested and observed radio state
+  user: core
+  <source>
+    *: "Wi-Fi"
+  </source>
+  <dest>
+    *: "Wi-Fi"
+  </dest>
+  <voice>
+    *: "Wi-Fi"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_AIRPLANE_MODE
+  desc: requested and observed radio state
+  user: core
+  <source>
+    *: "Airplane mode"
+  </source>
+  <dest>
+    *: "Airplane mode"
+  </dest>
+  <voice>
+    *: "Airplane mode"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_CONNECTIVITY_UNKNOWN
+  desc: requested and observed radio state
+  user: core
+  <source>
+    *: "State not confirmed"
+  </source>
+  <dest>
+    *: "State not confirmed"
+  </dest>
+  <voice>
+    *: "State not confirmed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_CONNECTIVITY_ADMIN_OFF
+  desc: requested and observed radio state
+  user: core
+  <source>
+    *: "Disabled in software"
+  </source>
+  <dest>
+    *: "Disabled in software"
+  </dest>
+  <voice>
+    *: "Disabled in software"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_CONNECTIVITY_ADMIN_ON
+  desc: requested and observed radio state
+  user: core
+  <source>
+    *: "Enabled in software"
+  </source>
+  <dest>
+    *: "Enabled in software"
+  </dest>
+  <voice>
+    *: "Enabled in software"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_CONNECTIVITY_PARTIAL
+  desc: requested and observed radio state
+  user: core
+  <source>
+    *: "Transition incomplete"
+  </source>
+  <dest>
+    *: "Transition incomplete"
+  </dest>
+  <voice>
+    *: "Transition incomplete"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_CONNECTIVITY_UNAVAILABLE
+  desc: requested and observed radio state
+  user: core
+  <source>
+    *: "Radio control unavailable"
+  </source>
+  <dest>
+    *: "Radio control unavailable"
+  </dest>
+  <voice>
+    *: "Radio control unavailable"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_CONNECTIVITY_FAILED
+  desc: requested and observed radio state
+  user: core
+  <source>
+    *: "Could not confirm the requested connectivity state"
+  </source>
+  <dest>
+    *: "Could not confirm the requested connectivity state"
+  </dest>
+  <voice>
+    *: "Could not confirm the requested connectivity state"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_CONNECTIVITY_STORAGE_ERROR
+  desc: requested and observed radio state
+  user: core
+  <source>
+    *: "Could not save connectivity settings"
+  </source>
+  <dest>
+    *: "Could not save connectivity settings"
+  </dest>
+  <voice>
+    *: "Could not save connectivity settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_PAIRED_DEVICES
+  desc: Bluetooth device lists and observed power
+  user: core
+  <source>
+    *: "Paired devices"
+  </source>
+  <dest>
+    *: "Paired devices"
+  </dest>
+  <voice>
+    *: "Paired devices"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_PAIR_NEW
+  desc: Bluetooth device lists and observed power
+  user: core
+  <source>
+    *: "Pair a new device"
+  </source>
+  <dest>
+    *: "Pair a new device"
+  </dest>
+  <voice>
+    *: "Pair a new device"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_PAIRED_EMPTY
+  desc: Bluetooth device lists and observed power
+  user: core
+  <source>
+    *: "No paired devices"
+  </source>
+  <dest>
+    *: "No paired devices"
+  </dest>
+  <voice>
+    *: "No paired devices"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_UNPAIRED_EMPTY
+  desc: Bluetooth device lists and observed power
+  user: core
+  <source>
+    *: "No new devices found"
+  </source>
+  <dest>
+    *: "No new devices found"
+  </dest>
+  <voice>
+    *: "No new devices found"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_POWER_UNKNOWN
+  desc: Bluetooth device lists and observed power
+  user: core
+  <source>
+    *: "Bluetooth power state not confirmed"
+  </source>
+  <dest>
+    *: "Bluetooth power state not confirmed"
+  </dest>
+  <voice>
+    *: "Bluetooth power state not confirmed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TRIPLE_TAP
+  desc: Accessible gesture actions and settings
+  user: core
+  <source>
+    *: "Triple tap"
+  </source>
+  <dest>
+    *: "Triple tap"
+  </dest>
+  <voice>
+    *: "Triple tap"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DOUBLE_TAP_HOLD
+  desc: Accessible gesture actions and settings
+  user: core
+  <source>
+    *: "Double tap and hold"
+  </source>
+  <dest>
+    *: "Double tap and hold"
+  </dest>
+  <voice>
+    *: "Double tap and hold"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TOUCH_HOLD_TIME
+  desc: Accessible gesture actions and settings
+  user: core
+  <source>
+    *: "Touch hold time"
+  </source>
+  <dest>
+    *: "Touch hold time"
+  </dest>
+  <voice>
+    *: "Touch hold time"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_STROKE_REPEAT
+  desc: Accessible gesture actions and settings
+  user: core
+  <source>
+    *: "Repeat gesture actions while holding"
+  </source>
+  <dest>
+    *: "Repeat gesture actions while holding"
+  </dest>
+  <voice>
+    *: "Repeat gesture actions while holding"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TOGGLE_TOUCH
+  desc: Accessible gesture actions and settings
+  user: core
+  <source>
+    *: "Turn touch browsing on or off"
+  </source>
+  <dest>
+    *: "Turn touch browsing on or off"
+  </dest>
+  <voice>
+    *: "Turn touch browsing on or off"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_ACTION_DATE
+  desc: Accessible gesture actions and settings
+  user: core
+  <source>
+    *: "Speak the current date"
+  </source>
+  <dest>
+    *: "Speak the current date"
+  </dest>
+  <voice>
+    *: "Speak the current date"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_ACTION_SUMMARY
+  desc: Accessible gesture actions and settings
+  user: core
+  <source>
+    *: "Speak playback and device summary"
+  </source>
+  <dest>
+    *: "Speak playback and device summary"
+  </dest>
+  <voice>
+    *: "Speak playback and device summary"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DESTINATION_UNAVAILABLE
+  desc: Accessible gesture actions and settings
+  user: core
+  <source>
+    *: "This screen is unavailable here"
+  </source>
+  <dest>
+    *: "This screen is unavailable here"
+  </dest>
+  <voice>
+    *: "This screen is unavailable here"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TOUCH_GESTURE_SENSITIVITY
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Touch gesture sensitivity"
+  </source>
+  <dest>
+    *: "Touch gesture sensitivity"
+  </dest>
+  <voice>
+    *: "Touch gesture sensitivity"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_UNLOCK_ANY_BUTTON
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Unlocking with any physical button"
+  </source>
+  <dest>
+    *: "Unlocking with any physical button"
+  </dest>
+  <voice>
+    *: "Unlocking with any physical button"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_LOCKED_BUTTONS
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Allow physical buttons while the screen is locked"
+  </source>
+  <dest>
+    *: "Allow physical buttons while the screen is locked"
+  </dest>
+  <voice>
+    *: "Allow physical buttons while the screen is locked"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TYPING_MODE
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Typing mode"
+  </source>
+  <dest>
+    *: "Typing mode"
+  </dest>
+  <voice>
+    *: "Typing mode"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_ECHO
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Typing echo"
+  </source>
+  <dest>
+    *: "Typing echo"
+  </dest>
+  <voice>
+    *: "Typing echo"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_ECHO_NONE
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "None"
+  </source>
+  <dest>
+    *: "None"
+  </dest>
+  <voice>
+    *: "None"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_ECHO_CHARACTERS
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Characters"
+  </source>
+  <dest>
+    *: "Characters"
+  </dest>
+  <voice>
+    *: "Characters"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_ECHO_WORDS
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Words"
+  </source>
+  <dest>
+    *: "Words"
+  </dest>
+  <voice>
+    *: "Words"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_ECHO_BOTH
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Characters and words"
+  </source>
+  <dest>
+    *: "Characters and words"
+  </dest>
+  <voice>
+    *: "Characters and words"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DELETE_ECHO
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Deletion announcement"
+  </source>
+  <dest>
+    *: "Deletion announcement"
+  </dest>
+  <voice>
+    *: "Deletion announcement"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DELETED_CHARACTER
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Say deleted and character"
+  </source>
+  <dest>
+    *: "Say deleted and character"
+  </dest>
+  <voice>
+    *: "Say deleted and character"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_CHARACTER_ONLY
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Deleted character only"
+  </source>
+  <dest>
+    *: "Deleted character only"
+  </dest>
+  <voice>
+    *: "Deleted character only"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_CAPITALS
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Capital letter announcement"
+  </source>
+  <dest>
+    *: "Capital letter announcement"
+  </dest>
+  <voice>
+    *: "Capital letter announcement"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_CAPITAL_SPOKEN
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Say capital"
+  </source>
+  <dest>
+    *: "Say capital"
+  </dest>
+  <voice>
+    *: "Say capital"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_CAPITAL_PITCH
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Change voice pitch"
+  </source>
+  <dest>
+    *: "Change voice pitch"
+  </dest>
+  <voice>
+    *: "Change voice pitch"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_CAPITAL_PITCH_PERCENT
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Capital voice pitch change"
+  </source>
+  <dest>
+    *: "Capital voice pitch change"
+  </dest>
+  <voice>
+    *: "Capital voice pitch change"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_CAPITAL
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Capital"
+  </source>
+  <dest>
+    *: "Capital"
+  </dest>
+  <voice>
+    *: "Capital"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DELETED
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Deleted"
+  </source>
+  <dest>
+    *: "Deleted"
+  </dest>
+  <voice>
+    *: "Deleted"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_NONE
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "None"
+  </source>
+  <dest>
+    *: "None"
+  </dest>
+  <voice>
+    *: "None"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_EXPLORATION
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Screen exploration only"
+  </source>
+  <dest>
+    *: "Screen exploration only"
+  </dest>
+  <voice>
+    *: "Screen exploration only"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_PHYSICAL_EXPLORATION
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Buttons and exploration"
+  </source>
+  <dest>
+    *: "Buttons and exploration"
+  </dest>
+  <voice>
+    *: "Buttons and exploration"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_GESTURES_EXPLORATION
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Gestures and exploration"
+  </source>
+  <dest>
+    *: "Gestures and exploration"
+  </dest>
+  <voice>
+    *: "Gestures and exploration"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_ALL
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "All inputs"
+  </source>
+  <dest>
+    *: "All inputs"
+  </dest>
+  <voice>
+    *: "All inputs"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_EMPTY_PITCH
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Different sound pitch on empty space"
+  </source>
+  <dest>
+    *: "Different sound pitch on empty space"
+  </dest>
+  <voice>
+    *: "Different sound pitch on empty space"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_EMPTY_SEMITONES
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Sound pitch for empty areas"
+  </source>
+  <dest>
+    *: "Sound pitch for empty areas"
+  </dest>
+  <voice>
+    *: "Sound pitch for empty areas"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_KEYCLICK_SEMITONES
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "semitones"
+  </source>
+  <dest>
+    *: "semitones"
+  </dest>
+  <voice>
+    *: "semitones"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_WIFI_INTERFACE_DOWN
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Wi-Fi interface down; radio state unconfirmed"
+  </source>
+  <dest>
+    *: "Wi-Fi interface down; radio state unconfirmed"
+  </dest>
+  <voice>
+    *: "Wi-Fi interface down; radio state unconfirmed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_WIFI_CONTROL_FAILED
+  desc: accessibility input configuration and speech
+  user: core
+  <source>
+    *: "Wi-Fi control failed; radio state unconfirmed"
+  </source>
+  <dest>
+    *: "Wi-Fi control failed; radio state unconfirmed"
+  </dest>
+  <voice>
+    *: "Wi-Fi control failed; radio state unconfirmed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_EMPTY_FEEDBACK
+  desc: accessibility feedback and screen lock settings
+  user: core
+  <source>
+    *: "Report empty areas during touch exploration"
+  </source>
+  <dest>
+    *: "Report empty areas during touch exploration"
+  </dest>
+  <voice>
+    *: "Report empty areas during touch exploration"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_EMPTY_SOUND_ONLY
+  desc: accessibility feedback and screen lock settings
+  user: core
+  <source>
+    *: "Sound only"
+  </source>
+  <dest>
+    *: "Sound only"
+  </dest>
+  <voice>
+    *: "Sound only"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_EMPTY_SOUND_AND_SPEECH
+  desc: accessibility feedback and screen lock settings
+  user: core
+  <source>
+    *: "Sound and speech"
+  </source>
+  <dest>
+    *: "Sound and speech"
+  </dest>
+  <voice>
+    *: "Sound and speech"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_EMPTY_SPEECH_ONLY
+  desc: accessibility feedback and screen lock settings
+  user: core
+  <source>
+    *: "Speech only"
+  </source>
+  <dest>
+    *: "Speech only"
+  </dest>
+  <voice>
+    *: "Speech only"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_AUTOLOCK_TIMEOUT
+  desc: accessibility feedback and screen lock settings
+  user: core
+  <source>
+    *: "Automatic screen lock after inactivity"
+  </source>
+  <dest>
+    *: "Automatic screen lock after inactivity"
+  </dest>
+  <voice>
+    *: "Automatic screen lock after inactivity"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_AUTOLOCK_LEGACY
+  desc: accessibility feedback and screen lock settings
+  user: core
+  <source>
+    *: "Use advanced keylock settings"
+  </source>
+  <dest>
+    *: "Use advanced keylock settings"
+  </dest>
+  <voice>
+    *: "Use advanced keylock settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_WIFI_DRIVER_SUSPENDED
+  desc: accessibility feedback and screen lock settings
+  user: core
+  <source>
+    *: "Wi-Fi driver suspended"
+  </source>
+  <dest>
+    *: "Wi-Fi driver suspended"
+  </dest>
+  <voice>
+    *: "Wi-Fi driver suspended"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_RESET_PARTIAL
+  desc: touch controls reset but empty-area feedback reset failed
+  user: core
+  <source>
+    *: "Touch controls reset, but empty-area feedback could not be reset."
+  </source>
+  <dest>
+    *: "Touch controls reset, but empty-area feedback could not be reset."
+  </dest>
+  <voice>
+    *: "Touch controls reset, but empty-area feedback could not be reset."
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_INTERFACE_ACTIONS
+  desc: physical button profile used outside the playback screen
+  user: core
+  <source>
+    *: "Interface actions"
+  </source>
+  <dest>
+    *: "Interface actions"
+  </dest>
+  <voice>
+    *: "Interface actions"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_PLAYBACK_ACTIONS
+  desc: physical button or gesture profile used on the playback screen
+  user: core
+  <source>
+    *: "Playback screen actions"
+  </source>
+  <dest>
+    *: "Playback screen actions"
+  </dest>
+  <voice>
+    *: "Playback screen actions"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_DISPLAY_SETTINGS
+  desc: accessibility display controls, distinct from hardware display settings
+  user: core
+  <source>
+    *: "Screen settings"
+  </source>
+  <dest>
+    *: "Screen settings"
+  </dest>
+  <voice>
+    *: "Screen settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TOUCH_WAKE_SETTINGS
+  desc: touch wake gesture settings, independent of screen reader gestures
+  user: core
+  <source>
+    *: "Wake and unlock screen"
+  </source>
+  <dest>
+    *: "Wake and unlock screen"
+  </dest>
+  <voice>
+    *: "Wake and unlock screen"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_LIST_BOUNDARY
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "List boundary feedback"
+  </source>
+  <dest>
+    *: "List boundary feedback"
+  </dest>
+  <voice>
+    *: "List boundary feedback"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_FEEDBACK_BOTH
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Sound and speech"
+  </source>
+  <dest>
+    *: "Sound and speech"
+  </dest>
+  <voice>
+    *: "Sound and speech"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_FEEDBACK_SOUND
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Sound only"
+  </source>
+  <dest>
+    *: "Sound only"
+  </dest>
+  <voice>
+    *: "Sound only"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_FEEDBACK_SPEECH
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Speech only"
+  </source>
+  <dest>
+    *: "Speech only"
+  </dest>
+  <voice>
+    *: "Speech only"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_LIST_START
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Start of list"
+  </source>
+  <dest>
+    *: "Start of list"
+  </dest>
+  <voice>
+    *: "Start of list"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_LIST_END
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "End of list"
+  </source>
+  <dest>
+    *: "End of list"
+  </dest>
+  <voice>
+    *: "End of list"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_ACTION_FIRST
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Go to start of list"
+  </source>
+  <dest>
+    *: "Go to start of list"
+  </dest>
+  <voice>
+    *: "Go to start of list"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_ACTION_LAST
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Go to end of list"
+  </source>
+  <dest>
+    *: "Go to end of list"
+  </dest>
+  <voice>
+    *: "Go to end of list"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_ACTION_PAGE_FIRST
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Go to start of current page"
+  </source>
+  <dest>
+    *: "Go to start of current page"
+  </dest>
+  <voice>
+    *: "Go to start of current page"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_ACTION_PAGE_LAST
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Go to end of current page"
+  </source>
+  <dest>
+    *: "Go to end of current page"
+  </dest>
+  <voice>
+    *: "Go to end of current page"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_SERVICES
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Select accessibility services"
+  </source>
+  <dest>
+    *: "Select accessibility services"
+  </dest>
+  <voice>
+    *: "Select accessibility services"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_ACTION
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Toggle accessibility shortcut services"
+  </source>
+  <dest>
+    *: "Toggle accessibility shortcut services"
+  </dest>
+  <voice>
+    *: "Toggle accessibility shortcut services"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_EMPTY
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "No accessibility services selected"
+  </source>
+  <dest>
+    *: "No accessibility services selected"
+  </dest>
+  <voice>
+    *: "No accessibility services selected"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_DISABLED
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Accessibility shortcut disabled"
+  </source>
+  <dest>
+    *: "Accessibility shortcut disabled"
+  </dest>
+  <voice>
+    *: "Accessibility shortcut disabled"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_SHORTCUT_PARTIAL
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Some accessibility services could not be changed"
+  </source>
+  <dest>
+    *: "Some accessibility services could not be changed"
+  </dest>
+  <voice>
+    *: "Some accessibility services could not be changed"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TOUCH_ON
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Touch exploration on"
+  </source>
+  <dest>
+    *: "Touch exploration on"
+  </dest>
+  <voice>
+    *: "Touch exploration on"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_TOUCH_OFF
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Touch exploration off"
+  </source>
+  <dest>
+    *: "Touch exploration off"
+  </dest>
+  <voice>
+    *: "Touch exploration off"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_CURTAIN_ON
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Screen curtain on"
+  </source>
+  <dest>
+    *: "Screen curtain on"
+  </dest>
+  <voice>
+    *: "Screen curtain on"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_ACCESSIBILITY_CURTAIN_OFF
+  desc: accessibility list navigation and grouped service feedback
+  user: core
+  <source>
+    *: "Screen curtain off"
+  </source>
+  <dest>
+    *: "Screen curtain off"
+  </dest>
+  <voice>
+    *: "Screen curtain off"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TOUCH_WAKE_SINGLE
+  desc: touch wake gesture settings, independent of screen reader gestures
+  user: core
+  <source>
+    *: "One tap"
+  </source>
+  <dest>
+    *: "One tap"
+  </dest>
+  <voice>
+    *: "One tap"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TOUCH_WAKE_DOUBLE
+  desc: touch wake gesture settings, independent of screen reader gestures
+  user: core
+  <source>
+    *: "Two taps"
+  </source>
+  <dest>
+    *: "Two taps"
+  </dest>
+  <voice>
+    *: "Two taps"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TOUCH_WAKE_TRIPLE
+  desc: touch wake gesture settings, independent of screen reader gestures
+  user: core
+  <source>
+    *: "Three taps"
+  </source>
+  <dest>
+    *: "Three taps"
+  </dest>
+  <voice>
+    *: "Three taps"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TOUCH_WAKE_LIGHT
+  desc: touch wake gesture settings, independent of screen reader gestures
+  user: core
+  <source>
+    *: "Only turn on backlight"
+  </source>
+  <dest>
+    *: "Only turn on backlight"
+  </dest>
+  <voice>
+    *: "Only turn on backlight"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TOUCH_WAKE_UNLOCK
+  desc: touch wake gesture settings, independent of screen reader gestures
+  user: core
+  <source>
+    *: "Wake and unlock screen"
+  </source>
+  <dest>
+    *: "Wake and unlock screen"
+  </dest>
+  <voice>
+    *: "Wake and unlock screen"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TALKBOX_SETTINGS
+  desc: Talkbox screen reader settings, including the eSpeak engine submenu
+  user: core
+  <source>
+    *: "Talkbox settings"
+  </source>
+  <dest>
+    *: "Talkbox settings"
+  </dest>
+  <voice>
+    *: "Talkbox settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TALKBOX_ANNOUNCE_POSITION
+  desc: Talkbox list position announcement preference
+  user: core
+  <source>
+    *: "Announce list item position"
+  </source>
+  <dest>
+    *: "Announce list item position"
+  </dest>
+  <voice>
+    *: "Announce list item position"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TALKBOX_POSITION_EVERYWHERE
+  desc: Announce list positions in every common list
+  user: core
+  <source>
+    *: "Everywhere"
+  </source>
+  <dest>
+    *: "Everywhere"
+  </dest>
+  <voice>
+    *: "Everywhere"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TALKBOX_POSITION_INTERFACE
+  desc: Announce positions in interface lists, including value selectors
+  user: core
+  <source>
+    *: "Interface only"
+  </source>
+  <dest>
+    *: "Interface only"
+  </dest>
+  <voice>
+    *: "Interface only"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TALKBOX_POSITION_FILES
+  desc: Announce positions in filesystem file and folder lists
+  user: core
+  <source>
+    *: "Files only"
+  </source>
+  <dest>
+    *: "Files only"
+  </dest>
+  <voice>
+    *: "Files only"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TALKBOX_POSITION_EXCEPT_SLIDERS
+  desc: Announce positions everywhere except numeric range controls
+  user: core
+  <source>
+    *: "Everywhere except sliders"
+  </source>
+  <dest>
+    *: "Everywhere except sliders"
+  </dest>
+  <voice>
+    *: "Everywhere except sliders"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TALKBOX_ANNOUNCE_DYNAMIC
+  desc: Talkbox automatic dynamic content announcement preference
+  user: core
+  <source>
+    *: "Announce dynamic content changes"
+  </source>
+  <dest>
+    *: "Announce dynamic content changes"
+  </dest>
+  <voice>
+    *: "Announce dynamic content changes"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FM_SCAN_COMPLETE
+  desc: Explicit completion of an FM preset scan
+  user: core
+  <source>
+    *: "Scan complete"
+  </source>
+  <dest>
+    *: "Scan complete"
+  </dest>
+  <voice>
+    *: "Scan complete"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FM_RDS_INFO
+  desc: FM menu entry for explicitly reading RDS information
+  user: core
+  <source>
+    *: "RDS information"
+  </source>
+  <dest>
+    *: "RDS information"
+  </dest>
+  <voice>
+    *: "RDS information"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FM_RDS_NAME
+  desc: RDS programme service name
+  user: core
+  <source>
+    *: "Station name"
+  </source>
+  <dest>
+    *: "Station name"
+  </dest>
+  <voice>
+    *: "Station name"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FM_RDS_TEXT
+  desc: RDS broadcast radio text, not necessarily song metadata
+  user: core
+  <source>
+    *: "Radio text"
+  </source>
+  <dest>
+    *: "Radio text"
+  </dest>
+  <voice>
+    *: "Radio text"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_FM_RDS_NO_DATA
+  desc: No currently available RDS information
+  user: core
+  <source>
+    *: "No RDS data"
+  </source>
+  <dest>
+    *: "No RDS data"
+  </dest>
+  <voice>
+    *: "No RDS data"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_SETTINGS
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Bluetooth settings"
+  </source>
+  <dest>
+    *: "Bluetooth settings"
+  </dest>
+  <voice>
+    *: "Bluetooth settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_CONNECT_LAST
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Connect last selected device"
+  </source>
+  <dest>
+    *: "Connect last selected device"
+  </dest>
+  <voice>
+    *: "Connect last selected device"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_AUTOCONNECT
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Automatic connection"
+  </source>
+  <dest>
+    *: "Automatic connection"
+  </dest>
+  <voice>
+    *: "Automatic connection"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_AUTO_STARTUP
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "When Bluetooth starts"
+  </source>
+  <dest>
+    *: "When Bluetooth starts"
+  </dest>
+  <voice>
+    *: "When Bluetooth starts"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_AUTO_STARTUP_LOSS
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "When Bluetooth starts and after connection loss"
+  </source>
+  <dest>
+    *: "When Bluetooth starts and after connection loss"
+  </dest>
+  <voice>
+    *: "When Bluetooth starts and after connection loss"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_RETRY_WINDOW
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Connection retry time limit"
+  </source>
+  <dest>
+    *: "Connection retry time limit"
+  </dest>
+  <voice>
+    *: "Connection retry time limit"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_RETRY_30
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "30 seconds"
+  </source>
+  <dest>
+    *: "30 seconds"
+  </dest>
+  <voice>
+    *: "30 seconds"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_RETRY_60
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "60 seconds"
+  </source>
+  <dest>
+    *: "60 seconds"
+  </dest>
+  <voice>
+    *: "60 seconds"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_RETRY_120
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "120 seconds"
+  </source>
+  <dest>
+    *: "120 seconds"
+  </dest>
+  <voice>
+    *: "120 seconds"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_RETRY_300
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "300 seconds"
+  </source>
+  <dest>
+    *: "300 seconds"
+  </dest>
+  <voice>
+    *: "300 seconds"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_LOSS_BEHAVIOR
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "After connection loss"
+  </source>
+  <dest>
+    *: "After connection loss"
+  </dest>
+  <voice>
+    *: "After connection loss"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_LOSS_PAUSE
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Pause music and use wired output"
+  </source>
+  <dest>
+    *: "Pause music and use wired output"
+  </dest>
+  <voice>
+    *: "Pause music and use wired output"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_LOSS_CONTINUE
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Continue on wired output"
+  </source>
+  <dest>
+    *: "Continue on wired output"
+  </dest>
+  <voice>
+    *: "Continue on wired output"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_ANNOUNCEMENTS
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Announce connection changes"
+  </source>
+  <dest>
+    *: "Announce connection changes"
+  </dest>
+  <voice>
+    *: "Announce connection changes"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_LAST_DEVICE
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Last selected device"
+  </source>
+  <dest>
+    *: "Last selected device"
+  </dest>
+  <voice>
+    *: "Last selected device"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_NO_LAST_DEVICE
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "No remembered device"
+  </source>
+  <dest>
+    *: "No remembered device"
+  </dest>
+  <voice>
+    *: "No remembered device"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_SETTINGS_ERROR
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Could not read or save Bluetooth settings"
+  </source>
+  <dest>
+    *: "Could not read or save Bluetooth settings"
+  </dest>
+  <voice>
+    *: "Could not read or save Bluetooth settings"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_KEEP_DEVICE
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Keep paired device"
+  </source>
+  <dest>
+    *: "Keep paired device"
+  </dest>
+  <voice>
+    *: "Keep paired device"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_REMOVE_CONFIRM
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Forget this paired device?"
+  </source>
+  <dest>
+    *: "Forget this paired device?"
+  </dest>
+  <voice>
+    *: "Forget this paired device?"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_CONNECTION_LOST
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Bluetooth connection lost"
+  </source>
+  <dest>
+    *: "Bluetooth connection lost"
+  </dest>
+  <voice>
+    *: "Bluetooth connection lost"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_RECONNECT_FAILED
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Bluetooth reconnection stopped"
+  </source>
+  <dest>
+    *: "Bluetooth reconnection stopped"
+  </dest>
+  <voice>
+    *: "Bluetooth reconnection stopped"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_MONITOR_ACTIVE
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Signal monitor process started"
+  </source>
+  <dest>
+    *: "Signal monitor process started"
+  </dest>
+  <voice>
+    *: "Signal monitor process started"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_MONITOR_UNAVAILABLE
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Connection monitoring unavailable"
+  </source>
+  <dest>
+    *: "Connection monitoring unavailable"
+  </dest>
+  <voice>
+    *: "Connection monitoring unavailable"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_HIBY_BT_RECONNECTING
+  desc: Bluetooth reconnection policy and accessible status
+  user: core
+  <source>
+    *: "Reconnecting"
+  </source>
+  <dest>
+    *: "Reconnecting"
+  </dest>
+  <voice>
+    *: "Reconnecting"
   </voice>
 </phrase>

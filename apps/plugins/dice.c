@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -50,7 +51,7 @@ struct dices
     int nb_sides;
 };
 
-#define PRINT_BUFFER_LENGTH MAX_DICES*4
+#define PRINT_BUFFER_LENGTH (MAX_DICES * 4 + 1)
 
 
 static struct dices dice;
@@ -76,6 +77,7 @@ static struct configdata config[] =
 
 static void dice_init(struct dices* dice);
 static void dice_roll(struct dices* dice);
+static void dice_speak(const struct dices *results);
 static void dice_print(struct dices* dice, struct screen* display);
 static bool dice_menu(struct dices* dice);
 
@@ -88,6 +90,10 @@ enum plugin_status plugin_start(const void* parameter) {
     rb->srand(*rb->current_tick);
 
     configfile_load(CFG_FILE, config, 2, 0);
+    if (dice.nb_dices < 1 || dice.nb_dices > MAX_DICES)
+        dice.nb_dices = INITIAL_NB_DICES;
+    if (sides_index < 0 || sides_index >= (int)ARRAYLEN(nb_sides_values))
+        sides_index = INITIAL_NB_SIDES;
     dice.nb_sides = nb_sides_values[sides_index];
     if(!dice_menu(&dice))
     {
@@ -96,6 +102,7 @@ enum plugin_status plugin_start(const void* parameter) {
     }
     configfile_save(CFG_FILE, config, 2, 0);
     dice_roll(&dice);
+    dice_speak(&dice);
     FOR_NB_SCREENS(i)
         dice_print( &dice, rb->screens[i] );
     while(true) {
@@ -104,11 +111,16 @@ enum plugin_status plugin_start(const void* parameter) {
         switch(action) {
             case DICE_ROLL:
                 dice_roll(&dice);
+                dice_speak(&dice);
                 FOR_NB_SCREENS(i)
                     dice_print( &dice, rb->screens[i] );
                 break;
             case DICE_QUIT:
                 return PLUGIN_OK;
+            default:
+                if (rb->default_event_handler(action) == SYS_USB_CONNECTED)
+                    return PLUGIN_USB_CONNECTED;
+                break;
         }
     }
 }
@@ -130,12 +142,26 @@ static void dice_roll(struct dices* dice) {
 
 static void dice_print_string_buffer(struct dices* dice, char* buffer,
                               int start, int end){
-    int i, written;
-    for (i=start; i<end; i++) {
-        written=rb->snprintf(buffer, PRINT_BUFFER_LENGTH,
-                             " %3d", dice->values[i]);
-        buffer=&(buffer[written]);
+    size_t used = 0;
+    buffer[0] = '\0';
+    for (int index = start; index < end && used < PRINT_BUFFER_LENGTH; index++) {
+        int written = rb->snprintf(buffer + used, PRINT_BUFFER_LENGTH - used,
+                                   " %3d", dice->values[index]);
+        if (written < 0 || (size_t)written >= PRINT_BUFFER_LENGTH - used)
+            break;
+        used += written;
     }
+}
+
+static void dice_speak(const struct dices *results)
+{
+    if (!talk_menus_enabled(rb->global_settings))
+        return;
+    rb->talk_id(LANG_DICE_RESULTS, false);
+    for (int index = 0; index < results->nb_dices; index++)
+        rb->talk_number(results->values[index], true);
+    rb->talk_id(LANG_DICE_TOTAL, true);
+    rb->talk_number(results->total, true);
 }
 
 static void dice_print(struct dices* dice, struct screen* display){
@@ -172,19 +198,20 @@ static void dice_print(struct dices* dice, struct screen* display){
             start=end;
         }
     }
-    rb->snprintf(buffer, PRINT_BUFFER_LENGTH, "Total: %d", dice->total);
+    rb->snprintf(buffer, PRINT_BUFFER_LENGTH, "%s: %d",
+                 rb->str(LANG_DICE_TOTAL), dice->total);
     display->puts_scroll(0, current_row, buffer);
     display->update();
 }
 
 static bool dice_menu(struct dices * dice) {
-    int selection;
+    int selection = 0;
     bool menu_quit = false, result = false;
 
-    MENUITEM_STRINGLIST(menu, "Dice", NULL,
-                        "Roll Dice",
-                        "Number of Dice", "Number of Sides",
-                        "Playback Control", "Quit");
+    MENUITEM_STRINGLIST(menu, ID2P(LANG_DICE_TITLE), NULL,
+                        ID2P(LANG_DICE_ROLL),
+                        ID2P(LANG_DICE_COUNT), ID2P(LANG_DICE_SIDES),
+                        ID2P(LANG_PLAYBACK_CONTROL), ID2P(LANG_MENU_QUIT));
 
 
     while (!menu_quit) {
@@ -195,12 +222,12 @@ static bool dice_menu(struct dices * dice) {
                 break;
 
             case 1:
-                rb->set_int("Number of Dice", "", UNIT_INT, &(dice->nb_dices),
+                rb->set_int(rb->str(LANG_DICE_COUNT), "", UNIT_INT, &(dice->nb_dices),
                             NULL, 1, 1, MAX_DICES, NULL );
                 break;
 
             case 2:
-                rb->set_option("Number of Sides", &sides_index, RB_INT,
+                rb->set_option(rb->str(LANG_DICE_SIDES), &sides_index, RB_INT,
                                nb_sides_option,
                                sizeof(nb_sides_values)/sizeof(int), NULL);
                 dice->nb_sides=nb_sides_values[sides_index];

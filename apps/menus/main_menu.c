@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -48,6 +49,9 @@
 #include "wps.h"
 #include "skin_buffer.h"
 #include "disk.h"
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+#include "hiby_connectivity.h"
+#endif
 
 static const struct browse_folder_info config = {ROCKBOX_DIR, SHOW_CFG};
 static int show_info(void);
@@ -460,7 +464,7 @@ static int show_info(void)
     refresh_data(&data);
     simplelist_info_init(&info, str(LANG_ROCKBOX_INFO), 0, (void*)&data);
     simplelist_setline(str(LANG_WAIT)); /* set a line so list is not empty on load */
-    if(global_settings.talk_menu)
+    if(talk_menus_enabled(&global_settings))
          info.get_talk = info_speak_item;
     info.action_callback = info_action_callback;
     return (simplelist_show_list(&info)) ? 1 : 0;
@@ -506,11 +510,19 @@ MENUITEM_FUNCTION(main_menu_config_item, 0, ID2P(LANG_MAIN_MENU),
 /***********************************/
 /*    MAIN MENU                    */
 
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+MENUITEM_FUNCTION(connectivity_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_CONNECTIVITY), hiby_connectivity_menu, NULL, Icon_NOICON);
+#endif
+
 MAKE_MENU(main_menu_, ID2P(LANG_SETTINGS), NULL,
         Icon_Submenu_Entered,
         &sound_settings,
         &playback_settings,
         &settings_menu_item, &theme_menu,
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+        &connectivity_item,
+#endif
 #ifdef HAVE_RECORDING
         &recording_settings,
 #endif

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -355,6 +356,61 @@ static int lap_scroll = 0;
 static int lap_start;
 static int lap_times[MAX_LAPS];
 
+static void stopwatch_talk_time(int elapsed, bool enqueue)
+{
+    if (!talk_menus_enabled(rb->global_settings))
+        return;
+
+    if (elapsed < 0)
+        elapsed = 0;
+    int hours = elapsed / (HZ * 3600);
+    int minutes = elapsed / (HZ * 60) % 60;
+    int hundredths = (elapsed % (HZ * 60)) * 100 / HZ;
+    if (hours)
+    {
+        if (rb->talk_value_decimal(hours, UNIT_HOUR, 0, enqueue) < 0)
+            return;
+        enqueue = true;
+    }
+    if (minutes)
+    {
+        if (rb->talk_value_decimal(minutes, UNIT_MIN, 0, enqueue) < 0)
+            return;
+        enqueue = true;
+    }
+    rb->talk_value_decimal(hundredths, UNIT_SEC, 2, enqueue);
+}
+
+static void stopwatch_talk_state(void)
+{
+    if (!talk_menus_enabled(rb->global_settings))
+        return;
+
+    int label = counting ? LANG_COUNTDOWN_TIMER_RUNNING
+                         : LANG_COUNTDOWN_TIMER_PAUSED;
+    if (rb->talk_id(label, false) >= 0 &&
+        rb->talk_id(LANG_ELAPSED, true) >= 0)
+        stopwatch_talk_time(stopwatch, true);
+}
+
+static void stopwatch_talk_lap(int selected_lap)
+{
+    if (!talk_menus_enabled(rb->global_settings) || selected_lap < 1 ||
+        selected_lap > curr_lap || curr_lap - selected_lap >= MAX_LAPS)
+        return;
+
+    if (rb->talk_id(LANG_STOPWATCH_LAP, false) < 0 ||
+        rb->talk_number(selected_lap, true) < 0 ||
+        rb->talk_id(LANG_ELAPSED, true) < 0)
+        return;
+    int elapsed = lap_times[(selected_lap - 1) % MAX_LAPS];
+    stopwatch_talk_time(elapsed, true);
+    if (selected_lap > 1 && curr_lap - selected_lap < MAX_LAPS - 1 &&
+        rb->talk_id(LANG_STOPWATCH_SPLIT, true) >= 0)
+        stopwatch_talk_time(elapsed - lap_times[(selected_lap - 2) % MAX_LAPS],
+                            true);
+}
+
 static void ticks_to_string(int ticks,int lap,int buflen, char * buf)
 {
     int hours, minutes, seconds, cs;
@@ -481,6 +537,9 @@ enum plugin_status plugin_start(const void* parameter)
     lines = (vp.height / h) - (LAP_Y);
 
     load_stopwatch();
+    stopwatch = counting ? prev_total + *rb->current_tick - start_at
+                         : prev_total;
+    stopwatch_talk_state();
 
     while (!done)
     {
@@ -522,6 +581,8 @@ enum plugin_status plugin_start(const void* parameter)
             button = rb->button_get_w_tmo(HZ/10);
             rb->reset_poweroff_timer();
         }
+        if (counting)
+            stopwatch = prev_total + *rb->current_tick - start_at;
         switch (button)
         {
 #ifdef STOPWATCH_RC_QUIT
@@ -545,6 +606,7 @@ enum plugin_status plugin_start(const void* parameter)
                      prev_total += *rb->current_tick - start_at;
                      stopwatch = prev_total;
                  }
+                 stopwatch_talk_state();
                  break;
 
             /* Reset timer */
@@ -555,6 +617,8 @@ enum plugin_status plugin_start(const void* parameter)
                      curr_lap = 0;
                      lap_scroll = 0;
                      update_lap = true;
+                     stopwatch = 0;
+                     stopwatch_talk_state();
                  }
                  break;
 
@@ -566,12 +630,14 @@ enum plugin_status plugin_start(const void* parameter)
                      lap_times[curr_lap%MAX_LAPS] = stopwatch;
                      curr_lap++;
                      update_lap = true;
+                     stopwatch_talk_lap(curr_lap);
                  }
                  else
                  {
                      counting = ! counting;
                      start_at = *rb->current_tick;
                      stopwatch = prev_total + *rb->current_tick - start_at;
+                     stopwatch_talk_state();
                  }
                  break;
 
@@ -581,6 +647,7 @@ enum plugin_status plugin_start(const void* parameter)
                  {
                      lap_scroll--;
                      update_lap = true;
+                     stopwatch_talk_lap(curr_lap - lap_scroll);
                  }
                  break;
 
@@ -591,6 +658,7 @@ enum plugin_status plugin_start(const void* parameter)
                  {
                      lap_scroll++;
                      update_lap = true;
+                     stopwatch_talk_lap(curr_lap - lap_scroll);
                  }
                  break;
 

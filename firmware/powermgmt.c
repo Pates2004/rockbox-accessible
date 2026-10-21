@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -23,6 +24,7 @@
 #include "config.h"
 #include "system.h"
 #include "kernel.h"
+#include "corelock.h"
 #include "thread.h"
 #include "debug.h"
 #include "adc.h"
@@ -104,7 +106,70 @@ enum charge_state_type charge_state = DISCHARGING;
 #endif
 #endif /* CONFIG_CHARGING */
 
-static int shutdown_timeout = 0;
+static int shutdown_timeout SHAREDBSS_ATTR = 0;
+
+enum shutdown_request_type
+{
+    SHUTDOWN_REQUEST_NONE,
+    SHUTDOWN_REQUEST_POWEROFF,
+    SHUTDOWN_REQUEST_REBOOT,
+};
+
+static enum shutdown_request_type shutdown_request SHAREDBSS_ATTR;
+
+#if (CONFIG_PLATFORM & PLATFORM_HOSTED)
+static unsigned char shutdown_guard;
+#elif defined(HAVE_CORELOCK_OBJECT)
+static struct corelock shutdown_guard SHAREDBSS_ATTR;
+#endif
+
+static int shutdown_state_lock(void)
+{
+#if (CONFIG_PLATFORM & PLATFORM_HOSTED)
+    while (__atomic_test_and_set(&shutdown_guard, __ATOMIC_ACQUIRE))
+    {
+    }
+    return 0;
+#else
+    int previous_level = disable_irq_save();
+    corelock_lock(&shutdown_guard);
+    return previous_level;
+#endif
+}
+
+static void shutdown_state_unlock(int previous_level)
+{
+#if (CONFIG_PLATFORM & PLATFORM_HOSTED)
+    (void)previous_level;
+    __atomic_clear(&shutdown_guard, __ATOMIC_RELEASE);
+#else
+    corelock_unlock(&shutdown_guard);
+    restore_irq(previous_level);
+#endif
+}
+
+static bool shutdown_timeout_active(void)
+{
+    int previous_level = shutdown_state_lock();
+    bool active = shutdown_timeout != 0;
+    shutdown_state_unlock(previous_level);
+    return active;
+}
+
+static void shutdown_timeout_step(void)
+{
+    bool expired = false;
+    int previous_level = shutdown_state_lock();
+    if (shutdown_timeout)
+    {
+        shutdown_timeout -= POWER_THREAD_STEP_TICKS;
+        expired = shutdown_timeout <= 0;
+    }
+    shutdown_state_unlock(previous_level);
+
+    if (expired)
+        power_off();
+}
 
 void handle_auto_poweroff(void);
 static int poweroff_timeout = 0;
@@ -722,12 +787,7 @@ static inline void power_thread_step(void)
 {
     /* If the power off timeout expires, the main thread has failed
        to shut down the system, and we need to force a power off */
-    if (shutdown_timeout) {
-        shutdown_timeout -= POWER_THREAD_STEP_TICKS;
-
-        if (shutdown_timeout <= 0)
-            power_off();
-    }
+    shutdown_timeout_step();
 
 #ifdef HAVE_RTC_ALARM
     power_thread_rtc_process();
@@ -755,7 +815,7 @@ static inline void power_thread_step(void)
          * Shut down if voltage drops below shutoff level and we are not
          * using NiMH or Alkaline batteries.
          */
-        if (!shutdown_timeout && query_force_shutdown()) {
+        if (!shutdown_timeout_active() && query_force_shutdown()) {
             sys_poweroff();
         }
     }
@@ -1089,25 +1149,38 @@ void reset_poweroff_timer(void)
 }
 
 #ifndef BOOTLOADER
-static void sys_shutdown_common(void)
+static bool sys_shutdown_common(enum shutdown_request_type request)
 {
-    /* If the main thread fails to shut down the system, we will force a
-       power off after an 20 second timeout - 28 seconds if recording */
-    if (shutdown_timeout == 0) {
-#if (defined(IAUDIO_X5) || defined(IAUDIO_M5) || defined(COWON_D2)) && !defined(SIMULATOR)
-        pcf50606_reset_timeout(); /* Reset timer on first attempt only */
+    int timeout;
+#ifdef IPOD_NANO2G
+    timeout = HZ*60;
+#else
+    timeout = HZ*20;
 #endif
 #ifdef HAVE_RECORDING
-        if (audio_status() & AUDIO_STATUS_RECORD)
-            shutdown_timeout += HZ*8;
+    if (audio_status() & AUDIO_STATUS_RECORD)
+        timeout += HZ*8;
 #endif
-#ifdef IPOD_NANO2G
-        /* The FTL alone may take half a minute to shut down cleanly. */
-        shutdown_timeout += HZ*60;
-#else
-        shutdown_timeout += HZ*20;
-#endif
+
+    int previous_level = shutdown_state_lock();
+    bool first_request = shutdown_request == SHUTDOWN_REQUEST_NONE;
+    bool notify = first_request ||
+        (shutdown_request == SHUTDOWN_REQUEST_POWEROFF &&
+         request == SHUTDOWN_REQUEST_REBOOT);
+
+    if (notify)
+    {
+        shutdown_request = request;
+        if (first_request)
+            shutdown_timeout = timeout;
     }
+    shutdown_state_unlock(previous_level);
+
+#if (defined(IAUDIO_X5) || defined(IAUDIO_M5) || defined(COWON_D2)) && !defined(SIMULATOR)
+    if (first_request)
+        pcf50606_reset_timeout();
+#endif
+    return notify;
 }
 #endif /* BOOTLOADER */
 
@@ -1115,8 +1188,8 @@ void sys_poweroff(void)
 {
 #ifndef BOOTLOADER
     logf("sys_poweroff()");
-    sys_shutdown_common();
-    queue_broadcast(SYS_POWEROFF, 0);
+    if (sys_shutdown_common(SHUTDOWN_REQUEST_POWEROFF))
+        queue_broadcast(SYS_POWEROFF, 0);
 #endif
 }
 
@@ -1125,8 +1198,8 @@ void sys_reboot(void)
 {
 #ifndef BOOTLOADER
     logf("sys_reboot()");
-    sys_shutdown_common();
-    queue_broadcast(SYS_REBOOT, 0);
+    if (sys_shutdown_common(SHUTDOWN_REQUEST_REBOOT))
+        queue_broadcast(SYS_REBOOT, 0);
 #endif
 }
 
@@ -1134,13 +1207,18 @@ void cancel_shutdown(void)
 {
     logf("cancel_shutdown()");
 
+    int previous_level = shutdown_state_lock();
 #if (defined(IAUDIO_X5) || defined(IAUDIO_M5) || defined(COWON_D2)) && !defined(SIMULATOR)
-    /* TODO: Move some things to target/ tree */
-    if (shutdown_timeout)
+    bool was_active = shutdown_timeout != 0;
+#endif
+    shutdown_timeout = 0;
+    shutdown_request = SHUTDOWN_REQUEST_NONE;
+    shutdown_state_unlock(previous_level);
+
+#if (defined(IAUDIO_X5) || defined(IAUDIO_M5) || defined(COWON_D2)) && !defined(SIMULATOR)
+    if (was_active)
         pcf50606_reset_timeout();
 #endif
-
-    shutdown_timeout = 0;
 }
 
 void set_sleeptimer_duration(int minutes)
@@ -1232,7 +1310,7 @@ void handle_auto_poweroff(void)
         last_event_tick = current_tick;
     }
 
-    if (!shutdown_timeout && query_force_shutdown()) {
+    if (!shutdown_timeout_active() && query_force_shutdown()) {
         backlight_on();
         sys_poweroff();
     }

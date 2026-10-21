@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -47,6 +48,152 @@
 #define LOGF_ENABLE
 #include "logf.h"
 #include <stdio.h>
+
+#ifdef HIBY_R1
+#include <pthread.h>
+#include <sys/stat.h>
+#include "usb-storage-hiby.h"
+
+static pthread_mutex_t storage_mutex = PTHREAD_MUTEX_INITIALIZER;
+static struct hiby_usb_storage storage;
+static struct hiby_usb_storage_status storage_error;
+static bool storage_initialized;
+static FILE *storage_stream;
+
+static int storage_io_open(void *context, const char *path, bool write)
+{
+    (void)context;
+    if (storage_stream)
+        return -EBUSY;
+    storage_stream = fopen(path, write ? "we" : "re");
+    return storage_stream ? 0 : -(errno ? errno : EIO);
+}
+
+static int storage_io_read(void *context, int descriptor, char *buffer, size_t size)
+{
+    (void)context;
+    (void)descriptor;
+    size_t count = fread(buffer, 1, size, storage_stream);
+    return ferror(storage_stream) ? -(errno ? errno : EIO) : (int)count;
+}
+
+static int storage_io_write(void *context, int descriptor, const char *buffer, size_t size)
+{
+    (void)context;
+    (void)descriptor;
+    size_t count = fwrite(buffer, 1, size, storage_stream);
+    return ferror(storage_stream) ? -(errno ? errno : EIO) : (int)count;
+}
+
+static int storage_io_close(void *context, int descriptor)
+{
+    (void)context;
+    (void)descriptor;
+    int result = fclose(storage_stream);
+    storage_stream = NULL;
+    return result ? (errno ? errno : EIO) : 0;
+}
+
+static const struct hiby_usb_storage_io storage_io =
+{
+    .open = storage_io_open,
+    .read = storage_io_read,
+    .write = storage_io_write,
+    .close = storage_io_close
+};
+
+static int storage_detach(void *context)
+{
+    (void)context;
+    int result = hiby_usb_storage_checked_value(&storage_io, NULL,
+        "/sys/kernel/config/usb_gadget/adb_demo/UDC", "\n", "");
+    if (result)
+        return result;
+    const char *lun = "/sys/kernel/config/usb_gadget/adb_demo/functions/mass_storage.0/lun.0/file";
+    if (access(lun, F_OK) != 0)
+        return errno == ENOENT ? 0 : (errno ? errno : EIO);
+    return hiby_usb_storage_checked_value(&storage_io, NULL, lun, "\n", "");
+}
+
+static int storage_local_ready(void *context)
+{
+    struct stat directory, parent;
+    (void)context;
+    if (stat(PIVOT_ROOT, &directory) != 0 || stat(PIVOT_ROOT "/..", &parent) != 0)
+        return errno ? errno : EIO;
+    if (!S_ISDIR(directory.st_mode) || directory.st_dev == parent.st_dev)
+        return ENODEV;
+    return 0;
+}
+
+static const struct hiby_usb_storage_operations storage_operations =
+{
+    .detach = storage_detach,
+    .local_ready = storage_local_ready
+};
+
+static void storage_initialize(void)
+{
+    if (!storage_initialized)
+    {
+        hiby_usb_storage_init(&storage, &storage_operations, NULL, false);
+        storage_error = storage.status;
+        storage_initialized = true;
+    }
+}
+
+struct hiby_usb_storage_status hiby_usb_storage_target_prepare(void)
+{
+    pthread_mutex_lock(&storage_mutex);
+    storage_initialize();
+    struct hiby_usb_storage_status result = hiby_usb_storage_prepare(&storage);
+    storage_error = result;
+    pthread_mutex_unlock(&storage_mutex);
+    return result;
+}
+
+struct hiby_usb_storage_status hiby_usb_storage_target_export(void)
+{
+    pthread_mutex_lock(&storage_mutex);
+    storage_initialize();
+    struct hiby_usb_storage_status result = hiby_usb_storage_export(&storage);
+    storage_error = result;
+    pthread_mutex_unlock(&storage_mutex);
+    return result;
+}
+
+struct hiby_usb_storage_status hiby_usb_storage_target_restore(void)
+{
+    pthread_mutex_lock(&storage_mutex);
+    storage_initialize();
+    struct hiby_usb_storage_status result = hiby_usb_storage_restore(&storage);
+    if (!result.success)
+        storage_error = result;
+    pthread_mutex_unlock(&storage_mutex);
+    return result;
+}
+
+struct hiby_usb_storage_status hiby_usb_storage_target_status(void)
+{
+    pthread_mutex_lock(&storage_mutex);
+    storage_initialize();
+    struct hiby_usb_storage_status result = storage.status;
+    if (storage_error.error != HIBY_USB_STORAGE_ERROR_NONE)
+    {
+        result.success = false;
+        result.error = storage_error.error;
+        result.system_error = storage_error.system_error;
+        result.recovery_error = storage_error.recovery_error;
+    }
+    pthread_mutex_unlock(&storage_mutex);
+    return result;
+}
+
+bool hiby_usb_storage_target_safe_to_resume(void)
+{
+    return hiby_usb_storage_target_status().safe_to_resume;
+}
+#endif
 
 /* Configfs root of the gadget created by usb_init_device() */
 #define USB_GADGET_PATH   "/sys/kernel/config/usb_gadget/adb_demo"
@@ -175,6 +322,11 @@ void hiby_set_usb_mode(int mode) {
     if (_usb_mode == mode)
         return;
 
+#ifdef HIBY_R1
+    if (!hiby_usb_storage_target_restore().success)
+        return;
+#endif
+
     /* Drop any active DAC before reconfiguring the base gadget. */
     if (usb_audio_get_active())
         disable_usb_audio();
@@ -198,6 +350,7 @@ int usb_detect(void)
     return power_input_status() == POWER_INPUT_USB_CHARGER ? USB_INSERTED : USB_EXTRACTED;
 }
 
+#ifndef HIBY_R1
 static void set_mass_storage_lun(void)
 {
     const char *device = "/dev/mmcblk0p1";
@@ -208,6 +361,7 @@ static void set_mass_storage_lun(void)
 
     sysfs_set_string("/sys/kernel/config/usb_gadget/adb_demo/functions/mass_storage.0/lun.0/file", device);
 }
+#endif
 
 void usb_enable(bool on)
 {
@@ -219,9 +373,22 @@ void usb_enable(bool on)
     if (_usb_mode == USB_MODE_ADB || usb_audio_get_active())
         return;
 
+#ifdef HIBY_R1
+    if (_usb_mode == USB_MODE_MASS_STORAGE)
+    {
+        if (on)
+            hiby_usb_storage_target_export();
+        else
+            hiby_usb_storage_target_restore();
+        return;
+    }
+    if (!hiby_usb_storage_target_restore().success)
+        return;
+#else
     // Re-arm the LUN on each connect, otherwise the disk is only exported the first time.
     if (on && _usb_mode == USB_MODE_MASS_STORAGE)
         set_mass_storage_lun();
+#endif
 
     sysfs_set_string("/sys/kernel/config/usb_gadget/adb_demo/UDC",
                      on ? "13500000.otg_new" : "\n");
@@ -236,10 +403,14 @@ int disk_mount_all(void)
 {
     logf(">>>>>>>>>>>>>>>>> disk_mount_all()\n");
 
+#ifdef HIBY_R1
+    return hiby_usb_storage_target_restore().success ? 1 : 0;
+#else
 #ifdef HAVE_MULTIDRIVE
     startup_rbhome();
 #endif
     return 1;
+#endif
 }
 
 /* This is called by usb thread after all threads ACKs usb inserted message
@@ -248,6 +419,9 @@ int disk_mount_all(void)
  */
 int disk_unmount_all(void)
 {
+#ifdef HIBY_R1
+    return hiby_usb_storage_target_prepare().success ? 1 : 0;
+#else
     // We're always mounted as rockbox lives on the sdcard
     logf(">>>>>>>>>>>>>>>>> disk_unmount_all()\n");
 
@@ -260,6 +434,7 @@ int disk_unmount_all(void)
 #endif
 
     return 1;
+#endif
 }
 
 void enable_charging(void) {
@@ -272,6 +447,11 @@ void enable_charging(void) {
 
 void enable_adb(void) {
     logf(">>>>>>>>>>>>>>>>> set_adb()\n");
+
+#ifdef HIBY_R1
+    if (!hiby_usb_storage_target_restore().success)
+        return;
+#endif
 
     // Stop the respawner FIRST so it can't rebind adbd under us.
     system("killall adbserver.sh adbd 2>/dev/null");
@@ -349,6 +529,11 @@ void disable_adb(void) {
 void enable_mass_storage(void) {
     logf(">>>>>>>>>>>>>>>>> set_mass_storage()\n");
 
+#ifdef HIBY_R1
+    if (!hiby_usb_storage_target_restore().success)
+        return;
+#endif
+
     /* Disable adb and USB DAC if they're running */
     disable_adb();
     disable_usb_audio();
@@ -365,10 +550,18 @@ void enable_mass_storage(void) {
 
     system("ln -s /sys/kernel/config/usb_gadget/adb_demo/functions/mass_storage.0 /sys/kernel/config/usb_gadget/adb_demo/configs/c.1/");
 
+#ifdef HIBY_R1
+    hiby_usb_storage_target_restore();
+#else
     set_mass_storage_lun();
+#endif
 }
 
 void disable_mass_storage(void) {
+#ifdef HIBY_R1
+    if (!hiby_usb_storage_target_restore().success)
+        return;
+#endif
     // Remove the mass_storage.0 link to config
     if (access("/sys/kernel/config/usb_gadget/adb_demo/configs/c.1/mass_storage.0", F_OK) == 0) {
         system("rm /sys/kernel/config/usb_gadget/adb_demo/configs/c.1/mass_storage.0");
@@ -401,6 +594,11 @@ void disable_mass_storage(void) {
 bool enable_usb_audio(void)
 {
     logf(">>>>>>>>>>>>>>>>> enable_usb_audio()\n");
+
+#ifdef HIBY_R1
+    if (!hiby_usb_storage_target_restore().success)
+        return false;
+#endif
 
     /* The DAC pump feeds the PCM mixer, which isn't up until audio_init(), so
      * a DAC setting applied at boot lands too early. Bail before touching

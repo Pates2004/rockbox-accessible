@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -31,6 +32,10 @@
 #include "cpucache-arm.h"
 #include "pcm-internal.h"
 #include "pcm_sink.h"
+
+#ifdef HAVE_PCM_RECORDING_VOICE
+void audio_set_pcm_output(bool active);
+#endif
 
 #define MAX_TRANSFER (4*((1<<11)-1)) /* maximum data we can transfer via DMA
                                       * i.e. 32 bits at once (size of I2SO_DATA)
@@ -133,6 +138,10 @@ static void sink_dma_start(const void *addr, size_t size)
     /* force writeback */
     commit_dcache_range(dma_start_addr, dma_start_size);
 
+#ifdef HAVE_PCM_RECORDING_VOICE
+    audio_set_pcm_output(true);
+#endif
+
     play_start_pcm();
 }
 
@@ -151,6 +160,10 @@ static void sink_dma_stop(void)
     dma_release();
 
     play_callback_pending = false;
+
+#ifdef HAVE_PCM_RECORDING_VOICE
+    audio_set_pcm_output(false);
+#endif
 }
 
 /* divider is 9 bits but the highest one (for 8kHz) fit in 8 bits */

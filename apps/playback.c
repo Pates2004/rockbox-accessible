@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -19,6 +20,9 @@
  * KIND, either express or implied.
  *
  ****************************************************************************/
+#ifdef AUDIO_PAUSE_HOST_TEST
+#include "audio-pause-test.h"
+#else
 #include "config.h"
 #include "system.h"
 #include "version.h"
@@ -3198,14 +3202,10 @@ static void audio_stop_playback(void)
 
 /* Pause the playback of the current track
    (Q_AUDIO_PAUSE) */
-static void audio_on_pause(bool pause)
+#endif
+
+static void audio_apply_pause(bool pause)
 {
-    logf("%s(%s)", __func__, pause ? "true" : "false");
-
-    if (play_status == PLAY_STOPPED || pause == (play_status == PLAY_PAUSED))
-        return;
-
-    play_status = pause ? PLAY_PAUSED : PLAY_PLAYING;
     iap_on_play_status(play_status);
 
     if (!pause && codec_skip_pending)
@@ -3224,6 +3224,46 @@ static void audio_on_pause(bool pause)
         pcmbuf_pause(pause);
     }
 }
+
+#if (defined(HIBY_R1) && defined(HAVE_ESPEAK) && !defined(SIMULATOR) && !defined(BOOTLOADER)) || defined(HIBY_BT_SERVICE_HOST_TEST)
+static unsigned int playback_control_generation;
+#define playback_control_changed() (++playback_control_generation)
+
+struct guarded_pause_request
+{
+    bool (*begin)(void *context);
+    void (*end)(void *context);
+    void *context;
+    unsigned int generation;
+    bool committed;
+};
+#else
+#define playback_control_changed() ((void)0)
+#endif
+
+static void audio_on_pause(bool pause)
+{
+    logf("%s(%s)", __func__, pause ? "true" : "false");
+    if (play_status == PLAY_STOPPED || pause == (play_status == PLAY_PAUSED))
+        return;
+    play_status = pause ? PLAY_PAUSED : PLAY_PLAYING;
+    audio_apply_pause(pause);
+}
+
+#if (defined(HIBY_R1) && defined(HAVE_ESPEAK) && !defined(SIMULATOR) && !defined(BOOTLOADER)) || defined(HIBY_BT_SERVICE_HOST_TEST)
+static void audio_on_pause_guarded(struct guarded_pause_request *request)
+{
+    if (play_status != PLAY_PLAYING ||
+        request->generation != playback_control_generation || !request->begin(request->context))
+        return;
+    play_status = PLAY_PAUSED;
+    request->committed = true;
+    request->end(request->context);
+    audio_apply_pause(true);
+}
+#endif
+
+#ifndef AUDIO_PAUSE_HOST_TEST
 
 /* Skip a certain number of tracks forwards or backwards
    (Q_AUDIO_SKIP) */
@@ -3617,6 +3657,12 @@ void audio_playback_handler(struct queue_event *ev)
             audio_on_pause(ev->data);
             break;
 
+#if (defined(HIBY_R1) && defined(HAVE_ESPEAK) && !defined(SIMULATOR) && !defined(BOOTLOADER)) || defined(HIBY_BT_SERVICE_HOST_TEST)
+        case Q_AUDIO_PAUSE_GUARDED:
+            audio_on_pause_guarded((struct guarded_pause_request *)ev->data);
+            break;
+#endif
+
         case Q_AUDIO_SKIP:
             LOGFQUEUE("playback < Q_AUDIO_SKIP");
             audio_on_skip();
@@ -3959,9 +4005,12 @@ struct mp3entry * audio_next_track(void)
     return id3;
 }
 
+#endif
+
 /* Start playback at the specified elapsed time or offset */
 void audio_play(unsigned long elapsed, unsigned long offset)
 {
+    playback_control_changed();
     logf("audio_play");
 
 #ifdef PLAYBACK_VOICE
@@ -3978,21 +4027,50 @@ void audio_play(unsigned long elapsed, unsigned long offset)
 /* Stop playback if playing */
 void audio_stop(void)
 {
+    playback_control_changed();
     LOGFQUEUE("audio >| audio Q_AUDIO_STOP");
     audio_queue_send(Q_AUDIO_STOP, 0);
 }
 
 /* Pause playback if playing */
+
 void audio_pause(void)
 {
+    playback_control_changed();
     LOGFQUEUE("audio >| audio Q_AUDIO_PAUSE");
     audio_queue_send(Q_AUDIO_PAUSE, true);
 }
+
+#if (defined(HIBY_R1) && defined(HAVE_ESPEAK) && !defined(SIMULATOR) && !defined(BOOTLOADER)) || defined(HIBY_BT_SERVICE_HOST_TEST)
+unsigned int audio_playback_generation(void)
+{
+    return playback_control_generation;
+}
+
+bool audio_pause_guarded(unsigned int generation, bool (*begin)(void *context),
+    void (*end)(void *context), void *context)
+{
+    if (!begin || !end)
+        return false;
+    struct guarded_pause_request request = {
+        .begin = begin,
+        .end = end,
+        .context = context,
+        .generation = generation,
+        .committed = false
+    };
+    audio_queue_send(Q_AUDIO_PAUSE_GUARDED, (intptr_t)&request);
+    return request.committed;
+}
+#endif
+
+#ifndef AUDIO_PAUSE_HOST_TEST
 
 /* This sends a stop message and the audio thread will dump all its
    subsequent messages */
 void audio_hard_stop(void)
 {
+    playback_control_changed();
     /* Stop playback */
     LOGFQUEUE("audio >| audio Q_AUDIO_STOP: 1");
     audio_queue_send(Q_AUDIO_STOP, 1);
@@ -4006,11 +4084,16 @@ void audio_hard_stop(void)
 }
 
 /* Resume playback if paused */
+#endif
+
 void audio_resume(void)
 {
+    playback_control_changed();
     LOGFQUEUE("audio >| audio Q_AUDIO_PAUSE resume");
     audio_queue_send(Q_AUDIO_PAUSE, false);
 }
+
+#ifndef AUDIO_PAUSE_HOST_TEST
 
 /* Internal function used by REPEAT_ONE extern playlist.c */
 bool audio_pending_track_skip_is_manual(void)
@@ -4358,3 +4441,5 @@ void INIT_ATTR playback_init(void)
     audio_set_buffer_margin(global_settings.buffer_margin);
 #endif
 }
+
+#endif

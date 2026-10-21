@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -20,7 +21,10 @@
 #include "alsa-controls.h"
 #include "panic.h"
 #include "debug.h"
+#include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
+#include <stdint.h>
 
 /* alsa control handle, we keep it open at all times */
 static snd_ctl_t *alsa_ctl;
@@ -51,51 +55,97 @@ static const char *alsa_ctl_type_name(snd_ctl_elem_type_t type)
 }
 #endif
 
-void alsa_controls_init(const char *name)
+static void alsa_controls_cache(void)
 {
     /* allocate list on heap because it is used it is used in other functions */
-    snd_ctl_elem_list_malloc(&alsa_ctl_list);
-    /* there is only one card and "default" always works */
-    if(snd_ctl_open(&alsa_ctl, name, 0) < 0)
-        panicf("Cannot open ctl\n");
+    if(snd_ctl_elem_list_malloc(&alsa_ctl_list) < 0)
+        panicf("Cannot allocate control list");
     /* ALSA is braindead: first "get" the list -> only retrieve count */
     if(snd_ctl_elem_list(alsa_ctl, alsa_ctl_list) < 0)
         panicf("Cannot get element list\n");
     /* now we can allocate the list since the know the size */
     alsa_ctl_count = snd_ctl_elem_list_get_count(alsa_ctl_list);
+    if(alsa_ctl_count > INT_MAX ||
+        (alsa_ctl_count && sizeof(struct ctl_t) > SIZE_MAX / alsa_ctl_count))
+        panicf("Too many ALSA controls");
     if(snd_ctl_elem_list_alloc_space(alsa_ctl_list, alsa_ctl_count) < 0)
         panicf("Cannot allocate space for element list\n");
     /* ... and get the list again! */
     if(snd_ctl_elem_list(alsa_ctl, alsa_ctl_list) < 0)
         panicf("Cannot get element list\n");
+    if(snd_ctl_elem_list_get_count(alsa_ctl_list) != alsa_ctl_count ||
+        snd_ctl_elem_list_get_used(alsa_ctl_list) != alsa_ctl_count)
+        panicf("ALSA control list changed or incomplete");
+    if(alsa_ctl_count == 0)
+        return;
     /* now cache the info */
-    alsa_ctl_info = malloc(sizeof(struct ctl_t) * alsa_ctl_count);
+    alsa_ctl_info = calloc(alsa_ctl_count, sizeof(struct ctl_t));
+    if(!alsa_ctl_info)
+        panicf("Cannot allocate control cache");
     snd_ctl_elem_info_t *info;
-    snd_ctl_elem_info_malloc(&info);
+    if(snd_ctl_elem_info_malloc(&info) < 0)
+        panicf("Cannot allocate control info");
     for(unsigned i = 0; i < alsa_ctl_count; i++)
     {
         /* allocate the ID and retrieve it */
-        snd_ctl_elem_id_malloc(&alsa_ctl_info[i].id);
+        if(snd_ctl_elem_id_malloc(&alsa_ctl_info[i].id) < 0)
+        {
+            snd_ctl_elem_info_free(info);
+            panicf("Cannot allocate control ID %u", i);
+        }
         snd_ctl_elem_list_get_id(alsa_ctl_list, i, alsa_ctl_info[i].id);
         /* NOTE: name is valid as long as the ID lives; since we keep both, no need to copy */
         alsa_ctl_info[i].name = snd_ctl_elem_id_get_name(alsa_ctl_info[i].id);
         /* get info */
         snd_ctl_elem_info_set_id(info, alsa_ctl_info[i].id);
         if(snd_ctl_elem_info(alsa_ctl, info) < 0)
+        {
+            snd_ctl_elem_info_free(info);
             panicf("Cannot get control '%s' info", alsa_ctl_info[i].name);
+        }
         alsa_ctl_info[i].type = snd_ctl_elem_info_get_type(info);
         alsa_ctl_info[i].count = snd_ctl_elem_info_get_count(info);
+        if(alsa_ctl_info[i].count > INT_MAX ||
+            ((alsa_ctl_info[i].type == SND_CTL_ELEM_TYPE_BOOLEAN ||
+              alsa_ctl_info[i].type == SND_CTL_ELEM_TYPE_INTEGER ||
+              alsa_ctl_info[i].type == SND_CTL_ELEM_TYPE_ENUMERATED) &&
+             alsa_ctl_info[i].count > 128))
+        {
+            snd_ctl_elem_info_free(info);
+            panicf("Control '%s' has too many values", alsa_ctl_info[i].name);
+        }
         if(alsa_ctl_info[i].type == SND_CTL_ELEM_TYPE_ENUMERATED)
         {
             alsa_ctl_info[i].items = snd_ctl_elem_info_get_items(info);
-            alsa_ctl_info[i].enum_name = malloc(sizeof(char *) * alsa_ctl_info[i].items);
+            if(alsa_ctl_info[i].items > INT_MAX ||
+                (alsa_ctl_info[i].items && sizeof(char *) > SIZE_MAX / alsa_ctl_info[i].items))
+            {
+                snd_ctl_elem_info_free(info);
+                panicf("Control '%s' has too many enum items", alsa_ctl_info[i].name);
+            }
+            if(alsa_ctl_info[i].items == 0)
+                continue;
+            alsa_ctl_info[i].enum_name = calloc(alsa_ctl_info[i].items, sizeof(char *));
+            if(!alsa_ctl_info[i].enum_name)
+            {
+                snd_ctl_elem_info_free(info);
+                panicf("Cannot allocate control '%s' enum cache", alsa_ctl_info[i].name);
+            }
             for(unsigned j = 0; j < alsa_ctl_info[i].items; j++)
             {
                 snd_ctl_elem_info_set_item(info, j);
                 if(snd_ctl_elem_info(alsa_ctl, info) < 0)
+                {
+                    snd_ctl_elem_info_free(info);
                     panicf("Cannot get control '%s' info for item %u", alsa_ctl_info[i].name, j);
+                }
                 /* NOTE: copy string because it becomes invalid after info is freed */
                 alsa_ctl_info[i].enum_name[j] = strdup(snd_ctl_elem_info_get_item_name(info));
+                if(!alsa_ctl_info[i].enum_name[j])
+                {
+                    snd_ctl_elem_info_free(info);
+                    panicf("Cannot copy control '%s' enum item %u", alsa_ctl_info[i].name, j);
+                }
             }
         }
         else
@@ -123,9 +173,67 @@ void alsa_controls_init(const char *name)
 
 }
 
+void alsa_controls_init(const char *name)
+{
+    int result = snd_ctl_open(&alsa_ctl, name, 0);
+    if(result < 0)
+        panicf("Cannot open ctl %s\n%d: %s", name, result, snd_strerror(result));
+    alsa_controls_cache();
+}
+
+void alsa_controls_init_hw(unsigned int card)
+{
+    snd_config_t *configuration = NULL;
+    snd_input_t *input = NULL;
+    char definition[64];
+    snprintf(definition, sizeof(definition),
+             "ctl.rockbox { type hw card %u }", card);
+    int result = snd_config_top(&configuration);
+    if(result >= 0)
+        result = snd_input_buffer_open(&input, definition, -1);
+    if(result >= 0)
+        result = snd_config_load(configuration, input);
+    if(input)
+        snd_input_close(input);
+    if(result >= 0)
+        result = snd_ctl_open_lconf(&alsa_ctl, "rockbox", 0, configuration);
+    if(configuration)
+        snd_config_delete(configuration);
+    if(result < 0)
+        panicf("Cannot open ctl hw:%u\n%d: %s", card, result, snd_strerror(result));
+    alsa_controls_cache();
+}
+
 void alsa_controls_close(void)
 {
-    snd_ctl_close(alsa_ctl);
+    if(alsa_ctl_info)
+    {
+        for(unsigned index = 0; index < alsa_ctl_count; index++)
+        {
+            if(alsa_ctl_info[index].enum_name)
+            {
+                for(unsigned item = 0; item < alsa_ctl_info[index].items; item++)
+                    free((void *)alsa_ctl_info[index].enum_name[item]);
+                free(alsa_ctl_info[index].enum_name);
+            }
+            if(alsa_ctl_info[index].id)
+                snd_ctl_elem_id_free(alsa_ctl_info[index].id);
+        }
+        free(alsa_ctl_info);
+        alsa_ctl_info = NULL;
+    }
+    alsa_ctl_count = 0;
+    if(alsa_ctl_list)
+    {
+        snd_ctl_elem_list_free_space(alsa_ctl_list);
+        snd_ctl_elem_list_free(alsa_ctl_list);
+        alsa_ctl_list = NULL;
+    }
+    if(alsa_ctl)
+    {
+        snd_ctl_close(alsa_ctl);
+        alsa_ctl = NULL;
+    }
 }
 
 /* find a control element ID by name, return -1 of not found or index into array */

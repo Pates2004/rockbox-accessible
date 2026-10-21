@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -39,10 +40,22 @@
 #include "splash.h"
 #include "settings.h"
 #include "misc.h"
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+#include "hiby_bluetooth_service.h"
+#endif
+
+#if defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+#include "accessibility_screen.h"
+#include "accessibility_touch_wake.h"
+#endif
 
 #ifdef HAVE_TOUCHSCREEN
 #include "statusbar-skinned.h"
 #include "viewport.h"
+#ifdef HAVE_ESPEAK
+#include "accessibility.h"
+#include "root_menu.h"
+#endif
 #endif
 
 #ifdef HAVE_BACKLIGHT
@@ -68,6 +81,11 @@ typedef struct
     const struct button_mapping   *items;
     const struct button_mapping* (*get_context_map)(int);
     bool                           is_prebutton;
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+    bool                           physical_button;
+    bool                           fresh_physical_button;
+    bool                           user_activity;
+#endif
 } action_cur_t;
 
 /* act_last holds action state between get_action() calls */
@@ -90,6 +108,16 @@ typedef struct
     int          unlock_combo;
     bool         keys_locked;
     bool         screen_has_lock;
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+    unsigned int physical_buttons;
+    unsigned int unlock_contact;
+    bool         unlock_wait_for_press;
+    long         inactivity_tick;
+    int          inactivity_timeout;
+    bool         inactivity_initialized;
+    bool         inactivity_armed;
+    int          inactivity_unlock_combo;
+#endif
 
 #endif
 
@@ -157,7 +185,36 @@ static inline bool has_flag(unsigned int value, unsigned int flag)
     return ((value & flag) == flag);
 }
 
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD)
+static bool accessibility_forced_lock;
+#endif
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+static bool accessibility_custom_click;
+#endif
+
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+static unsigned int accessibility_physical_button(int button)
+{
+    unsigned int touch = BUTTON_TOUCHSCREEN | BUTTON_TOPLEFT | BUTTON_TOPMIDDLE |
+        BUTTON_TOPRIGHT | BUTTON_MIDLEFT | BUTTON_CENTER | BUTTON_MIDRIGHT |
+        BUTTON_BOTTOMLEFT | BUTTON_BOTTOMMIDDLE | BUTTON_BOTTOMRIGHT;
+#ifdef BUTTON_TOUCH
+    touch |= BUTTON_TOUCH;
+#endif
+    unsigned int physical = BUTTON_MAIN | BUTTON_REMOTE;
+    if ((button & touch) || (button & ~(physical | BUTTON_REL | BUTTON_REPEAT)))
+        return 0;
+    return button & physical;
+}
+
+static void accessibility_clear_lock_queue(void)
+{
+    button_clear_queue_preserve_events();
+}
+#endif
+
 #if defined(HAVE_BACKLIGHT) || !defined(HAS_BUTTON_HOLD)
+
 /* HELPER FUNCTIONS selective softlock and backlight */
 
 /****************************************************************
@@ -247,7 +304,7 @@ static bool is_action_discarded(action_cur_t *cur, bool filtered, long *tick)
     /*directly after a match a key release event may trigger another*/
     if (filtered && cur->action != ACTION_UNKNOWN)
     {
-        *tick = current_tick + ACTION_FILTER_TICKS;
+        *tick = (long)((unsigned long)current_tick + ACTION_FILTER_TICKS);
     }
     /* has button been released/repeat or is this the only action it could be */
     if (completed || !cur->is_prebutton)
@@ -256,7 +313,8 @@ static bool is_action_discarded(action_cur_t *cur, bool filtered, long *tick)
         * key release event then return false
         * keeping action, and reset tick
         */
-        if (!filtered && *tick < current_tick)
+        if (!filtered &&
+            (long)((unsigned long)*tick - (unsigned long)current_tick) < 0)
         {
             *tick = 0;
              ret  = false;
@@ -341,6 +399,57 @@ static inline bool action_poll_button(action_last_t *last, action_cur_t *cur)
         *button = ACTION_REDRAW;
         return true;
     }
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+    unsigned int physical = accessibility_physical_button(*button);
+    if (physical)
+        accessibility_touch_wake_cancel();
+    cur->physical_button = physical != 0;
+    cur->fresh_physical_button = physical &&
+        !(*button & (BUTTON_REL | BUTTON_REPEAT)) &&
+        (physical & ~last->physical_buttons);
+    cur->user_activity = physical && (cur->fresh_physical_button ||
+        (physical & last->physical_buttons));
+    if (*button & BUTTON_REL)
+        last->physical_buttons &= ~physical;
+    else if (physical && !(*button & BUTTON_REPEAT))
+        last->physical_buttons = physical;
+    if (last->unlock_wait_for_press)
+    {
+        if (!last->unlock_contact && cur->fresh_physical_button)
+            last->unlock_wait_for_press = false;
+        else if (*button & BUTTON_REL)
+            last->unlock_contact &= ~physical;
+        else if (last->unlock_contact)
+            last->unlock_contact |= physical;
+    }
+#endif
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    if (accessibility_curtain_escape(*button))
+    {
+        accessibility_reset();
+        last->wait_for_release = false;
+        last->button = *button;
+        last->action = ACTION_NONE;
+        *button = ACTION_NONE;
+        return true;
+    }
+#endif
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+    if (last->unlock_wait_for_press && (last->unlock_contact || physical))
+    {
+        last->button = BUTTON_NONE | BUTTON_REL;
+        last->action = ACTION_NONE;
+        *button = ACTION_NONE;
+        return true;
+    }
+    if (last->keys_locked && cur->fresh_physical_button &&
+        accessibility_screen_unlock_any_button())
+    {
+        last->wait_for_release = false;
+        last->context = cur->context;
+        return false;
+    }
+#endif
    /* *************************************************
     * If waiting for release, Don't send any buttons
     * through until we see the release event
@@ -393,6 +502,10 @@ static inline bool action_poll_button(action_last_t *last, action_cur_t *cur)
     {
         last->context = cur->context;
     }
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+    else
+        cur->user_activity = false;
+#endif
 
     return ret;
 }
@@ -453,7 +566,6 @@ static inline bool get_action_touchscreen(action_last_t *last, action_cur_t *cur
         }
 
         last->button = cur->button;
-        last->tick = now;
         cur->action = ACTION_TOUCHSCREEN;
 
         /* Update touchevent data */
@@ -466,10 +578,15 @@ static inline bool get_action_touchscreen(action_last_t *last, action_cur_t *cur
 
         last->touchevent.x = (last->ts_data >> 16) & 0xffff;
         last->touchevent.y = last->ts_data & 0xffff;
-        last->touchevent.tick = last->tick;
+        last->touchevent.tick = now;
 
         /* Update gesture state */
-        gesture_process(&last->gesture, &last->touchevent);
+#ifdef HAVE_ESPEAK
+        if (accessibility_enabled())
+            gesture_reset(&last->gesture);
+        else
+#endif
+            gesture_process(&last->gesture, &last->touchevent);
 
         return true;
     }
@@ -661,7 +778,11 @@ static inline void action_code_lookup(action_last_t *last, action_cur_t *cur)
 #if !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
     /* This only applies to the first context, to allow locked contexts to
      * specify a fall through to their non-locked version */
-    if (is_keys_locked())
+    if (is_keys_locked()
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD)
+        && !(cur->physical_button && accessibility_screen_locked_buttons())
+#endif
+        )
         context |= CONTEXT_LOCKED;
 #endif
 
@@ -746,12 +867,41 @@ static inline void action_code_lookup(action_last_t *last, action_cur_t *cur)
 * on user selection it will be locked
 * or unlocked as well
 */
+void action_update_touch_lock(void)
+{
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+    if (!has_flag(action_last.softlock_mask, SEL_ACTION_ENABLED) ||
+        has_flag(action_last.softlock_mask, SEL_ACTION_NOTOUCH))
+        button_enable_touch(!action_last.keys_locked || accessibility_touch_wake_enabled());
+#endif
+}
+
 static inline void do_key_lock(bool lock)
 {
+#if defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+    bool changed = action_last.keys_locked != lock;
+#endif
     action_last.keys_locked = lock;
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+    touchscreen_set_wake_locked(lock);
+    if (!lock)
+        action_last.inactivity_tick = current_tick;
+#endif
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    if (lock)
+        root_menu_cancel_navigation();
+    else
+        accessibility_forced_lock = false;
+#endif
     action_last.button = BUTTON_NONE;
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+    accessibility_clear_lock_queue();
+#else
     button_clear_queue();
-#if defined(HAVE_TOUCHPAD) || defined(HAVE_TOUCHSCREEN)
+#endif
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+    action_update_touch_lock();
+#elif defined(HAVE_TOUCHPAD) || defined(HAVE_TOUCHSCREEN)
  /* disable touch device on keylock if std behavior or selected disable touch */
     if (!has_flag(action_last.softlock_mask, SEL_ACTION_ENABLED) ||
          has_flag(action_last.softlock_mask, SEL_ACTION_NOTOUCH))
@@ -759,6 +909,65 @@ static inline void do_key_lock(bool lock)
         button_enable_touch(!lock);
     }
 #endif
+#if defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+    if (changed)
+        accessibility_screen_lock_changed(lock);
+#endif
+}
+
+static int autosoftlock_timeout(action_last_t *last)
+{
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+    int seconds = accessibility_screen_autolock_timeout();
+    if (!last->inactivity_initialized || last->inactivity_timeout != seconds)
+    {
+        last->inactivity_initialized = true;
+        last->inactivity_timeout = seconds;
+        last->inactivity_tick = current_tick;
+        last->inactivity_armed = false;
+    }
+    if (seconds >= 0)
+    {
+        if (!seconds || last->keys_locked)
+        {
+            last->inactivity_armed = false;
+            return TIMEOUT_BLOCK;
+        }
+        if (!accessibility_physical_button(last->unlock_combo))
+        {
+            if (!accessibility_physical_button(last->inactivity_unlock_combo))
+            {
+                last->inactivity_armed = false;
+                return TIMEOUT_BLOCK;
+            }
+            last->unlock_combo = last->inactivity_unlock_combo;
+        }
+        if (!last->inactivity_armed)
+        {
+            last->inactivity_armed = true;
+            last->inactivity_tick = current_tick;
+        }
+        unsigned long elapsed = (unsigned long)current_tick - (unsigned long)last->inactivity_tick;
+        int timeout = seconds * HZ;
+        return elapsed >= (unsigned long)timeout ? 0 : timeout - (int)elapsed;
+    }
+#endif
+#if defined(HAVE_BACKLIGHT)
+    if (!last->keys_locked && last->unlock_combo != BUTTON_NONE &&
+        has_flag(last->softlock_mask, SEL_ACTION_AUTOLOCK | SEL_ACTION_ALOCK_OK))
+    {
+        int timeout = backlight_get_current_timeout();
+        if (timeout > 0)
+        {
+            unsigned long elapsed = (unsigned long)current_tick -
+                                    (unsigned long)last->tick;
+            return elapsed >= (unsigned long)timeout ? 0 : timeout - (int)elapsed;
+        }
+    }
+#else
+    (void)last;
+#endif
+    return TIMEOUT_BLOCK;
 }
 
 /**********************************************
@@ -771,22 +980,16 @@ static inline void do_key_lock(bool lock)
 static inline int do_auto_softlock(action_last_t *last, action_cur_t *cur)
 {
 
-#if !defined(HAVE_BACKLIGHT)
+#if !defined(HAVE_BACKLIGHT) && !(defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER))
     (void) last;
     return cur->action;
 #else
     int  action     = cur->action;
-    bool is_timeout = false;
-    int  timeout;
-    if (has_flag(last->softlock_mask, SEL_ACTION_ALOCK_OK))
-    {
-        timeout = backlight_get_current_timeout();
-        is_timeout = (timeout > 0 && (current_tick > action_last.tick + timeout));
-    }
-
-    if (is_timeout)
+    if (autosoftlock_timeout(last) == 0)
     {
         do_key_lock(true);
+        if (action == ACTION_STD_KEYLOCK)
+            action = ACTION_REDRAW;
 
 #if defined(HAVE_TOUCHPAD) || defined(HAVE_TOUCHSCREEN)
         /* if the touchpad is supposed to be off and the current buttonpress
@@ -814,7 +1017,12 @@ static inline int do_auto_softlock(action_last_t *last, action_cur_t *cur)
         }
 #endif
     }
-    else if (action == ACTION_STD_KEYLOCK)
+#ifdef HAVE_BACKLIGHT
+    else if (action == ACTION_STD_KEYLOCK && has_flag(last->softlock_mask, SEL_ACTION_AUTOLOCK)
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+             && accessibility_screen_autolock_timeout() < 0
+#endif
+             )
     {
         if (!has_flag(last->softlock_mask, SEL_ACTION_ALWAYSAUTOLOCK)) // normal operation, clear/arm autolock
         {
@@ -844,6 +1052,7 @@ static inline int do_auto_softlock(action_last_t *last, action_cur_t *cur)
         }
     }
 
+#endif
     return action;
 #endif /* HAVE_BACKLIGHT */
 }
@@ -876,15 +1085,17 @@ static inline void do_softlock(action_last_t *last, action_cur_t *cur)
     bool filtered = true;
     bool notify_user = false;
     bool sl_activate = true; /* standard softlock behavior */
+    bool locked_before_action = last->keys_locked;
 
-    if ((!last->keys_locked) && has_flag(last->softlock_mask, SEL_ACTION_AUTOLOCK))
+    if (!last->keys_locked)
     {
         action = do_auto_softlock(last, cur);
     }
 
     /* Lock/Unlock toggled by ACTION_STD_KEYLOCK presses*/
     if ((action == ACTION_STD_KEYLOCK)
-         || (last->keys_locked && last->unlock_combo == cur->button))
+         || (locked_before_action && last->unlock_combo != BUTTON_NONE &&
+             last->unlock_combo == cur->button))
     {
 #ifdef HAVE_BACKLIGHT
 	// if backlight is off and keys are unlocked, do nothing and exit.
@@ -905,6 +1116,14 @@ static inline void do_softlock(action_last_t *last, action_cur_t *cur)
     }
 #endif
 
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+    else if (last->keys_locked && cur->physical_button &&
+             accessibility_screen_locked_buttons())
+    {
+        cur->action = action;
+        return;
+    }
+#endif
     else if (last->keys_locked && action != ACTION_REDRAW)
     {
         if (has_flag(last->softlock_mask, SEL_ACTION_ENABLED))
@@ -951,19 +1170,21 @@ static inline void do_softlock(action_last_t *last, action_cur_t *cur)
             if (!is_backlight_on(false))
                 sleep(HZ/2);
 #endif
-            if (last->keys_locked)
-            {
-                splash(HZ/2, ID2P(LANG_KEYLOCK_ON));
-            }
-            else
-            {
-                splash(HZ/2, ID2P(LANG_KEYLOCK_OFF));
-            }
+            int message = last->keys_locked ? LANG_KEYLOCK_ON : LANG_KEYLOCK_OFF;
+#if defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+            splashf_silent(HZ/2, ID2P(message));
+#else
+            splash(HZ/2, ID2P(message));
+#endif
         }
 
         action       = ACTION_REDRAW;
         last->button = BUTTON_NONE;
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+        accessibility_clear_lock_queue();
+#else
         button_clear_queue();
+#endif
     }
 
     cur->action = action;
@@ -989,7 +1210,8 @@ static inline int update_action_last(action_last_t *last, action_cur_t *cur)
 
     if (action == last->action)
     {
-        last->repeated = (current_tick < last->tick + REPEAT_WINDOW_TICKS);
+        last->repeated = ((unsigned long)current_tick - (unsigned long)last->tick <
+                          REPEAT_WINDOW_TICKS);
     }
     else
     {
@@ -1000,9 +1222,16 @@ static inline int update_action_last(action_last_t *last, action_cur_t *cur)
     last->button = cur->button;
     last->data   = button_get_data();
     last->tick   = current_tick;
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+    if (cur->user_activity && !last->keys_locked && action != ACTION_UNKNOWN)
+        last->inactivity_tick = current_tick;
+#endif
 
     /* Produce keyclick */
-    keyclick_click(false, action);
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    if (!accessibility_custom_click)
+#endif
+        keyclick_click(false, action);
 
     return action;
 }
@@ -1025,7 +1254,81 @@ static void init_act_cur(action_cur_t *cur,
     cur->items               = NULL;
     cur->timeout             = timeout;
     cur->get_context_map = get_context_map;
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+    cur->physical_button = false;
+    cur->fresh_physical_button = false;
+    cur->user_activity = false;
+#endif
 }
+
+#if defined(HIBY_R1) && defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+int accessibility_default_button_action(int button, int context, bool held_release)
+{
+    action_last_t previous = action_last;
+    action_cur_t current;
+    init_act_cur(&current, context & ~ALLOW_SOFTLOCK, 0, NULL);
+    current.button = button;
+#if !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+    current.physical_button = accessibility_physical_button(button) != 0;
+#endif
+    previous.button = button & ~(BUTTON_REL | BUTTON_REPEAT);
+    if (held_release)
+        previous.button |= BUTTON_REPEAT;
+#ifndef DISABLE_ACTION_REMAP
+    previous.key_remap = 0;
+#endif
+    action_code_lookup(&previous, &current);
+    return current.action;
+}
+#endif
+
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+static int accessibility_finish_button(action_last_t *last, action_cur_t *cur)
+{
+    if (cur->action == ACTION_UNKNOWN)
+    {
+#ifndef HAS_BUTTON_HOLD
+        if (last->screen_has_lock && autosoftlock_timeout(last) == 0)
+        {
+            cur->action = ACTION_NONE;
+            do_softlock(last, cur);
+        }
+#endif
+        if (cur->button != BUTTON_NONE)
+        {
+            last->button = cur->button;
+            last->tick = current_tick;
+#if !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+            if (cur->user_activity && !last->keys_locked)
+                last->inactivity_tick = current_tick;
+#endif
+        }
+        return ACTION_NONE;
+    }
+#ifndef HAS_BUTTON_HOLD
+    if (cur->action == ACTION_STD_KEYLOCK)
+    {
+        last->screen_has_lock = true;
+        accessibility_forced_lock = true;
+    }
+#endif
+    int raw = cur->button;
+    if (cur->button == BUTTON_NONE)
+        cur->button = last->button & ~(BUTTON_REL | BUTTON_REPEAT);
+#if !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+    cur->physical_button = accessibility_physical_button(cur->button) != 0;
+#endif
+    bool feedback = cur->action != ACTION_WPS_STOPSEEK;
+    do_softlock(last, cur);
+    accessibility_custom_click = true;
+    int result = update_action_last(last, cur);
+    accessibility_custom_click = false;
+    last->button = raw == BUTTON_NONE ? (cur->button | BUTTON_REL) : raw;
+    if (feedback)
+        keyclick_click_physical(result, accessibility_button_is_repeat());
+    return result;
+}
+#endif
 
 /*******************************************************
 * do_backlight allows exemptions to the backlight on
@@ -1112,24 +1415,271 @@ static inline int do_backlight(action_last_t *last, action_cur_t *cur, int actio
 *                   TIMEOUT_BLOCK   to wait for a button press
 *                   Any number >0   to wait that many ticks for a press
 */
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+static bool accessibility_handle_touch_wake(action_last_t *last, action_cur_t *cur)
+{
+    if (!accessibility_touch_wake_enabled())
+        return false;
+    const int touch_buttons = BUTTON_TOUCHSCREEN |
+        BUTTON_TOPLEFT | BUTTON_TOPMIDDLE | BUTTON_TOPRIGHT |
+        BUTTON_MIDLEFT | BUTTON_CENTER | BUTTON_MIDRIGHT |
+        BUTTON_BOTTOMLEFT | BUTTON_BOTTOMMIDDLE | BUTTON_BOTTOMRIGHT;
+    if (cur->button != BUTTON_NONE && !(cur->button & touch_buttons))
+    {
+        if (cur->button != SYS_BATTERY_UPDATE && cur->button != SYS_CHARGER_CONNECTED &&
+            cur->button != SYS_CHARGER_DISCONNECTED)
+            accessibility_touch_wake_cancel();
+        return false;
+    }
+    bool dark = false;
+#ifdef HAVE_BACKLIGHT
+    dark = !is_backlight_on(false) && !backlight_screen_curtain_active();
+#endif
+    struct touchevent event;
+    const struct touchevent *contact = NULL;
+    if (cur->button != BUTTON_NONE)
+    {
+        intptr_t data = button_get_data();
+        event = (struct touchevent){
+            .type = cur->button & BUTTON_REL ? TOUCHEVENT_RELEASE :
+                    cur->button & BUTTON_REPEAT ? TOUCHEVENT_CONTACT : TOUCHEVENT_PRESS,
+            .x = (data >> 16) & 0xffff,
+            .y = data & 0xffff,
+            .tick = current_tick
+        };
+        contact = &event;
+    }
+    enum accessibility_touch_wake_result result = accessibility_touch_wake_process(
+        contact, last->keys_locked, dark, cur->context);
+    if (result == ACCESSIBILITY_TOUCH_WAKE_PASS)
+        return false;
+    accessibility_reset();
+    gesture_reset(&last->gesture);
+    last->touchevent.type = TOUCHEVENT_NONE;
+    if (result == ACCESSIBILITY_TOUCH_WAKE_UNLOCK && last->keys_locked)
+    {
+        do_key_lock(false);
+        skin_request_update_locked(false);
+    }
+    cur->action = ACTION_NONE;
+    if (result == ACCESSIBILITY_TOUCH_WAKE_LIGHT || result == ACCESSIBILITY_TOUCH_WAKE_UNLOCK)
+    {
+        action_handle_backlight(true, false);
+        if (!last->keys_locked)
+            last->inactivity_tick = current_tick;
+        cur->action = ACTION_REDRAW;
+    }
+    last->button = BUTTON_NONE | BUTTON_REL;
+    last->action = cur->action;
+    last->tick = current_tick;
+    last->repeated = false;
+    return true;
+}
+#endif
+
 static int get_action_worker(action_last_t *last, action_cur_t *cur)
 {
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+    hiby_bluetooth_service_process_notifications();
+    cur->timeout = hiby_bluetooth_service_adjust_timeout(cur->timeout);
+#endif
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    static int accessibility_context = -1;
+    if (accessibility_context != cur->context)
+    {
+        accessibility_reset();
+        accessibility_context = cur->context;
+    }
+    cur->timeout = accessibility_adjust_timeout(cur->timeout);
+#if !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+    cur->timeout = accessibility_touch_wake_timeout(cur->timeout);
+#endif
+#endif
     send_event(GUI_EVENT_ACTIONUPDATE, NULL);
+
+#ifndef HAS_BUTTON_HOLD
+    if (has_flag(cur->context, ALLOW_SOFTLOCK))
+    {
+        int remaining = autosoftlock_timeout(last);
+        if (remaining >= 0 && (cur->timeout < 0 || cur->timeout > remaining))
+            cur->timeout = remaining;
+    }
+#endif
 
     /*if button = none/special; returns immediately*/
     if (action_poll_button(last, cur))
     {
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+        if (cur->button == BUTTON_NONE && accessibility_handle_touch_wake(last, cur))
+            return cur->action;
+        if (cur->button != BUTTON_NONE && cur->button != SYS_BATTERY_UPDATE &&
+            cur->button != SYS_CHARGER_CONNECTED && cur->button != SYS_CHARGER_DISCONNECTED)
+            accessibility_touch_wake_cancel();
+#endif
+        if (cur->button == BUTTON_NONE)
+        {
+            update_screen_has_lock(last, cur);
+#ifndef HAS_BUTTON_HOLD
+            if (last->screen_has_lock && autosoftlock_timeout(last) == 0)
+            {
+                cur->action = ACTION_NONE;
+                do_softlock(last, cur);
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+                accessibility_reset();
+#endif
+                return cur->action;
+            }
+#endif
+        }
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+        if (cur->button == BUTTON_NONE)
+        {
+            if (last->wait_for_release)
+            {
+                accessibility_reset();
+                return ACTION_NONE;
+            }
+#if !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+            if (last->unlock_wait_for_press)
+                return ACTION_NONE;
+#endif
+            bool locked = false;
+#ifndef HAS_BUTTON_HOLD
+            locked = last->keys_locked;
+            if (accessibility_forced_lock)
+                last->screen_has_lock = true;
+#endif
+            if (accessibility_handle_button(BUTTON_NONE, cur->context,
+                    locked
+#if !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+                    && !accessibility_screen_locked_buttons()
+#endif
+                    , &cur->action))
+                return accessibility_finish_button(last, cur);
+        }
+        if (cur->button == BUTTON_NONE && accessibility_enabled())
+        {
+            bool locked = false;
+#ifndef HAS_BUTTON_HOLD
+            locked = last->keys_locked;
+#endif
+            if (!locked)
+            {
+                cur->action = accessibility_handle_touch(NULL,
+                    cur->context & ~ALLOW_SOFTLOCK);
+                if (cur->action == ACTION_STD_KEYLOCK)
+                {
+                    cur->button = BUTTON_TOUCHSCREEN;
+#ifndef HAS_BUTTON_HOLD
+                    last->screen_has_lock = true;
+                    accessibility_forced_lock = true;
+#endif
+                    do_softlock(last, cur);
+                }
+                return cur->action;
+            }
+            accessibility_cancel_touch();
+        }
+        if (cur->button != BUTTON_NONE && cur->button != ACTION_REDRAW &&
+            cur->button != SYS_BATTERY_UPDATE &&
+            cur->button != SYS_CHARGER_CONNECTED &&
+            cur->button != SYS_CHARGER_DISCONNECTED)
+            accessibility_reset();
+#endif
         return cur->button;
     }
 
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+    if (accessibility_handle_touch_wake(last, cur))
+        return cur->action;
+#endif
     update_screen_has_lock(last, cur);
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD)
+    if (accessibility_forced_lock)
+        last->screen_has_lock = true;
+#ifndef BOOTLOADER
+    if (last->keys_locked && cur->fresh_physical_button &&
+        accessibility_screen_unlock_any_button())
+    {
+        last->unlock_contact = accessibility_physical_button(cur->button);
+        last->unlock_wait_for_press = true;
+        accessibility_reset();
+        do_key_lock(false);
+        last->button = BUTTON_NONE | BUTTON_REL;
+        last->action = ACTION_NONE;
+        last->tick = current_tick;
+        last->repeated = false;
+        skin_request_update_locked(false);
+        action_handle_backlight(true, false);
+        return ACTION_REDRAW;
+    }
+    if (last->keys_locked && !cur->physical_button &&
+        accessibility_screen_locked_buttons())
+    {
+        accessibility_cancel_touch();
+        return ACTION_NONE;
+    }
+#endif
+    if (last->keys_locked && has_flag(cur->button, BUTTON_TOUCHSCREEN) && accessibility_enabled())
+    {
+        accessibility_reset();
+        last->button = cur->button;
+        return ACTION_NONE;
+    }
+#endif
 
     if (get_action_touchscreen(last, cur))
     {
         do_softlock(last, cur);
+        last->tick = current_tick;
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+        if (!last->keys_locked)
+            last->inactivity_tick = current_tick;
+#endif
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+        if (accessibility_enabled())
+        {
+            bool locked = false;
+#ifndef HAS_BUTTON_HOLD
+            locked = last->keys_locked;
+#endif
+            if (cur->action == ACTION_TOUCHSCREEN && !locked)
+            {
+                cur->action = accessibility_handle_touch(&last->touchevent,
+                                                          cur->context);
+                if (cur->action == ACTION_STD_KEYLOCK)
+                {
+#ifndef HAS_BUTTON_HOLD
+                    last->screen_has_lock = true;
+                    accessibility_forced_lock = true;
+#endif
+                    do_softlock(last, cur);
+                }
+            }
+            else
+            {
+                accessibility_reset();
+                cur->action = ACTION_NONE;
+            }
+        }
+#endif
         return cur->action;
     }
 
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    accessibility_cancel_touch();
+    bool locked = false;
+#ifndef HAS_BUTTON_HOLD
+    locked = last->keys_locked;
+#endif
+    if (accessibility_handle_button(cur->button, cur->context,
+            locked
+#if !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
+            && !accessibility_screen_locked_buttons()
+#endif
+            , &cur->action))
+        return accessibility_finish_button(last, cur);
+#endif
     button_flip_horizontally(cur->context, &cur->button);
 
     action_code_lookup(last, cur);
@@ -1150,6 +1700,14 @@ static int get_action_worker(action_last_t *last, action_cur_t *cur)
 #ifdef HAVE_TOUCHSCREEN
 int action_get_touch_event(struct touchevent *ev)
 {
+#ifdef HAVE_ESPEAK
+    if (accessibility_enabled())
+    {
+        if (ev)
+            memset(ev, 0, sizeof(*ev));
+        return TOUCHEVENT_NONE;
+    }
+#endif
     if (ev)
         *ev = action_last.touchevent;
 
@@ -1264,6 +1822,18 @@ void action_wait_for_release(void)
     button_clear_pressed();
 }
 
+#if defined(HIBY_R1)
+static int do_global_volume(int action)
+{
+    if (action == ACTION_LIST_VOLUP || action == ACTION_LIST_VOLDOWN)
+    {
+        adjust_volume(action == ACTION_LIST_VOLUP ? 1 : -1);
+        return ACTION_NONE;
+    }
+    return action;
+}
+#endif
+
 int get_action(int context, int timeout)
 {
     action_cur_t current;
@@ -1274,11 +1844,24 @@ int get_action(int context, int timeout)
 #ifdef HAVE_TOUCHSCREEN
     if (action == ACTION_TOUCHSCREEN)
     {
-        action = sb_touch_to_button(context);
+#ifdef HAVE_ESPEAK
+        if (!accessibility_enabled())
+#endif
+            action = sb_touch_to_button(context);
     }
 #endif
 
     action = do_backlight(&action_last, &current, action);
+
+#if defined(HIBY_R1)
+    action = do_global_volume(action);
+#endif
+
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    int pending = accessibility_process_pending(action, context);
+    if (pending)
+        action = pending;
+#endif
 
     return action;
 }
@@ -1379,6 +1962,16 @@ int get_custom_action(int context,int timeout,
 
     action = do_backlight(&action_last, &current, action);
 
+#if defined(HIBY_R1)
+    action = do_global_volume(action);
+#endif
+
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    int pending = accessibility_process_pending(action, context);
+    if (pending)
+        action = pending;
+#endif
+
     return action;
 }
 
@@ -1440,7 +2033,19 @@ bool is_keys_locked(void)
 /* Enable selected actions to bypass a locked state */
 void set_selective_softlock_actions(bool selective, unsigned int mask)
 {
+#if defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+    bool was_locked = action_last.keys_locked;
+#endif
     action_last.keys_locked = false;
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+    touchscreen_set_wake_locked(false);
+#endif
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+    action_last.inactivity_tick = current_tick;
+#endif
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    accessibility_forced_lock = false;
+#endif
 #if defined(HAVE_TOUCHPAD) || defined(HAVE_TOUCHSCREEN)
     button_enable_touch(true);
 #endif
@@ -1452,6 +2057,10 @@ void set_selective_softlock_actions(bool selective, unsigned int mask)
     {
         action_last.softlock_mask = SEL_ACTION_NONE;
     }
+#if defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+    if (was_locked)
+        accessibility_screen_lock_changed(false);
+#endif
 }
 
 /* look for an action in the given context, return button which triggers it.
@@ -1482,6 +2091,9 @@ static int find_button_for_action(int context, int action)
 
 void action_autosoftlock_init(void)
 {
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+    action_last.inactivity_unlock_combo = BUTTON_NONE;
+#endif
     /* search in WPS and STD contexts for the keylock button combo */
     static const int contexts[2] = { CONTEXT_WPS, CONTEXT_STD };
 
@@ -1491,6 +2103,10 @@ void action_autosoftlock_init(void)
         if (button != BUTTON_NONE)
         {
             action_last.unlock_combo = button;
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
+            if (accessibility_physical_button(button))
+                action_last.inactivity_unlock_combo = button;
+#endif
             break;
         }
     }

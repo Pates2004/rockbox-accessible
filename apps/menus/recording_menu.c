@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -404,7 +405,7 @@ static void trigger_speak_item(const struct settings_list **settings,
 {
     const struct settings_list *s = settings[selected_setting];
     int temp;
-    if (!global_settings.talk_menu)
+    if (!talk_menus_enabled(&global_settings))
         return;
     if (title)
         talk_id(s->lang_id, false);

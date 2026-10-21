@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -73,7 +74,7 @@ static void say_time(int cursorpos, const struct tm *tm)
     int value = 0;
     int unit = 0;
 
-    if (!global_settings.talk_menu)
+    if (!talk_menus_enabled(&global_settings))
         return;
 
     switch(cursorpos)
@@ -320,7 +321,11 @@ bool set_time_screen(const char* title, struct tm *tm, bool set_date)
                 break;
         }
 
-        button = get_action(CONTEXT_SETTINGS_TIME, TIMEOUT_BLOCK);
+        button = get_action(
+#if defined(HIBY_R1)
+                            ALLOW_SOFTLOCK |
+#endif
+                            CONTEXT_SETTINGS_TIME, TIMEOUT_BLOCK);
         switch ( button ) {
             case ACTION_STD_PREV:
                 cursorpos = clamp_value_wrap(--cursorpos, last_item, 0);
@@ -814,7 +819,7 @@ refresh_info:
     }
 
     gui_synclist_init(&id3_lists, &id3_get_name_cb, &info, true, 2, NULL);
-    if(global_settings.talk_menu)
+    if(talk_menus_enabled(&global_settings))
         gui_synclist_set_voice_callback(&id3_lists, id3_speak_item);
     gui_synclist_set_nb_items(&id3_lists, info.count*2);
     gui_synclist_set_title(&id3_lists, str(LANG_TRACK_INFO), NOICON);
@@ -953,7 +958,7 @@ int view_runtime(void)
     info.action_callback = runtime_info_cb;
     info.timeout = HZ;
     info.selection_size = 2;
-    if(global_settings.talk_menu)
+    if(talk_menus_enabled(&global_settings))
         info.get_talk = runtime_speak_data;
     info.scroll_all = true;
     return simplelist_show_list(&info);

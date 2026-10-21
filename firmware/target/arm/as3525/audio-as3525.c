@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -27,12 +28,18 @@
 
 int audio_channels = 2;
 
-#if CONFIG_CPU == AS3525
 int audio_output_source = AUDIO_SRC_PLAYBACK;
+
+#ifdef HAVE_PCM_RECORDING_VOICE
+static bool pcm_output_active = false;
 #endif
 
 void audio_set_output_source(int source)
 {
+#ifdef HAVE_PCM_RECORDING_VOICE
+    int oldlevel = disable_irq_save();
+#endif
+
     bitset32(&CGU_PERI, CGU_I2SOUT_APB_CLOCK_ENABLE);
 
     if ((unsigned)source >= AUDIO_NUM_SOURCES)
@@ -42,15 +49,31 @@ void audio_set_output_source(int source)
 
 #if CONFIG_CPU == AS3525
     loopback = loopback && audio_channels > 1;
+#elif defined(HAVE_PCM_RECORDING_VOICE)
+    loopback = loopback && !pcm_output_active;
+#endif
 
     audio_output_source = source;
-#endif
 
     if (loopback)
         I2SOUT_CONTROL |= (1<<5);  /* loopback from i2sin fifo */
     else
         I2SOUT_CONTROL &= ~(1<<5); /* normal i2sout */
+
+#ifdef HAVE_PCM_RECORDING_VOICE
+    restore_irq(oldlevel);
+#endif
 }
+
+#ifdef HAVE_PCM_RECORDING_VOICE
+void audio_set_pcm_output(bool active)
+{
+    int oldlevel = disable_irq_save();
+    pcm_output_active = active;
+    audio_set_output_source(audio_output_source);
+    restore_irq(oldlevel);
+}
+#endif
 
 void audio_input_mux(int source, unsigned flags)
 {
@@ -154,4 +177,3 @@ unsigned int pcm_sampr_to_hw_sampr(unsigned int samplerate,
     (void)type;
 }
 #endif /* CONFIG_SAMPR_TYPES */
-

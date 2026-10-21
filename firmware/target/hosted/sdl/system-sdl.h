@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.                  
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___  
@@ -50,6 +51,7 @@ void wait_for_interrupt(void);
 
 void sim_enter_irq_handler(void);
 void sim_exit_irq_handler(void);
+bool sim_kernel_init(void);
 void sim_kernel_shutdown(void);
 void sys_poweroff(void);
 void sys_handle_argv(int argc, char *argv[]);

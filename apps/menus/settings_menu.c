@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -26,6 +27,11 @@
 #include "lang.h"
 #include "action.h"
 #include "settings.h"
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+#include "accessibility.h"
+#include "accessibility_typing.h"
+#include "backlight.h"
+#endif
 #include "rbpaths.h"
 #include "menu.h"
 #include "open_plugin.h"
@@ -38,6 +44,12 @@
 #include "splash.h"
 #include "yesno.h"
 #include "talk.h"
+#ifdef HAVE_ESPEAK
+#include "tts.h"
+#endif
+#if defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD)
+#include "accessibility_screen.h"
+#endif
 #include "powermgmt.h"
 #include "playback.h"
 #if CONFIG_RTC
@@ -340,13 +352,26 @@ MENUITEM_SETTING(volume_adjust_norm_steps, &global_settings.volume_adjust_norm_s
 /* Keyclick menu */
 MENUITEM_SETTING(keyclick, &global_settings.keyclick, NULL);
 MENUITEM_SETTING(keyclick_repeats, &global_settings.keyclick_repeats, NULL);
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+MENUITEM_FUNCTION(keyclick_sources, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_KEYCLICK_SOURCES), accessibility_keyclick_menu,
+                  NULL, Icon_NOICON);
+#endif
 #ifdef HAVE_HARDWARE_CLICK
 MENUITEM_SETTING(keyclick_hardware, &global_settings.keyclick_hardware, NULL);
 MAKE_MENU(keyclick_menu, ID2P(LANG_KEYCLICK), 0, Icon_NOICON,
-           &keyclick, &keyclick_hardware, &keyclick_repeats);
+           &keyclick, &keyclick_hardware, &keyclick_repeats
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+           , &keyclick_sources
+#endif
+           );
 #else
 MAKE_MENU(keyclick_menu, ID2P(LANG_KEYCLICK), 0, Icon_NOICON,
-           &keyclick, &keyclick_repeats);
+           &keyclick, &keyclick_repeats
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+           , &keyclick_sources
+#endif
+           );
 #endif
 
 #if CONFIG_CHARGING
@@ -432,6 +457,11 @@ MAKE_MENU(usb_menu, ID2P(LANG_USB_MENU), 0, Icon_NOICON,
 #endif
          );
 
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && defined(HIBY_R1)
+MENUITEM_FUNCTION(accessibility_buttons_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_ACCESSIBILITY_BUTTONS), accessibility_buttons_menu, NULL, Icon_NOICON);
+#endif
+
 MAKE_MENU(system_menu, ID2P(LANG_SYSTEM),
           0, Icon_System_menu,
 #if (BATTERY_CAPACITY_INC > 0) || defined(HAVE_USB_CHARGING_ENABLE)
@@ -468,6 +498,12 @@ MAKE_MENU(system_menu, ID2P(LANG_SYSTEM),
 #endif
 #ifdef HAVE_BUTTONLIGHT_BRIGHTNESS
             &buttonlight_brightness,
+#endif
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+            &touchscreen_menu,
+#ifdef HIBY_R1
+            &accessibility_buttons_item,
+#endif
 #endif
             &keyclick_menu,
 #ifdef HAVE_TOUCHPAD_SENSITIVITY_SETTING
@@ -715,7 +751,148 @@ MENUITEM_SETTING(talk_filetype_item, &global_settings.talk_filetype, NULL);
 MENUITEM_SETTING(talk_battery_level_item,
                  &global_settings.talk_battery_level, NULL);
 MENUITEM_SETTING(talk_mixer_amp_item, &global_settings.talk_mixer_amp, NULL);
+
+#ifdef HAVE_ESPEAK
+static int tts_enabled_callback(int action,
+                                const struct menu_item_ex *this_item,
+                                struct gui_synclist *this_list)
+{
+    (void)this_item;
+    (void)this_list;
+
+    if (action == ACTION_EXIT_MENUITEM)
+        tts_settings_changed();
+
+    return action;
+}
+
+static int tts_select_language(void)
+{
+    return tts_choose_voice(false) ? MENU_ATTACHED_USB : 0;
+}
+
+static int tts_select_variant(void)
+{
+    return tts_choose_voice(true) ? MENU_ATTACHED_USB : 0;
+}
+
+MENUITEM_SETTING(tts_enabled_item, &global_settings.tts_enabled,
+                 tts_enabled_callback);
+MENUITEM_SETTING(tts_rate_item, &global_settings.tts_rate, NULL);
+MENUITEM_SETTING(tts_rate_scale_item, &global_settings.tts_rate_scale, NULL);
+MENUITEM_SETTING(tts_pitch_item, &global_settings.tts_pitch, NULL);
+MENUITEM_SETTING(tts_volume_item, &global_settings.tts_volume, NULL);
+MENUITEM_SETTING(tts_range_item, &global_settings.tts_range, NULL);
+MENUITEM_SETTING(tts_wordgap_item, &global_settings.tts_wordgap, NULL);
+MENUITEM_SETTING(tts_punctuation_item, &global_settings.tts_punctuation, NULL);
+MENUITEM_SETTING(tts_ducking_item, &global_settings.tts_ducking, NULL);
+MENUITEM_SETTING(tts_ducking_level_item, &global_settings.tts_ducking_level, NULL);
+MENUITEM_SETTING(tts_reader_unit_item, &global_settings.tts_reader_unit, NULL);
+MENUITEM_SETTING(tts_reader_page_lines_item, &global_settings.tts_reader_page_lines, NULL);
+MAKE_MENU(tts_reader_settings_menu, ID2P(LANG_TTS_READER_SETTINGS), 0, Icon_Voice,
+          &tts_reader_unit_item, &tts_reader_page_lines_item);
+MENUITEM_FUNCTION(tts_language_item, MENU_FUNC_CHECK_RETVAL, ID2P(LANG_TTS_LANGUAGE),
+                  tts_select_language, NULL, Icon_Language);
+MENUITEM_FUNCTION(tts_variant_item, MENU_FUNC_CHECK_RETVAL, ID2P(LANG_TTS_VARIANT),
+                  tts_select_variant, NULL, Icon_Voice);
+MAKE_MENU(tts_settings_menu, ID2P(LANG_TTS), 0, Icon_Voice,
+          &tts_language_item, &tts_variant_item,
+          &tts_rate_item, &tts_rate_scale_item, &tts_pitch_item, &tts_volume_item,
+          &tts_range_item, &tts_wordgap_item, &tts_punctuation_item);
+MENUITEM_SETTING(list_boundary_feedback_item, &global_settings.list_boundary_feedback, NULL);
+MENUITEM_SETTING(tts_announce_position_item, &global_settings.tts_announce_position, NULL);
+MENUITEM_SETTING(tts_announce_dynamic_item, &global_settings.tts_announce_dynamic, NULL);
+MENUITEM_SETTING(accessibility_shortcut_enabled_item, &global_settings.accessibility_shortcut_enabled, NULL);
+MENUITEM_SETTING(accessibility_shortcut_espeak_item, &global_settings.accessibility_shortcut_espeak, NULL);
+MENUITEM_SETTING(accessibility_shortcut_voice_files_item, &global_settings.accessibility_shortcut_voice_files, NULL);
+#ifdef HAVE_TOUCHSCREEN
+MENUITEM_SETTING(accessibility_shortcut_touch_item, &global_settings.accessibility_shortcut_touch, NULL);
+#ifdef HAVE_SCREEN_CURTAIN
+MENUITEM_SETTING(accessibility_shortcut_curtain_item, &global_settings.accessibility_shortcut_curtain, NULL);
+#endif
+#endif
+MAKE_MENU(accessibility_shortcut_services_menu, ID2P(LANG_ACCESSIBILITY_SHORTCUT_SERVICES), 0, Icon_Voice,
+          &accessibility_shortcut_espeak_item, &accessibility_shortcut_voice_files_item,
+#ifdef HAVE_TOUCHSCREEN
+          &accessibility_shortcut_touch_item,
+#ifdef HAVE_SCREEN_CURTAIN
+          &accessibility_shortcut_curtain_item,
+#endif
+#endif
+          );
+MAKE_MENU(accessibility_shortcut_menu, ID2P(LANG_ACCESSIBILITY_SHORTCUT), 0, Icon_Voice,
+          &accessibility_shortcut_enabled_item, &accessibility_shortcut_services_menu);
+
+#endif
+
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+MENUITEM_FUNCTION(accessibility_touch_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_ACCESSIBILITY), accessibility_touch_menu, NULL, Icon_Voice);
+#ifdef HAVE_SCREEN_CURTAIN
+MENUITEM_FUNCTION(accessibility_curtain_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_ACCESSIBILITY_CURTAIN), accessibility_curtain_menu, NULL, Icon_Voice);
+#endif
+MENUITEM_FUNCTION(accessibility_typing_mode_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_ACCESSIBILITY_TYPING_MODE), accessibility_typing_menu, NULL, Icon_Voice);
+MENUITEM_FUNCTION(accessibility_typing_echo_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_ACCESSIBILITY_ECHO), accessibility_typing_echo_menu, NULL, Icon_Voice);
+MENUITEM_FUNCTION(accessibility_typing_capitals_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_ACCESSIBILITY_CAPITALS), accessibility_typing_capitals_menu, NULL, Icon_Voice);
+MENUITEM_FUNCTION(accessibility_typing_capital_pitch_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_ACCESSIBILITY_CAPITAL_PITCH_PERCENT), accessibility_typing_capital_pitch_menu, NULL, Icon_Voice);
+MENUITEM_FUNCTION(accessibility_typing_deletion_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_ACCESSIBILITY_DELETE_ECHO), accessibility_typing_deletion_menu, NULL, Icon_Voice);
+MAKE_MENU(accessibility_typing_item, ID2P(LANG_ACCESSIBILITY_TYPING_SETTINGS), NULL, Icon_Voice,
+          &accessibility_typing_mode_item, &accessibility_typing_echo_item,
+          &accessibility_typing_capitals_item, &accessibility_typing_capital_pitch_item,
+          &accessibility_typing_deletion_item);
+#endif
+#if defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD)
+MENUITEM_FUNCTION(accessibility_screen_unlock_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_ACCESSIBILITY_SCREEN_UNLOCK_NOTICE),
+                  accessibility_screen_unlock_menu, NULL, Icon_Voice);
+MENUITEM_FUNCTION(accessibility_screen_lock_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_ACCESSIBILITY_SCREEN_LOCK_NOTICE),
+                  accessibility_screen_lock_menu, NULL, Icon_Voice);
+MAKE_MENU(accessibility_screen_menu, ID2P(LANG_ACCESSIBILITY_SCREEN_STATE),
+          0, Icon_Voice,
+          &accessibility_screen_unlock_item, &accessibility_screen_lock_item);
+#endif
+#if defined(HAVE_ESPEAK) && (!defined(HAS_BUTTON_HOLD) || \
+    (defined(HAVE_TOUCHSCREEN) && defined(HAVE_SCREEN_CURTAIN)))
+MAKE_MENU(accessibility_display_menu, ID2P(LANG_ACCESSIBILITY_DISPLAY_SETTINGS),
+          0, Icon_Voice,
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_SCREEN_CURTAIN)
+          &accessibility_curtain_item,
+#endif
+#ifndef HAS_BUTTON_HOLD
+          &accessibility_screen_menu,
+#endif
+          );
+#endif
+#ifdef HAVE_ESPEAK
+MAKE_MENU(talkbox_settings_menu, ID2P(LANG_TALKBOX_SETTINGS), 0, Icon_Voice,
+          &tts_settings_menu,
+          &tts_enabled_item, &tts_ducking_item, &tts_ducking_level_item,
+          &tts_reader_settings_menu,
+#ifdef HAVE_TOUCHSCREEN
+          &accessibility_touch_item,
+#endif
+#if !defined(HAS_BUTTON_HOLD) || \
+    (defined(HAVE_TOUCHSCREEN) && defined(HAVE_SCREEN_CURTAIN))
+          &accessibility_display_menu,
+#endif
+#ifdef HAVE_TOUCHSCREEN
+          &accessibility_typing_item,
+#endif
+          &list_boundary_feedback_item, &tts_announce_position_item,
+          &tts_announce_dynamic_item);
+#endif
 MAKE_MENU(voice_settings_menu, ID2P(LANG_VOICE), 0, Icon_Voice,
+#ifdef HAVE_ESPEAK
+          &talkbox_settings_menu,
+          &accessibility_shortcut_menu,
+#endif
           &talk_menu_item, &talk_dir_item, &talk_dir_clip_item,
           &talk_file_item, &talk_file_clip_item, &talk_filetype_item,
           &talk_battery_level_item, &talk_mixer_amp_item);

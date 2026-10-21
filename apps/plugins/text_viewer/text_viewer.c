@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -54,7 +55,7 @@ enum plugin_status plugin_start(const void* file)
     }
 
     /* Voice that we're loading the file... */
-    if (rb->global_settings->talk_menu) {
+    if (talk_menus_enabled(rb->global_settings)) {
         rb->talk_id(LANG_WAIT, true);
         rb->talk_file_or_spell(NULL, file, NULL, true);
         rb->talk_force_enqueue_next();

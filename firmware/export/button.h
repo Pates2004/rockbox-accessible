@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -70,6 +71,7 @@ int button_queue_count(void);
 bool button_queue_empty(void);
 bool button_queue_full(void);
 void button_clear_queue(void);
+void button_clear_queue_preserve_events(void);
 void button_clear_pressed(void);
 long button_get(bool block);
 long button_get_w_tmo(int ticks);

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 #ifdef ROCKBOX_HAS_LOGF
 logfdisp.c
 #endif
@@ -7,12 +8,30 @@ alarm_menu.c
 #endif
 abrepeat.c
 bookmark.c
+#ifdef HIBY_R1
+hiby_power.c
+#endif
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+hiby_bluetooth.c
+hiby_bluetooth_service.c
+hiby_bluetooth_settings.c
+bluetooth_policy.c
+hiby_connectivity.c
+#endif
 core_keymap.c
 debug_menu.c
 filetypes.c
 fileop.c
 #ifdef HAVE_TOUCHSCREEN
 gesture.c
+#ifdef HAVE_ESPEAK
+accessibility_gesture.c
+accessibility_buttons.c
+accessibility_typing.c
+accessibility_touch.c
+accessibility_touch_wake.c
+accessibility.c
+#endif
 #endif
 language.c
 main.c
@@ -30,6 +49,13 @@ menus/audiohw_eq_menu.c
 menus/eq_menu.c
 buffering.c
 voice_thread.c
+#ifdef HAVE_ESPEAK
+tts.c
+tts_reader.c
+accessibility_screen.c
+accessibility_shortcut.c
+accessibility_services.c
+#endif
 rbcodec_helpers.c
 menus/main_menu.c
 menus/playback_menu.c
@@ -303,7 +329,11 @@ keymaps/keymap-rgnano.c
 #elif CONFIG_KEYPAD == N3DS_PAD
 keymaps/keymap-3ds.c
 #elif CONFIG_KEYPAD == HIBY_R3PROII_PAD
+#ifdef HIBY_R1
+keymaps/keymap-hibyr1.c
+#else
 keymaps/keymap-hibyr3proii.c
+#endif
 #elif CONFIG_KEYPAD == HIDIZS_AP80MAX_PAD
 keymaps/keymap-hidizsap80max.c
 #endif

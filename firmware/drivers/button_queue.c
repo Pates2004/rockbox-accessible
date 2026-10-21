@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -155,7 +156,19 @@ bool button_queue_try_post(long button, int data)
     if (!queue_empty(&button_queue))
     {
         if (force_post)
+        {
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_EXTENDED_MESSAGING_AND_NAME)
+            if ((button & BUTTON_REPEAT) && !(button & BUTTON_REL) &&
+                !IS_SYSEVENT(button))
+            {
+                const long filter[2] = { button, button };
+                while (queue_peek_ex(&button_queue, NULL,
+                                    QPEEK_REMOVE_EVENTS, &filter));
+            }
+            else
+#endif
             queue_remove_from_head(&button_queue, button);
+        }
         else
             return false;
     }
@@ -186,18 +199,16 @@ void button_clear_queue(void)
     queue_clear(&button_queue);
 }
 
+void button_clear_queue_preserve_events(void)
+{
+    queue_remove_except(&button_queue, SYS_EVENT | BUTTON_MULTIMEDIA | BUTTON_REL,
+                        BUTTON_REDRAW);
+}
+
 /* clears anything but release and sysevents */
 void button_clear_pressed(void)
 {
-    long button;
-    for (int count = queue_count(&button_queue); count > 0; count--)
-    {
-        button = button_get(false);
-        if (button & (BUTTON_REL | SYS_EVENT))
-        {
-            button_queue_post(button, button_data);
-        }
-    }
+    queue_remove_except(&button_queue, BUTTON_REL | SYS_EVENT, SYS_TIMEOUT);
 }
 
 long button_get_w_tmo(int ticks)

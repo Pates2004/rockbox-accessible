@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -148,6 +149,8 @@ enum
 
 #if defined(BOOTLOADER)
 #define USBMODE_DEFAULT USB_MODE_MASS_STORAGE
+#elif defined(HIBY_R1) && !defined(SIMULATOR)
+#define USBMODE_DEFAULT USB_MODE_CHARGE
 #else
 #define USBMODE_DEFAULT USB_MODE_MASS_STORAGE
 #endif

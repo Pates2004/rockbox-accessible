@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -184,7 +185,7 @@ enum plugin_status plugin_start(const void* parameter)
     load_from_cfg();
 
     rb->gui_synclist_init(&list, menu_get_name, NULL, false, 1, NULL);
-    if (rb->global_settings->talk_menu)
+    if (talk_menus_enabled(rb->global_settings))
         rb->gui_synclist_set_voice_callback(&list, menu_speak_item);
     rb->gui_synclist_set_icon_callback(&list, menu_get_icon);
     rb->gui_synclist_set_nb_items(&list, menu_item_count);

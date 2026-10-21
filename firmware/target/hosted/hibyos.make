@@ -1,3 +1,4 @@
+# Modified for Rockbox Accessible; change notice dated 2026-10-21.
 #             __________               __   ___.
 #   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
 #   Source     |       _//  _ \_/ ___\|  |/ /| __ \ /  _ \  \/  /
@@ -39,7 +40,7 @@ $(BUILDDIR)/rockbox.elf : $$(OBJ) $(FIRMLIB) $(VOICESPEEXLIB) $(CORE_LIBS)
 	$(call PRINTS,LD $(@F))$(CC) $(GCCOPTS) -o $@ $(OBJ) \
 		-L$(BUILDDIR)/firmware -lfirmware \
 		-L$(RBCODEC_BLD)/codecs $(call a2lnk, $(VOICESPEEXLIB)) \
-		-L$(BUILDDIR)/lib $(call a2lnk,$(CORE_LIBS)) \
+		-L$(BUILDDIR)/lib -Wl,--start-group $(call a2lnk,$(CORE_LIBS)) -Wl,--end-group \
 		$(LDOPTS) $(GLOBAL_LDOPTS) -Wl,-Map,$(BUILDDIR)/rockbox.map
 
 $(BUILDDIR)/$(BINARY): $(BUILDDIR)/rockbox.elf

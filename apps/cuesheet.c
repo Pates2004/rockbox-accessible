@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -491,7 +492,7 @@ void browse_cuesheet(struct cuesheet *cue)
     gui_synclist_set_nb_items(&lists, 2*cue->track_count);
     gui_synclist_set_title(&lists, title, 0);
 
-    if(global_settings.talk_menu)
+    if(talk_menus_enabled(&global_settings))
         gui_synclist_set_voice_callback(&lists, cuesheet_list_voice_cb);
 
     if (id3)

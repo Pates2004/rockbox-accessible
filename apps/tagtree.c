@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -1952,7 +1953,7 @@ entry_skip_formatter:
 
     if (!sort && (sort_inverse || sort_limit))
     {
-        if (global_settings.talk_menu) {
+        if (talk_menus_enabled(&global_settings)) {
             talk_id(LANG_SHOWDIR_BUFFER_FULL, true);
             talk_value(total_count, UNIT_INT, true);
         }

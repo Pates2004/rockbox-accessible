@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -41,6 +42,9 @@
 #include "splash.h"
 #include "cuesheet.h"
 #include "filetree.h"
+#ifdef HAVE_ESPEAK
+#include "tts.h"
+#endif
 #include "misc.h"
 #include "strnatcmp.h"
 #include "keyboard.h"
@@ -786,6 +790,15 @@ int ft_enter(struct tree_context* c)
                     return rc;
                 }
 
+#ifdef HAVE_ESPEAK
+                const char *extension = strrchr(buf, '.');
+                if (tts_is_available() && extension && !strcasecmp(extension, ".txt"))
+                {
+                    if (tts_read_file(buf))
+                        rc = GO_TO_FILEBROWSER;
+                    break;
+                }
+#endif
                 plugin = filetype_get_plugin(file->attr, plugin_path, sizeof(plugin_path));
                 if (plugin)
                 {

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -32,6 +33,9 @@
 #include "sysfs.h"
 #include "alsa-controls.h"
 #include "pcm-alsa.h"
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+#include "bluetooth-hiby.h"
+#endif
 
 #include "logf.h"
 
@@ -105,7 +109,11 @@ void hiby_set_output(int ps)
 void audiohw_preinit(void)
 {
     logf("hw preinit");
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+    alsa_controls_init_hw(0);
+#else
     alsa_controls_init("default");
+#endif
     hw_init = 1;
 
     audiohw_mute(false);  /* No need ? */
@@ -137,6 +145,9 @@ void audiohw_set_volume(int vol_l, int vol_r)
 
     vol_l_hw = vol_l;
     vol_r_hw = vol_r;
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+    pcm_alsa_set_bluetooth_volume(vol_l, vol_r);
+#endif
 
     l = -vol_l/5;
     r = -vol_r/5;

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -22,6 +23,7 @@
 #include <stddef.h>
 #include <limits.h>
 #include "config.h"
+#include "accessibility_touch_wake.h"
 #include "appevents.h"
 #include "lang.h"
 #include "action.h"
@@ -41,6 +43,10 @@
 #endif
 #ifdef HAVE_TOUCHSCREEN
 #include "screens.h"
+#ifdef HAVE_ESPEAK
+#include "accessibility_touch.h"
+#include "accessibility_screen.h"
+#endif
 #endif
 #include "viewport.h"
 #include "statusbar.h" /* statusbar_vals enum*/
@@ -590,12 +596,40 @@ MENUITEM_FUNCTION(touchscreen_menu_reset_calibration, 0,
 	              reset_mapping, NULL, Icon_NOICON);
 MENUITEM_SETTING(list_line_padding, &global_settings.list_line_padding, line_padding_callback);
 
+#ifdef HAVE_ESPEAK
+MENUITEM_FUNCTION(touchscreen_sensitivity_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_TOUCH_GESTURE_SENSITIVITY), accessibility_touch_sensitivity_menu,
+                  NULL, Icon_NOICON);
+#ifndef HAS_BUTTON_HOLD
+MENUITEM_FUNCTION(touchscreen_unlock_any_button_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_ACCESSIBILITY_UNLOCK_ANY_BUTTON), accessibility_screen_unlock_any_button_menu,
+                  NULL, Icon_NOICON);
+MENUITEM_FUNCTION(touchscreen_locked_buttons_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_ACCESSIBILITY_LOCKED_BUTTONS), accessibility_screen_locked_buttons_menu,
+                  NULL, Icon_NOICON);
+MENUITEM_FUNCTION(touchscreen_autolock_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_ACCESSIBILITY_AUTOLOCK_TIMEOUT), accessibility_screen_autolock_menu,
+                  NULL, Icon_NOICON);
+MENUITEM_FUNCTION(touchscreen_wake_item, MENU_FUNC_CHECK_RETVAL,
+                  ID2P(LANG_TOUCH_WAKE_SETTINGS), accessibility_touch_wake_menu,
+                  NULL, Icon_NOICON);
+#endif
+#endif
+
 MAKE_MENU(touchscreen_menu, ID2P(LANG_TOUCHSCREEN_SETTINGS), NULL, Icon_NOICON,
           &touch_mode,
           &touch_enable_flick_shortcuts,
           &list_line_padding,
           &touchscreen_menu_calibrate,
-          &touchscreen_menu_reset_calibration);
+          &touchscreen_menu_reset_calibration
+#ifdef HAVE_ESPEAK
+          , &touchscreen_sensitivity_item
+#ifndef HAS_BUTTON_HOLD
+          , &touchscreen_unlock_any_button_item, &touchscreen_locked_buttons_item,
+          &touchscreen_autolock_item, &touchscreen_wake_item
+#endif
+#endif
+          );
 #endif
 
 static int codepage_callback(int action,
@@ -631,7 +665,7 @@ MAKE_MENU(display_menu, ID2P(LANG_DISPLAY),
             &scroll_settings_menu,
             &peak_meter_menu,
             &codepage_setting,
-#ifdef HAVE_TOUCHSCREEN
+#if defined(HAVE_TOUCHSCREEN) && !defined(HAVE_ESPEAK)
             &touchscreen_menu,
 #endif
             );

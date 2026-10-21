@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -159,6 +160,8 @@ extern bool queue_peek_ex(struct event_queue *q,
                           const long (*filters)[2]);
 
 extern void queue_clear(struct event_queue* q);
+extern void queue_remove_except(struct event_queue *queue, long preserved_mask,
+                                long preserved_id);
 extern void queue_remove_from_head(struct event_queue *q, long id);
 extern int queue_count(const struct event_queue *q);
 extern int queue_broadcast(long id, intptr_t data);

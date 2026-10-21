@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -48,6 +49,17 @@
 #include "talk.h"
 #include "audio.h"
 #include "settings.h"
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+#include "accessibility.h"
+#endif
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+#include "hiby_bluetooth.h"
+#include "hiby_connectivity.h"
+#include "hiby_bluetooth_service.h"
+#ifndef SIMULATOR
+#include "pcm-hiby.h"
+#endif
+#endif
 #include "storage.h"
 #include "ata_idle_notify.h"
 #include "kernel.h"
@@ -230,7 +242,7 @@ bool show_search_progress(bool init, int display_count, int current, int total)
                             display_count, str(LANG_OFF_ABORT));
         else
         {
-            if (global_settings.talk_menu &&
+            if (talk_menus_enabled(&global_settings) &&
                 TIME_AFTER(current_tick, talked_tick + (HZ * 5)))
             {
                 talked_tick = current_tick;
@@ -403,19 +415,19 @@ static bool clean_shutdown(enum shutdown_type sd_type,
             if (level > 10 || level < 0)
             {
                 if (global_settings.show_shutdown_message)
-                    splash(0, str(LANG_SHUTTINGDOWN));
+                    splashf_silent(0, "%s", str(LANG_SHUTTINGDOWN));
             }
             else
             {
                 msg_id = LANG_WARNING_BATTERY_LOW;
-                splashf(0, "%s %s", str(LANG_WARNING_BATTERY_LOW),
+                splashf_silent(0, "%s %s", str(LANG_WARNING_BATTERY_LOW),
                                     str(LANG_SHUTTINGDOWN));
             }
         }
         else
         {
             msg_id = LANG_WARNING_BATTERY_EMPTY;
-            splashf(0, "%s %s", str(LANG_WARNING_BATTERY_EMPTY),
+            splashf_silent(0, "%s %s", str(LANG_WARNING_BATTERY_EMPTY),
                                 str(LANG_SHUTTINGDOWN));
         }
 
@@ -459,7 +471,7 @@ static bool clean_shutdown(enum shutdown_type sd_type,
             dircache_disable();
 #endif
 
-        if(global_settings.talk_menu)
+        if(talk_menus_enabled(&global_settings))
         {
             bool enqueue = false;
             if(msg_id != -1)
@@ -471,6 +483,14 @@ static bool clean_shutdown(enum shutdown_type sd_type,
             voice_wait();
         }
 
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+        hiby_bluetooth_service_shutdown();
+        hiby_connectivity_shutdown();
+        hiby_bluetooth_shutdown();
+#ifndef SIMULATOR
+        hiby_pcm_shutdown();
+#endif
+#endif
         shutdown_hw(sd_type);
     }
     return false;
@@ -649,6 +669,10 @@ static void lo_unplug_change(bool inserted)
 
 long default_event_handler_ex(long event, void (*callback)(void *), void *parameter)
 {
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+    if (event == BUTTON_NONE)
+        hiby_bluetooth_service_process_notifications();
+#endif
 #if CONFIG_PLATFORM & (PLATFORM_ANDROID)
     static bool resume = false;
 #endif
@@ -1077,10 +1101,109 @@ void system_sound_play(enum system_sound sound)
 
 static keyclick_callback keyclick_current_callback = NULL;
 static void* keyclick_data = NULL;
+static bool keyclick_boundary_allowed;
 void keyclick_set_callback(keyclick_callback cb, void* data)
 {
     keyclick_current_callback = cb;
     keyclick_data = data;
+}
+
+static void keyclick_play_pitch(int action, bool do_beep, int semitones)
+{
+    keyclick_boundary_allowed = do_beep;
+    if (do_beep && keyclick_current_callback)
+        do_beep = keyclick_current_callback(action, keyclick_data);
+    keyclick_current_callback = NULL;
+
+    if (!do_beep)
+        return;
+
+    if (global_settings.keyclick)
+    {
+        if (semitones >= -12 && semitones <= 12 && semitones != 0)
+        {
+            static const unsigned short frequencies[] = {
+                2000, 2119, 2245, 2378, 2520, 2670, 2828, 2997, 3175, 3364, 3564, 3775,
+                4000, 4238, 4490, 4757, 5040, 5339, 5657, 5993, 6350, 6727, 7127, 7551, 8000
+            };
+            beep_play(frequencies[semitones + 12], KEYCLICK_DURATION,
+                      2500 * global_settings.keyclick);
+        }
+        else
+            system_sound_play(SOUND_KEYCLICK);
+    }
+#if defined(HAVE_HARDWARE_CLICK) && !defined(SIMULATOR)
+    if (global_settings.keyclick_hardware)
+        piezo_button_beep(false, false);
+#endif
+}
+
+static void keyclick_play(int action, bool do_beep)
+{
+    keyclick_play_pitch(action, do_beep, 0);
+}
+
+bool keyclick_list_boundary_enabled(void)
+{
+    return keyclick_boundary_allowed;
+}
+
+static bool keyclick_source_enabled(unsigned int source)
+{
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    if (!(accessibility_keyclick_sources() & source))
+        return false;
+#else
+    (void)source;
+#endif
+#ifdef HAVE_HARDWARE_CLICK
+    return global_settings.keyclick || global_settings.keyclick_hardware;
+#else
+    return global_settings.keyclick != 0;
+#endif
+}
+
+void keyclick_click_physical(int action, bool repeat)
+{
+    keyclick_play(action == ACTION_NONE ? ACTION_TOUCHSCREEN : action,
+                  keyclick_source_enabled(KEYCLICK_SOURCE_PHYSICAL) &&
+                  (!repeat || global_settings.keyclick_repeats));
+}
+
+void keyclick_click_gesture_repeat(int action, bool repeat)
+{
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    keyclick_play(action == ACTION_NONE ? ACTION_TOUCHSCREEN : action,
+                  keyclick_source_enabled(KEYCLICK_SOURCE_GESTURE) &&
+                  (!repeat || global_settings.keyclick_repeats));
+#else
+    (void)action;
+    (void)repeat;
+#endif
+}
+
+void keyclick_click_gesture(int action)
+{
+    keyclick_click_gesture_repeat(action, false);
+}
+
+void keyclick_click_touch_target(bool occupied, bool single_tap)
+{
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    unsigned int sources = KEYCLICK_SOURCE_EXPLORATION |
+        (occupied && single_tap ? KEYCLICK_SOURCE_GESTURE : KEYCLICK_SOURCE_NONE);
+    keyclick_play_pitch(ACTION_TOUCHSCREEN, keyclick_source_enabled(sources) &&
+                        (occupied || accessibility_empty_sound_enabled()),
+                        occupied ? 0 : accessibility_keyclick_empty_pitch());
+#else
+    (void)occupied;
+    (void)single_tap;
+#endif
+}
+
+void keyclick_click_exploration(bool occupied)
+{
+    keyclick_click_touch_target(occupied, false);
 }
 
 /* Produce keyclick based upon button and global settings */
@@ -1127,27 +1250,25 @@ void keyclick_click(bool rawbutton, int action)
     else
         last_button = BUTTON_NONE;
 
-    if (do_beep && keyclick_current_callback)
-        do_beep = keyclick_current_callback(action, keyclick_data);
-    keyclick_current_callback = NULL;
-
-    if (do_beep)
+#ifdef HIBY_R1
+    if (!rawbutton && !(button & BUTTON_TOUCHSCREEN))
     {
-#ifdef HAVE_HARDWARE_CLICK
-        if (global_settings.keyclick)
-        {
-            system_sound_play(SOUND_KEYCLICK);
-        }
-        if (global_settings.keyclick_hardware)
-        {
-#if !defined(SIMULATOR)
-            piezo_button_beep(false, false);
-#endif
-        }
-#else
-        system_sound_play(SOUND_KEYCLICK);
-#endif
+        bool recognized = action != ACTION_NONE && action != ACTION_UNKNOWN &&
+                          action != ACTION_WPS_STOPSEEK;
+        if ((button & BUTTON_REL) && !(button & (SYS_EVENT | BUTTON_MULTIMEDIA)))
+            do_beep = true;
+        do_beep = do_beep && recognized;
     }
+#endif
+
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    unsigned int source = (button & BUTTON_TOUCHSCREEN) ?
+        KEYCLICK_SOURCE_GESTURE : KEYCLICK_SOURCE_PHYSICAL;
+    do_beep = do_beep && (accessibility_keyclick_sources() & source);
+    if ((button & BUTTON_TOUCHSCREEN) && accessibility_enabled())
+        do_beep = false;
+#endif
+    keyclick_play(action, do_beep);
 }
 
 /* Return the ReplayGain mode adjusted by other relevant settings */
@@ -1595,7 +1716,7 @@ void talk_sleeptimer(int custom_duration)
 void talk_timedate(void)
 {
     struct tm *tm = get_time();
-    if (!global_settings.talk_menu)
+    if (!talk_menus_enabled(&global_settings))
         return;
     talk_id(LANG_CURRENT_TIME, false);
     if (valid_time(tm))

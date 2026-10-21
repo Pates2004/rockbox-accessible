@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 #define NO_MMSUPP_DEFINES
 
 #include "plugin.h"
@@ -757,7 +758,7 @@ static void thread(void)
 
 static void mm_errorhandler(void)
 {
-    if (rb->global_settings->talk_menu) {
+    if (talk_menus_enabled(rb->global_settings)) {
         rb->talk_id(LANG_ERROR_FORMATSTR, true);
         rb->talk_value_decimal(MikMod_errno, UNIT_INT, 0, true);
         rb->talk_force_enqueue_next();
@@ -793,7 +794,7 @@ static int playfile(char* filename)
 
     playingtime = 0;
 
-    if (rb->global_settings->talk_menu) {
+    if (talk_menus_enabled(rb->global_settings)) {
         rb->talk_id(LANG_WAIT, true);
         rb->talk_file_or_spell(NULL, filename, NULL, true);
         rb->talk_force_enqueue_next();

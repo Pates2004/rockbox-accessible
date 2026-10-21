@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -307,7 +308,7 @@ static const char* list_get_name_cb(int selected_item, void* data,
 
 static int list_voice_cb(int list_index, void* data)
 {
-    if (!rb->global_settings->talk_menu)
+    if (!talk_menus_enabled(rb->global_settings))
         return -1;
 
     if (data == MENU_ID(M_ROOT))

@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -42,6 +43,10 @@
 #include "debug.h"
 #include "line.h"
 #include "fixedpoint.h"
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+#include "accessibility.h"
+#include "talk.h"
+#endif
 
 #define ICON_PADDING 1
 #define ICON_PADDING_S "1"
@@ -446,6 +451,22 @@ void list_draw(struct screen *display, struct gui_synclist *list)
 
         callback_draw_item(&list_info);
     }
+#if defined(SIMULATOR) && defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    if (screen == SCREEN_MAIN)
+    {
+        const struct viewport *title = &title_text[screen];
+        bool has_title = list_display_title(list, screen);
+        DEBUGF("A11Y list geometry: parent=%d,%d,%d,%d text=%d,%d,%d,%d "
+               "title=%d,%d,%d,%d line=%d start=%d y=%d count=%d selected=%d group=%d\n",
+               parent->x, parent->y, parent->width, parent->height,
+               list_text_vp->x, list_text_vp->y,
+               list_text_vp->width, list_text_vp->height,
+               title->x, title->y, has_title ? title->width : 0,
+               has_title ? title->height : 0, list->line_height[screen],
+               list->start_item[screen], list->y_pos, list->nb_items,
+               list->selected_item, list->selected_size);
+    }
+#endif
     display->set_viewport(last_vp);
 }
 
@@ -776,10 +797,11 @@ static int get_click_location(struct gui_synclist *list, int x, int y)
                     on_scrollbar_clicked = false;
                     break;
                 case SCROLLBAR_LEFT:
-                    on_scrollbar_clicked = adj_x <= SCROLLBAR_WIDTH;
+                    on_scrollbar_clicked = adj_x >= -SCROLLBAR_WIDTH && adj_x < 0;
                     break;
                 case SCROLLBAR_RIGHT:
-                    on_scrollbar_clicked = adj_x > (text->x + text->width - SCROLLBAR_WIDTH);
+                    on_scrollbar_clicked = adj_x >= text->width &&
+                                           adj_x < text->width + SCROLLBAR_WIDTH;
                     break;
             }
             if (on_scrollbar_clicked)
@@ -818,8 +840,70 @@ static int list_do_flick(const struct gesture_event *gevent)
     }
 }
 
+#ifdef HAVE_ESPEAK
+static unsigned list_accessibility_explore(struct gui_synclist *list)
+{
+    static const struct gui_synclist *last_list;
+    static int last_item = -3;
+    int touch_x, touch_y;
+    bool force;
+    if (!accessibility_explore_point(&touch_x, &touch_y, &force))
+        return ACTION_NONE;
+    _gui_synclist_stop_kinetic_scrolling(list);
+    const enum screen_type screen = SCREEN_MAIN;
+    const struct viewport *parent = list->parent[screen];
+    const struct viewport *text = &list_text[screen];
+    int location = get_click_location(list, touch_x, touch_y);
+    int item = -1;
+    if (location & TITLE)
+        item = -2;
+    else if (location & SCROLLBAR)
+        item = -3;
+    else if ((location & LIST) && list->line_height[screen] > 0 &&
+             touch_y >= text->y && touch_y < text->y + text->height)
+    {
+        int line;
+        if (skinlist_get_item(&screens[screen], list,
+                             touch_x - parent->x, touch_y - parent->y, &line))
+            item = list->start_item[screen] + line;
+        else
+        {
+            int position = touch_y - text->y + list->y_pos;
+            if (position >= 0)
+                item = position / list->line_height[screen];
+        }
+        if (item < 0 || item >= list->nb_items)
+            item = -1;
+        else if (list->selected_size > 1)
+            item -= item % list->selected_size;
+    }
+    accessibility_explore_feedback(list, item,
+        item >= 0 || item == -3 || (item == -2 && list->title));
+    if (!force && last_list == list && last_item == item)
+        return ACTION_NONE;
+    last_list = list;
+    last_item = item;
+    if (item == -2 && list->title)
+        talk_spell(P2STR((const unsigned char *)list->title), false);
+    else if (item == -3)
+        talk_id(LANG_SCROLL_BAR, false);
+    else if (item < 0)
+        accessibility_speak_empty();
+    else
+    {
+        gui_synclist_select_item(list, item);
+        gui_synclist_speak_item(list);
+    }
+    return ACTION_REDRAW;
+}
+#endif
+
 unsigned gui_synclist_do_touchscreen(struct gui_synclist *list)
 {
+#ifdef HAVE_ESPEAK
+    if (accessibility_enabled())
+        return list_accessibility_explore(list);
+#endif
     struct touchevent tevent;
     struct gesture_event gevent;
 

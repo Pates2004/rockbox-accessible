@@ -1,3 +1,4 @@
+/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -94,7 +95,7 @@ static int initialize_catalog_buf(char* dirbuf, size_t dirbuf_sz)
     if (!dir_exists(dirbuf))
     {
         if (mkdir(dirbuf) < 0) {
-            if (global_settings.talk_menu) {
+            if (talk_menus_enabled(&global_settings)) {
                 talk_id(LANG_CATALOG_NO_DIRECTORY, true);
                 talk_dir_or_spell(dirbuf, NULL, true);
                 talk_force_enqueue_next();
@@ -257,7 +258,7 @@ restart:
 static void display_insert_count(int count)
 {
     static long talked_tick = 0;
-    if(global_settings.talk_menu && count &&
+    if(talk_menus_enabled(&global_settings) && count &&
         (talked_tick == 0 || TIME_AFTER(current_tick, talked_tick+5*HZ)))
     {
         talked_tick = current_tick;
