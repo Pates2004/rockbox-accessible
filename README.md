@@ -4,8 +4,8 @@
 
 For the player rather than SDL, use the detailed English
 [native HiBy R1 build guide](docs/BUILD-ACCESSIBLE-NATIVE.md). It distinguishes
-application compilation from release packaging and explicitly identifies the
-remaining public packaging-provenance prerequisite.
+application compilation from release packaging and includes offline preparation
+of the required SDK license/provenance inputs.
 
 An experimental Rockbox development fork with in-process speech and accessibility
 work. It is not an official Rockbox release. Talkbox is the accessibility layer;

@@ -14,12 +14,11 @@ There are three different outcomes:
 | Produce a candidate ZIP with matching source and notices | `--stage-hardware-test --source-frozen`, with the additional packaging inputs below | Package/source integrity; no native startup or device acceptance |
 | Recreate a previously delivered release byte for byte | Not established by this guide | Requires that release's exact inputs, environment, metadata and validation evidence |
 
-**Remaining public prerequisite:** `tools/rockboxdev.sh` builds an SDK but does
-not generate the notice/provenance directory required by the package builder.
-This repository currently has no public generator for that directory. Sections
-2–5 describe the public recipe and consuming a compatible SDK; section 7 states
-the additional prerequisite precisely. The packaging commands are conditional
-on having that prerequisite, not an end-to-end clean-clone success claim.
+**Public notice preparation:** `tools/prepare_hiby_notices.py` now generates the
+package builder's notice/provenance input offline from the pinned SDK inputs.
+Section 7 gives its explicit setup and verification commands. SDK provisioning
+in sections 2–5 remains a separate prerequisite; this is not an end-to-end
+clean-clone bootstrap or byte-identical release rebuild claim.
 
 ## 1. Host, source and locations
 
@@ -396,10 +395,34 @@ binary fixture that a public clone does not contain. Do not create fake headers
 or report a skipped platform/device case as passing. Compilation, package
 integrity, bounded QEMU execution and physical acceptance are separate results.
 
-## 7. Additional packaging inputs: the remaining public gap
+## 7. Prepare and verify the additional packaging inputs
 
-Only continue to section 8 if the SDK has genuine, matching license/provenance
-materials with this layout:
+The public offline generator requires the ten original source archives and
+five recipe files pinned in section 3, plus the installed hosted GCC 9.5.0.
+It reads those inputs, selects original root license files and records actual
+compiler inspection. It does not download, install or compile anything.
+
+Choose a **new** output directory outside the source checkout and SDK input
+trees. Preserve an existing frozen notice tree. The generator refuses existing
+output, linked paths/ancestors and source/input overlaps; there is no force or
+overwrite mode. With the variables from section 1:
+
+```bash
+export TOOLCHAIN_NOTICES="$PROJECT_WORKSPACE/hibyr1-notices-$VERSION"
+export ALSA_SOURCE="$SDK_ROOT/downloads/alsa-lib-1.0.26.tar.bz2"
+python3 -B tools/prepare_hiby_notices.py \
+    --sdk-root "$SDK_ROOT" --output "$TOOLCHAIN_NOTICES"
+python3 -B tools/prepare_hiby_notices.py \
+    --sdk-root "$SDK_ROOT" --output "$TOOLCHAIN_NOTICES" --check-only
+```
+
+`--check-only` verifies an output produced by this generator against the current
+pinned archives, recipe and compiler, without writing. It is not a migration
+command for a differently structured historical notice tree. Both modes print
+the notice count and provenance/manifest hashes on success and exit nonzero on
+failure. The SDK must be quiescent throughout both calls.
+
+The expected source-input and generated-output layout is:
 
 ```text
 SDK_ROOT/
@@ -411,10 +434,11 @@ SDK_ROOT/
   official/tools/toolchain-patches/glibc-227-make44.patch
   official/tools/toolchain-patches/glibc-227-texinfo.patch
   official/tools/toolchain-patches/linux-c23.patch
-  notices/provenance.json
-  notices/SHA256SUMS
-  notices/alsa-lib-1.0.26/COPYING
-  notices/...original toolchain source license files...
+TOOLCHAIN_NOTICES/
+  provenance.json
+  SHA256SUMS
+  alsa-lib-1.0.26/COPYING
+  ...original toolchain source license files...
 ```
 
 `--alsa-source` must name the **original archive**, not its extracted directory
@@ -433,14 +457,20 @@ The contract enforced by `tools/build_espeak_hiby.py` includes:
 | `provenance.json` → `sources["alsa-lib-1.0.26.tar.bz2"]` | Matching `archive_sha256`, `source_provenance.sha256` and `original_files["alsa-lib-1.0.26/COPYING"]` |
 | Actual notice files | Nonempty original files including the GPL, LGPL and GCC Runtime Library Exception version 3.1 |
 
-The existing SDK also records source URLs/hashes and original notice hashes for
-all ten source archives, actual verification results, actual compiler
-configuration and glibc flags. Its notice tree has a `SHA256SUMS` covering every
-payload file, including `provenance.json`. Verify such a tree before packaging:
+The generator records source URLs, pinned hashes, archive sizes and selected
+original notice hashes for all ten archives. It checks the actual compiler's
+version and target and records its real `gcc -v` output and executable hash.
+The glibc flags are identified as options from the pinned recipe; the tool does
+not independently measure how an installed libc was configured or prove the
+installed SDK was built from these particular source archives.
+
+Verification is explicitly **pinned SHA-256**, not newly verified upstream
+signatures. The tool does not copy private historical signature/smoke logs or
+invent successful signature records. Keep any separately obtained genuine
+signature evidence separately. `SHA256SUMS` covers every generated payload,
+including `provenance.json`; check it independently before packaging:
 
 ```bash
-export TOOLCHAIN_NOTICES="$SDK_ROOT/notices"
-export ALSA_SOURCE="$SDK_ROOT/downloads/alsa-lib-1.0.26.tar.bz2"
 (
     cd "$TOOLCHAIN_NOTICES"
     sha256sum --check SHA256SUMS
@@ -451,15 +481,32 @@ This hash check alone neither creates provenance nor proves that it describes
 your actual SDK. An arbitrary directory of license text, an empty JSON object
 or invented successful signature records is not a substitute.
 
-**Missing public setup step:** a portable generator must verify the pinned
-source archives and five recipe files, safely extract their original notices,
-record actual source/compiler provenance, and seal the resulting notice tree.
-The existing SDK's collection/sealing utilities depend on private workspace
-files and a particular historical smoke-run log; those utilities are not in
-this repository and are not commands readers can run from a clone. Until a
-public replacement is implemented and validated, use diagnostic compilation
-or obtain a correctly documented compatible SDK from its maintainer. Keep the
-builder's strict source, recipe and notice checks enabled.
+Archive inspection is bounded by compressed/expanded sizes, member count and
+selected notice sizes. Unsafe member paths, escaping links, special files,
+setuid/setgid entries and duplicate paths are rejected, including unsafe entries
+that are not selected. Only bounded regular license files are written; full
+SDK sources are never extracted by this generator. It includes zlib's original
+README notice as well as its license. Input hashes are rechecked for drift.
+
+A temporary sibling staging directory holds the selected notices/provenance
+for verification before the new output is created exclusively. On success that
+temporary staging is removed. If later placement fails, diagnostic staging and
+possibly incomplete new output remain with an explicit error; inspect those
+paths and the cause before choosing another output. No existing output is
+silently repaired or overwritten. The original archives, SDK runtime and any
+existing frozen notices remain inputs only.
+
+The generator has a focused regression suite:
+
+```bash
+python3 -B -m unittest discover -s tools/tests -p test_prepare_hiby_notices.py -v
+```
+
+This makes notice-input generation public without depending on private
+collection/sealing utilities or historical smoke-run paths. Keep the builder's
+strict source, recipe and notice checks enabled. Fresh SDK provisioning, full
+application runtime evidence and physical hardware acceptance remain separate
+requirements; this tool does not make those claims.
 
 ## 8. Stage and verify a complete candidate, conditionally
 

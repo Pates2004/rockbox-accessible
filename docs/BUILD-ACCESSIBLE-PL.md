@@ -3,11 +3,25 @@
 Szczegółowa [angielska instrukcja natywnego HiBy R1](BUILD-ACCESSIBLE-NATIVE.md)
 opisuje SDK, przygotowanie hosta, kompilację aplikacji i kontrole wyniku.
 Rozróżnia to od pełnego pakowania wydania: publiczny generator wymaganych
-informacji o pochodzeniu i licencjach świeżego SDK nie jest jeszcze dostępny.
-Warunkowe polecenie pakowania nie oznacza potwierdzonej odtwarzalności wydania
-od zera. Instrukcja dla współtwórców jest [po angielsku](CONTRIBUTING-ACCESSIBLE.md).
+informacji o pochodzeniu i licencjach, `tools/prepare_hiby_notices.py`, działa
+offline na przypiętych wejściach SDK. Nie buduje samego SDK ani nie dowodzi jego
+pochodzenia od źródeł. Polecenie pakowania nie oznacza potwierdzonej odtwarzalności
+wydania od zera lub bajt w bajt. Instrukcja dla współtwórców jest
+[po angielsku](CONTRIBUTING-ACCESSIBLE.md).
 
 [English](BUILD-ACCESSIBLE.md)
+
+Znane ograniczenie etykiet roboczych: część skryptów Sansy nadal nadaje historyczną
+nazwę r29, choć wspólne źródła korzystają z r34. Sprawdzaj rewizję silnika
+w manifeście, nie tę nazwę. Nie oznacza to aktualizacji ani ponownej weryfikacji
+zachowanych wydań Sansy. HiBy R1 ma odrębną, aktualną ścieżkę wersjonowania.
+
+Starszy klon Windows może zachować CRLF w `lib/espeak/License.txt` mimo aktualizacji
+reguł Git. Jeśli kontrola zgłosi niezgodną sumę tej licencji, nie wyłączaj jej.
+[Instrukcja naprawy](BUILD-ACCESSIBLE.md#existing-windows-checkout-with-a-license-hash-mismatch)
+zmienia wyłącznie końcówki linii zgodne z bieżącą wersją Git i odmawia nadpisania
+innych lokalnych zmian. Uruchamia się ją z katalogu źródeł w powłoce Linux/WSL.
+Nie resetuje repozytorium ani nie zmienia tekstu licencji, danych głosu i ustawień.
 
 To źródła rozwojowe, nie uniwersalny firmware. Zacznij od symulatora SDL.
 [Opis projektu](../README.md) rozróżnia wspólny rdzeń, obsługiwane cele i prace

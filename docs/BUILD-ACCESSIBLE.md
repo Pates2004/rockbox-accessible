@@ -34,6 +34,31 @@ repair a user's checkout. Network access is required for initial acquisition,
 not for speech at runtime. The integrated modified engine itself is already in
 `lib/espeak/engine`; the sibling supplies original sources and matching data.
 
+### Existing Windows checkout with a license hash mismatch
+
+New checkouts pin the integrated eSpeak license to LF. An older Windows checkout
+may retain its previous CRLF bytes even after updating the attributes. Do not
+disable the hash check. From that checkout's root in a Linux/WSL shell, this
+optional repair changes only line endings and refuses other local modifications:
+
+```sh
+python3 -B - <<'PY'
+from pathlib import Path
+import subprocess
+license_path = Path("lib/espeak/License.txt")
+canonical = subprocess.check_output(["git", "show", "HEAD:lib/espeak/License.txt"])
+current = license_path.read_bytes()
+if license_path.is_symlink() or current.replace(b"\r\n", b"\n") != canonical:
+    raise SystemExit("Local license changes detected; no file was written")
+if current != canonical:
+    license_path.write_bytes(canonical)
+print("The eSpeak license matches its tracked Git bytes")
+PY
+```
+
+Then rerun the original validation. This does not reset the checkout or change
+speech data, settings, other sources or the license text.
+
 ## 2. Build/output locations
 
 Build helpers keep current packages in this checkout's `installfiles` and working
@@ -97,9 +122,10 @@ than one byte. Simulator Bluetooth does not operate the computer's radio.
 The detailed English [native HiBy R1 guide](BUILD-ACCESSIBLE-NATIVE.md) covers
 SDK inputs, host preparation, application compilation, independent checks and
 the additional provenance/notices contract for complete packaging. Application
-compilation has a public recipe; generating those packaging notices from a
-fresh SDK is still a documented missing public helper. Do not mistake a
-conditional staging command for a proven end-to-end release reproduction.
+compilation has a public recipe; `tools/prepare_hiby_notices.py` prepares the
+packaging notices offline from its pinned SDK inputs. It does not build the SDK
+or prove that an installed SDK was built from those sources. Do not mistake a
+staging command for a proven end-to-end or byte-identical release reproduction.
 
 - Sansa: [Clip+](ESPEAK-CLIPPLUS.md), [Clip Zip](ESPEAK-CLIPZIP.md),
   `python3 -B tools/build_espeak_clipplus.py --help`.
@@ -121,6 +147,11 @@ Every settings/plugin-layout change requires the matching integrated plugin ABI
 and rebuilt bundled modules. Never copy old/stock plugins into an integrated
 build. Existing historical package versions in guides describe those particular
 packages, not acceptance of the current branch.
+
+Known development-label limitation: some Sansa builder version strings still say
+r29 although this shared source uses r34. Check the manifest's engine revision,
+not that legacy label. This does not update or revalidate the preserved Sansa
+releases. HiBy R1 uses its separately versioned current build path.
 
 ## 6. Tests and reporting
 
