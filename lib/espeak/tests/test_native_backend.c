@@ -97,6 +97,19 @@ int main(int count, char **arguments)
         require(synthesize("Test 123.", language, "", 175, 0, 100) == 0 && nonzero_count,
                 language);
     }
+    const char *prefix_texts[] = {
+        "Ankara'nın Türkiye'nin İstanbul'da",
+        "istanbultekniküniversitesikütüphanesi'nin",
+        "türkiyecumhuriyetikültürveturizmbakanlığıkütüphanelerveyayımlargenelmüdürlüğü'nün",
+    };
+    for (unsigned int index = 0; index < sizeof(prefix_texts) / sizeof(prefix_texts[0]); ++index)
+    {
+        require(synthesize(prefix_texts[index], "tr", "", 175, 0, 100) == 0,
+                "ordinary Turkish prefix synthesis");
+        require(sample_count && nonzero_count && position_count,
+                "ordinary Turkish prefix PCM and word events");
+        printf("PREFIX %u %zu %" PRIu64 "\n", index, sample_count, pcm_hash);
+    }
     require(synthesize("Cisza.", "pl", "", 175, 0, 0) == 0 && !nonzero_count,
             "zero volume produces silence");
     abort_output = 1;

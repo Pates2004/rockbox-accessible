@@ -802,7 +802,13 @@ int TranslateWord(Translator *tr, char *word1, int next_pause, WORD_TAB *wtab)
 	char unpron_phonemes[N_WORD_PHONEMES];
 	char end_phonemes[N_WORD_PHONEMES];
 	char word_copy[N_WORD_BYTES];
-	char prefix_chars[41];
+	// Explicit rule lengths use seven bits; automatic prefix lengths use the
+	// low byte and come from words bounded by N_WORD_BYTES in TranslateClause.
+	// Reserve one leading boundary byte and a trailing NUL in addition to the
+	// complete prefix, whose final separator becomes the trailing boundary.
+	static_assert(N_WORD_BYTES >= 0x80 && N_WORD_BYTES <= 0x100,
+		"Prefix length encoding must cover every bounded UTF-8 word");
+	char prefix_chars[N_WORD_BYTES+2];
 	int found=0;
    int end_flags;
 	char c_temp;   // save a character byte while we temporarily replace it with space
@@ -1164,8 +1170,8 @@ if((wmark > 0) && (wmark < 8))
 				else
 				{
 					pfix = 1;
-					prefix_chars[0] = 0;
-					n_chars = prefix_type & 0x3f;
+					prefix_chars[0] = ' ';
+					n_chars = prefix_type & 0xff;
 
 					for(ix=0; ix < n_chars; ix++)    // num. of bytes to remove
 					{
@@ -1173,7 +1179,8 @@ if((wmark > 0) && (wmark < 8))
 	
 						if((prefix_type & SUFX_B) && (ix == (n_chars-1)))
 						{
-							prefix_chars[pfix-1] = 0;  // discard the last character of the prefix, this is the separator character
+							// TranslateRules requires space boundaries on both sides.
+							prefix_chars[pfix-1] = ' ';  // replace the separator
 						}
 					}
 					prefix_chars[pfix] = 0;

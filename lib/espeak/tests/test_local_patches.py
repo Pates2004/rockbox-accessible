@@ -17,6 +17,8 @@ class LocalPatchProvenanceTests(unittest.TestCase):
         provenance = check_dependency(SOURCE)
         expected = {
             "engine/compiledict.cpp": "84849dae24db09a93995fc9f207ec3b3c593723324bb3243535d01bf0a343f22",
+            "engine/dictionary.cpp": "bdaa52af9dbf35ae16942ea5d66741fae91e6e92f9a07430f90e214297502b15",
+            "engine/translate.cpp": "18c8c91d36f6ca2c24e904dbaa8015e512f5321f106bfa1f02abe42a5fef0b72",
             "engine/tr_languages.cpp": "d29137d5cc2a2af4a44edfd37751752bd5fbe665d42dab68de89ddceffdbd8cc",
             "sonic/sonic.c": "9c1fe2a380bad7c9953859cbd43f267bce68d90bf95394c51f808372e905c34f",
         }
@@ -32,7 +34,8 @@ class LocalPatchProvenanceTests(unittest.TestCase):
 
     def test_changed_local_source_is_rejected(self):
         original_read = Path.read_bytes
-        for relative in ("engine/compiledict.cpp", "engine/tr_languages.cpp", "sonic/sonic.c"):
+        for relative in ("engine/compiledict.cpp", "engine/dictionary.cpp", "engine/translate.cpp",
+                         "engine/tr_languages.cpp", "sonic/sonic.c"):
             target = SOURCE / relative
 
             def altered_read(path):
@@ -47,7 +50,8 @@ class LocalPatchProvenanceTests(unittest.TestCase):
         if not SUPPLIED.is_dir():
             self.skipTest("Original supplied checkout unavailable")
         original_read = Path.read_bytes
-        for relative in ("src/compiledict.cpp", "src/tr_languages.cpp", "platforms/windows/third_party/sonic/sonic.c"):
+        for relative in ("src/compiledict.cpp", "src/dictionary.cpp", "src/translate.cpp",
+                         "src/tr_languages.cpp", "platforms/windows/third_party/sonic/sonic.c"):
             target = SUPPLIED / relative
 
             def altered_read(path):

@@ -14,6 +14,20 @@
     }
   },
   "patches": {
+    "engine/dictionary.cpp": {
+      "supplied_path": "src/dictionary.cpp",
+      "supplied_sha256": "e57797a17eba391c069af608b3f00c8f3820d0d8174f497a55f57127e4dfb70a",
+      "previous_integrated_sha256": "399da9a17624f44abf776baa642eaf66367f6a6945223119407b4ef7962dc84e",
+      "integrated_sha256": "bdaa52af9dbf35ae16942ea5d66741fae91e6e92f9a07430f90e214297502b15",
+      "correction": "Reject backward letter groups longer than the available current-word context before forming their start pointer"
+    },
+    "engine/translate.cpp": {
+      "supplied_path": "src/translate.cpp",
+      "supplied_sha256": "ff2d1f5d8d729f53a88128378db6efe86d13c145139868fc56a432af18e9e6bc",
+      "previous_integrated_sha256": "231876951f48ad9b71e40ee91d2b21d151dfd06150e3e797e40d1cca6808a453",
+      "integrated_sha256": "18c8c91d36f6ca2c24e904dbaa8015e512f5321f106bfa1f02abe42a5fef0b72",
+      "correction": "Retranslate complete bounded UTF-8 prefixes using the full byte-count field and required leading/trailing space boundaries"
+    },
     "engine/compiledict.cpp": {
       "supplied_path": "src/compiledict.cpp",
       "supplied_sha256": "2b183c88342e2eddec61334132bb1c79f1afdb13c5906c102fd663bdd42f1e7c",

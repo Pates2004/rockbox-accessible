@@ -733,6 +733,24 @@ in memory without writing to the supplied checkout. Host sanitizers and bounded
 heap measurements do not establish physical R1 behavior or the absence of all
 possible leaks.
 
+The 2026-10-21 ordinary-text stability correction also bounds backward
+letter-group comparisons in `engine/dictionary.cpp` by the current word.
+`engine/translate.cpp` now gives retranslatable Turkish prefixes the required
+space boundaries, preserves their complete UTF-8 byte count and derives their
+storage from the existing `N_WORD_BYTES` word bound. Explicit rule lengths fit
+seven bits; automatically measured prefix lengths occupy the full low byte,
+with prefix flags starting at bit eight. A static assertion keeps these length
+and storage contracts consistent. The prefix array increases from 41 to 162
+bytes; physical-player stack headroom still requires native validation.
+`test_backend.c` runs ordinary Turkish, German, Hungarian, Polish and English
+text, long UTF-8 filenames, complete-prefix traces and existing character
+speech. Its `text-prefixes` mode selects this regression alone. Both existing
+hosted test runners also include it in their normal backend run, while the
+existing supplied r34 PCM reference corpus remains unchanged. Original supplied
+engine sources, dictionaries and linguistic data remain unchanged.
+`test_native_backend.c` also exercises the same Turkish sentence and long names
+through the bounded native adapter in `run_native_tests.py`.
+
 The local compiler cleanup also frees each completed rule group's temporary
 allocations in `engine/compiledict.cpp`; this third source correction is pinned
 in `LOCAL-PATCHES.json`. `tests/test_dictionary_ownership.py` executes the

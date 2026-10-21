@@ -137,6 +137,72 @@ static struct capture speak(const char *text, const char *language, const char *
     return capture;
 }
 
+static FILE *open_trace(const char *output_directory, const char *filename);
+
+static void test_text_prefixes(const char *output_directory)
+{
+    static const struct {
+        const char *language;
+        const char *text;
+    } cases[] = {
+        {"tr", "Ankara'nın Türkiye'nin İstanbul'da"},
+        {"tr", "Ankara'nın"},
+        {"tr", "Türkiye'nin"},
+        {"tr", "İstanbul'da"},
+        {"tr", "Ankara'dan İzmir'e Çanakkale'nin Afyonkarahisar'ın"},
+        {"tr", "Çiçekler büyüyor. Bugün saat 12, yarın 23."},
+        {"de", "Unwiederbringlich wiederherstellen und unterscheiden."},
+        {"hu", "Budapest szép város. Egy, kettő, három."},
+        {"pl", "Druciana bociana bocianem bocianowi starcia tarcia natarcia."},
+        {"pl", "Zażółć gęślą jaźń. Pierwszy plik, 12 katalogów, 345 utworów."},
+        {"en", "Undo, redo and reassemble. First file, 12 folders, 345 songs."},
+    };
+    for (int rate = 175; rate <= 450; rate += 275) {
+        for (size_t index = 0; index < sizeof(cases) / sizeof(cases[0]); ++index) {
+            struct capture result = speak(cases[index].text, cases[index].language, "",
+                                          rate, 50, 100, 50, 0);
+            require(result.nonzero && result.samples > 0, "ordinary prefix text emits PCM");
+            fprintf(stderr, "prefix case=%zu language=%s rate=%d samples=%llu checksum=%llu\n",
+                    index, cases[index].language, rate,
+                    (unsigned long long)result.samples, (unsigned long long)result.checksum);
+        }
+    }
+    // Long ordinary filenames preserve their complete UTF-8 stem when a
+    // Turkish suffix follows the apostrophe. Cover the former 41-byte buffer
+    // and the former six-bit length decoder with actual synthesis and traces.
+    static const char *stems[] = {
+        "istanbultekniküniversitesikütüphanesi",
+        "türkiyecumhuriyetikültürveturizmbakanlığıkütüphanelerveyayımlargenelmüdürlüğü",
+    };
+    FILE *trace = open_trace(output_directory, "text-prefix-trace.txt");
+    for (size_t index = 0; index < sizeof(stems) / sizeof(stems[0]); ++index) {
+        char text[256];
+        char expected[256];
+        require(strlen(stems[index]) > (index ? 63u : 39u), "long UTF-8 stem fixture");
+        require(snprintf(text, sizeof(text), "%s'nin", stems[index]) > 0,
+                "format ordinary suffixed filename");
+        require(snprintf(expected, sizeof(expected), "Translate '%s'", stems[index]) > 0,
+                "format complete stem trace");
+        require(fseek(trace, 0, SEEK_END) == 0, "seek prefix trace end");
+        long start = ftell(trace);
+        require(start >= 0, "prefix trace position");
+        espeak_SetPhonemeTrace(2, trace);
+        struct capture result = speak(text, "tr", "", 175, 50, 100, 50, 0);
+        espeak_SetPhonemeTrace(0, NULL);
+        require(result.nonzero, "long suffixed filename has non-silent PCM");
+        require(fflush(trace) == 0 && fseek(trace, start, SEEK_SET) == 0,
+                "read prefix trace segment");
+        int found = 0;
+        char line[1024];
+        while (fgets(line, sizeof(line), trace))
+            found |= strstr(line, expected) != NULL;
+        require(!ferror(trace) && found, "whole UTF-8 prefix is retranslated without truncation");
+        clearerr(trace);
+    }
+    require(fclose(trace) == 0, "close prefix trace");
+    fprintf(stderr, "PASS: ordinary prefix text, language switches and numbers\n");
+}
+
 static FILE *open_trace(const char *output_directory, const char *filename)
 {
     char path[1024];
@@ -332,7 +398,7 @@ static void test_punctuation(int native, const char *output_directory)
 static int run_backend_tests(int argc, char **argv)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
-    require(argc >= 3, "usage: test_backend data-parent output-directory [reject|buffers|pcm|punctuation|punctuation-native]");
+    require(argc >= 3, "usage: test_backend data-parent output-directory [reject|buffers|pcm|punctuation|punctuation-native|text-prefixes]");
     if (argc == 4 && strcmp(argv[3], "reject") == 0) {
         require(rb_espeak_init(argv[1]) < 0, "reject invalid data root");
         require(rb_espeak_voice_count(false) == 0, "no lists after failed init");
@@ -363,6 +429,13 @@ static int run_backend_tests(int argc, char **argv)
     if (argc == 4 && strcmp(argv[3], "punctuation") == 0) {
         require(rb_espeak_init(argv[1]) == 22050, "backend punctuation initialization");
         test_punctuation(0, argv[2]);
+        return 0;
+    }
+    if (argc == 4 && strcmp(argv[3], "text-prefixes") == 0) {
+        require(rb_espeak_init(argv[1]) == 22050, "ordinary text initialization");
+        test_text_prefixes(argv[2]);
+        test_character_speech();
+        require(espeak_Terminate() == EE_OK, "ordinary text termination");
         return 0;
     }
     record_pcm = argc == 4 && strcmp(argv[3], "pcm") == 0;
@@ -441,6 +514,7 @@ static int run_backend_tests(int argc, char **argv)
            (unsigned long long)low.checksum, (unsigned long long)high.checksum,
            (unsigned long long)narrow.checksum, (unsigned long long)wide.checksum, silence.nonzero);
     if (!record_pcm) {
+        test_text_prefixes(argv[2]);
         test_word_positions();
         test_character_speech();
     }

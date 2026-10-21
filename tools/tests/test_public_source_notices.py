@@ -34,6 +34,12 @@ ENGINE_BEFORE_NOTICES = {
     "klatt.cpp": "2dbb6158f404b188e07e1ff8a12d9d6cb33a01b997b19aa56fc585c59ab902bb",
     "speech.h": "d51b0cf7575195f673541a14a736d93ab1fa922d8b83e790673c6878ef51ed31"
 }
+# Subsequent ordinary-text fixes keep the dated notices and original history.
+# Pin their reviewed current bodies separately from the notice-only baseline.
+ENGINE_AFTER_STABILITY_FIX = {
+    "dictionary.cpp": "7c53cfe027c9bbd061c7e861ae66463f53be881177b6981f7fc6b58350f78184",
+    "translate.cpp": "04928658baf6ae6ea7aef0d819a02a9bdbc35d8f1a98558bf8fb4b25e20a37c8",
+}
 PINNED_INPUTS = {
     "DATA.sha256": "8ed383e197973f4699c4f6499c20eed3d34e725d044b97531098d84ba2055132",
     "DATA-PROVENANCE.json": "928a9694079ce80771b576ea882bdb6ce3f988be8ef4807b0c95326876f200a6",
@@ -43,6 +49,8 @@ PINNED_INPUTS = {
 }
 NOTICED_PATCH_HASHES = {
     "engine/compiledict.cpp": "84849dae24db09a93995fc9f207ec3b3c593723324bb3243535d01bf0a343f22",
+    "engine/dictionary.cpp": "bdaa52af9dbf35ae16942ea5d66741fae91e6e92f9a07430f90e214297502b15",
+    "engine/translate.cpp": "18c8c91d36f6ca2c24e904dbaa8015e512f5321f106bfa1f02abe42a5fef0b72",
     "engine/tr_languages.cpp": "d29137d5cc2a2af4a44edfd37751752bd5fbe665d42dab68de89ddceffdbd8cc",
     "sonic/sonic.c": "9c1fe2a380bad7c9953859cbd43f267bce68d90bf95394c51f808372e905c34f"
 }
@@ -121,11 +129,12 @@ class PublicSourceNoticeTests(unittest.TestCase):
             with self.subTest(autocrlf=autocrlf):
                 self.assertEqual(effective_git_attributes(paths, autocrlf), expected)
 
-    def test_modified_engine_files_preserve_all_previous_bytes(self):
+    def test_modified_engine_files_keep_notices_and_recorded_source_bytes(self):
         for name, checksum in ENGINE_BEFORE_NOTICES.items():
             with self.subTest(source=name):
                 content = (ESPEAK / "engine" / name).read_bytes()
-                original = validate_notice(content, ENGINE_NOTICE, checksum)
+                original = validate_notice(content, ENGINE_NOTICE,
+                                           ENGINE_AFTER_STABILITY_FIX.get(name, checksum))
                 self.assertIn(b"GNU General Public License", original)
 
     def test_import_whitespace_exceptions_do_not_cover_integration_or_project_sources(self):
@@ -213,6 +222,8 @@ class PublicSourceNoticeTests(unittest.TestCase):
         sonic = read_manifest("SONIC.sha256")
         expected_previous = {
             "engine/compiledict.cpp": upstream["src/compiledict.cpp"],
+            "engine/dictionary.cpp": "399da9a17624f44abf776baa642eaf66367f6a6945223119407b4ef7962dc84e",
+            "engine/translate.cpp": "231876951f48ad9b71e40ee91d2b21d151dfd06150e3e797e40d1cca6808a453",
             "engine/tr_languages.cpp": "5522cc826e3e584e35b3941a14d60fb8f6b6941d6f8c11c7da41f45bc8b18794",
             "sonic/sonic.c": sonic["sonic/sonic.c"],
         }

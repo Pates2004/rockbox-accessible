@@ -19,6 +19,8 @@ ORIGINAL_SONIC_README_BYTES = 217
 def check_dependency(source, supplied=None):
     provenance = json.loads((source / "LOCAL-PATCHES.json").read_text(encoding="utf-8"))
     paths = {"engine/compiledict.cpp": "src/compiledict.cpp",
+             "engine/dictionary.cpp": "src/dictionary.cpp",
+             "engine/translate.cpp": "src/translate.cpp",
              "engine/tr_languages.cpp": "src/tr_languages.cpp",
              "sonic/sonic.c": "platforms/windows/third_party/sonic/sonic.c"}
     if (provenance["schema_version"] != 1 or set(provenance["patches"]) != set(paths) or
