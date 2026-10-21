@@ -135,7 +135,14 @@ class PublicSourceNoticeTests(unittest.TestCase):
         for attributes in effective_git_attributes(paths, "false").values():
             self.assertNotIn("whitespace", attributes)
         self.assertEqual(effective_git_attributes(["lib/espeak/License.txt"], "false"),
-                         {"lib/espeak/License.txt": {"text": "auto", "whitespace": "-blank-at-eol,-blank-at-eof"}})
+                         {"lib/espeak/License.txt": {"text": "set", "eol": "lf", "whitespace": "-blank-at-eol,-blank-at-eof"}})
+
+    def test_espeak_license_checkout_keeps_its_pinned_lf_on_windows(self):
+        expected = {"lib/espeak/License.txt": {"text": "set", "eol": "lf",
+                    "whitespace": "-blank-at-eol,-blank-at-eof"}}
+        for autocrlf in ("false", "true"):
+            with self.subTest(autocrlf=autocrlf):
+                self.assertEqual(effective_git_attributes(["lib/espeak/License.txt"], autocrlf), expected)
 
     def test_only_substantively_modified_engine_imports_have_notices(self):
         changed = set()
