@@ -292,6 +292,10 @@ int main(int argc, char **argv)
 #endif
     }
     else return 2;
+#if !defined(HAVE_TOUCHSCREEN) || !defined(HAVE_ESPEAK)
+    /* Legacy feedback uses the existing system sound without a pitched beep. */
+    CHECK(last_frequency == 0 && last_duration == 0 && last_amplitude == 0);
+#endif
     return 0;
 }
 """

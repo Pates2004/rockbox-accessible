@@ -133,7 +133,10 @@ static int menu_choice, menu_result, menu_items[8];
 static int battery;
 static struct tm clock_value;
 static struct tm spoken_time;
-static bool clock_null, mutate_clock, force_next;
+static bool mutate_clock, force_next;
+#if CONFIG_RTC
+static bool clock_null;
+#endif
 static char date_format[8] = "dAY";
 static char spoken_text[256][MAX_PATH];
 static struct mp3entry live_track;
@@ -418,7 +421,10 @@ void probe_reset(void)
     disk_size = temp_size = disk_offset = 0;
     disk_exists = temp_exists = read_active = write_active = false;
     fault = fault_after = read_chunk = write_chunk = 0;
-    clock_null = mutate_clock = false;
+    mutate_clock = false;
+#if CONFIG_RTC
+    clock_null = false;
+#endif
     mutate_inputs = metadata_available = false;
     play_status = skip_offset = peek_offset = 0;
     memset(&live_track, 0, sizeof(live_track));
@@ -491,7 +497,11 @@ void probe_clock(int field, int value)
         case 6: clock_value.tm_wday = value; break;
         case 7: clock_value.tm_yday = value; break;
         case 8: clock_value.tm_isdst = value; break;
-        case 9: clock_null = value; break;
+        case 9:
+#if CONFIG_RTC
+            clock_null = value;
+#endif
+            break;
         case 10: mutate_clock = value; break;
         default: assert(false);
     }
@@ -747,6 +757,9 @@ def build_hosts(workspace, windows=False):
             command += ["-static-libgcc", "-Wl,--no-undefined"]
         else:
             command += ["-fPIC", "-Wl,--no-undefined"]
+        if windows or os.name == "nt":
+            # Sanitizer exports must not hide the test API used by ctypes.
+            command += ["-Wl,--export-all-symbols"]
         if sanitize:
             command += ["-fsanitize=undefined", "-fno-sanitize-recover=all"]
         result = subprocess.run(command, capture_output=True, text=True, timeout=90)

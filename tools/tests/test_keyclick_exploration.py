@@ -49,7 +49,8 @@ struct screen {
     struct viewport *(*set_viewport)(struct viewport *);
     int (*getstringsize)(const char *, int *, int *);
 };
-static int point_x, point_y, point_ready, reports, reported_target, spoken, values;
+static int point_x, point_y, point_ready, reports, reported_target, spoken, value_calls;
+static int values = -1;
 static bool point_force = true, reported_occupied;
 static const void *reported_owner;
 static struct viewport original_viewport, default_viewport = {20, 30, 200, 160};
@@ -73,7 +74,8 @@ bool viewport_point_within_vp(const struct viewport *viewport, int position_x, i
 }
 void talk_id(int label, bool enqueue) { (void)enqueue; spoken = label; }
 void talk_spell(const char *text, bool enqueue) { (void)enqueue; spoken = text && *text ? 20 : -1; }
-void talk_value(int value, int unit, bool enqueue) { (void)unit; (void)enqueue; values = value; }
+void talk_value(int value, int unit, bool enqueue)
+{ (void)unit; (void)enqueue; ++value_calls; values = value; }
 const char *str(int label) { (void)label; return "RGB"; }
 int font_height(void) { return 10; }
 struct viewport *set_viewport(struct viewport *viewport)
@@ -103,6 +105,7 @@ int main(void)
     struct gui_yesno dialog = {{20, 30, 200, 100}, &message, &display, 10};
     point(30, 45); gui_yesno_explore(&dialog);
     CHECK(reported_owner == &dialog && reported_target == 0 && reported_occupied);
+    CHECK(spoken == 20 && value_calls == 0 && values == -1);
     point(30, 55); gui_yesno_explore(&dialog);
     CHECK(reported_target == -1 && !reported_occupied && spoken == -1);
     point(30, 90); gui_yesno_explore(&dialog);
@@ -114,6 +117,7 @@ int main(void)
     int previous = reports;
     gui_yesno_explore(&dialog);
     CHECK(reports == previous);
+    CHECK(value_calls == 0 && values == -1);
     return 0;
 }
 """
@@ -130,7 +134,7 @@ struct quickscreen { const struct settings_list *items[4]; struct viewport paren
                      struct viewport vps[1][4]; struct viewport vp_icons[1]; };
 int option_value_as_int(const struct settings_list *setting) { return setting->value; }
 void option_talk_value(const struct settings_list *setting, int value, bool enqueue)
-{ (void)setting; (void)enqueue; values = value; }
+{ (void)setting; (void)enqueue; ++value_calls; values = value; }
 """
 QUICKSCREEN_CASES = r"""
 int main(void)
@@ -143,8 +147,10 @@ int main(void)
     quick.items[QUICKSCREEN_LEFT] = &setting;
     point(25, 95); quickscreen_explore(&quick);
     CHECK(reported_target == QUICKSCREEN_LEFT && reported_occupied && spoken == 30 && values == 4);
+    CHECK(reported_owner == &quick && value_calls == 1);
     point(91, 98); quickscreen_explore(&quick);
     CHECK(reported_target == QUICKSCREEN_LEFT && reported_occupied);
+    CHECK(value_calls == 2 && values == 4);
     point(120, 98); quickscreen_explore(&quick);
     CHECK(!reported_occupied && spoken == -1);
     point(25, 45); quickscreen_explore(&quick);
@@ -153,6 +159,7 @@ int main(void)
     int previous = reports;
     point(121, 99); quickscreen_explore(&quick);
     CHECK(reports == previous + 1 && !reported_occupied);
+    CHECK(reported_owner == &quick && value_calls == 2);
     return 0;
 }
 """
@@ -173,22 +180,27 @@ int main(void)
     touchscreen_slider(&display, &rgb, &slider);
 #ifdef HAVE_ESPEAK
     CHECK(reported_target == 1 && reported_occupied && slider == 1 && values == 52);
+    CHECK(reported_owner == &rgb && spoken == 20 && value_calls == 1);
     CHECK(rgb.color == 0x123456 && rgb.rgb_val[1] == 52);
     point(50, 69); point_force = false;
     int previous = reports;
     touchscreen_slider(&display, &rgb, &slider);
     CHECK(reports == previous + 1);
+    CHECK(value_calls == 1 && values == 52);
     point(220, 69); touchscreen_slider(&display, &rgb, &slider);
     CHECK(!reported_occupied && active_viewport == &original_viewport);
     point(50, 35); touchscreen_slider(&display, &rgb, &slider);
     CHECK(!reported_occupied);
     point(50, 115); touchscreen_slider(&display, &rgb, &slider);
     CHECK(!reported_occupied);
+    CHECK(spoken == -1 && value_calls == 1);
 #else
     CHECK(active_viewport == &original_viewport && rgb.color == 0x123456);
     old_button = BUTTON_REL;
     point(30, 5);
     CHECK(touchscreen_slider(&display, &rgb, &slider) == ACTION_STD_CANCEL);
+    CHECK(reports == 0 && reported_owner == NULL && reported_target == 0 && !reported_occupied);
+    CHECK(spoken == 0 && value_calls == 0 && values == -1);
 #endif
     CHECK(active_viewport == &original_viewport);
     return 0;
@@ -219,13 +231,16 @@ int main(void)
     struct gui_wps wps = {&data};
     point(30, 55); skin_accessibility_explore(&wps);
     CHECK(reported_target == 0 && reported_occupied && reported_owner == &wps);
+    CHECK(reports == 1 && spoken == 0 && value_calls == 0 && values == -1);
     point(28, 48); skin_accessibility_explore(&wps);
     CHECK(reported_occupied);
     point(27, 48); skin_accessibility_explore(&wps);
     CHECK(!reported_occupied);
+    CHECK(spoken == -1);
     viewport.hidden_flags = VP_DRAW_HIDDEN;
     point(30, 55); skin_accessibility_explore(&wps);
     CHECK(!reported_occupied);
+    CHECK(spoken == -1 && value_calls == 0 && values == -1);
     viewport.hidden_flags = 0; data.touchscreen_locked = true;
     point(30, 55); skin_accessibility_explore(&wps);
     CHECK(!reported_occupied);

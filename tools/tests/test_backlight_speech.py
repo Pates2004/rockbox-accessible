@@ -55,7 +55,10 @@ static struct {
 } global_settings;
 static int table_setting_oldval, table_setting_array_position;
 static int language, talk_handle = 1, index_handle = 1;
-static bool disabled, available = true;
+static bool disabled;
+#ifdef HAVE_ESPEAK
+static bool available = true;
+#endif
 static unsigned int cases, hardware_calls;
 static int hardware_value;
 static char spoken[2048];
@@ -115,7 +118,9 @@ SUFFIX = r'''
 static void reset(void)
 {
     disabled = false;
+#ifdef HAVE_ESPEAK
     available = true;
+#endif
     talk_handle = index_handle = 1;
     spoken[0] = '\0';
     number_count = rockbox_count = 0;
@@ -171,7 +176,9 @@ static void test_callbacks(void)
                 option_talk_value(&setting, durations[duration], false);
                 CHECK(!spoken[0] && !rockbox_count);
                 reset();
+#ifdef HAVE_ESPEAK
                 available = false;
+#endif
                 talk_handle = index_handle = 0;
                 option_talk_value(&setting, durations[duration], false);
                 CHECK(!spoken[0] && !rockbox_count);
@@ -245,7 +252,9 @@ static void test_numeric_units_and_status(void)
     disabled = true;
     CHECK(talk_time_intervals(15, UNIT_SEC, false) == -1 && !spoken[0]);
     reset();
+#ifdef HAVE_ESPEAK
     available = false;
+#endif
     talk_handle = index_handle = 0;
     CHECK(talk_time_intervals(15, UNIT_SEC, false) == -1 && !spoken[0]);
     cases += 3;

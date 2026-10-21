@@ -366,7 +366,9 @@ int main(int argc, char **argv)
         fixture_mode(1);
         feedback_pending = true;
         accessibility_explore_feedback((void *)(uintptr_t)1, -1, false);
+        point_pending = exploring = have_context = true;
         accessibility_cancel_touch();
+        assert(!point_pending && !exploring && !have_context);
         accessibility_speak_empty();
         assert(!fixture_spoken);
         fixture_accessible = false;

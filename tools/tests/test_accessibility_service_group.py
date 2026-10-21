@@ -142,6 +142,19 @@ static void check_labels(unsigned int selected, unsigned int actual, bool partia
 '''
 
 MAIN = r'''
+static void check_curtain_calls(unsigned int selected, unsigned int previous,
+                                unsigned int supported, bool enabled,
+                                int previous_off_calls, int previous_on_calls)
+{
+    bool supported_curtain = (supported & 8) != 0;
+    bool selected_curtain = (selected & 8) ||
+        (!enabled && (selected & 1) && (previous & 8));
+    assert(curtain_off_calls == previous_off_calls +
+           (supported_curtain && selected_curtain && !enabled));
+    assert(curtain_on_calls == previous_on_calls +
+           (supported_curtain && selected_curtain && enabled));
+}
+
 int main(void)
 {
 #ifdef _WIN32
@@ -164,6 +177,7 @@ int main(void)
             bool possible = !enabled || !(mask & 8) || (state & 8) || (state & 1) || (mask & 1);
             bool success = accessibility_services_activate();
             assert(success == (mask && possible));
+            check_curtain_calls(mask, state, supported, enabled, 0, 0);
             unsigned int expected = enabled ? state | mask : state & ~mask;
             if (!enabled && (mask & 1) && (supported & 8)) expected &= ~8u;
             if (!possible) expected &= ~8u;
@@ -184,8 +198,12 @@ int main(void)
             {
                 group_calls = 0;
                 bool next_possible = enabled || !(mask & 8) || (expected & 8) || (expected & 1) || (mask & 1);
+                int previous_off_calls = curtain_off_calls;
+                int previous_on_calls = curtain_on_calls;
                 assert(accessibility_services_activate() == next_possible);
                 unsigned int previous = expected;
+                check_curtain_calls(mask, previous, supported, !enabled,
+                                    previous_off_calls, previous_on_calls);
                 expected = enabled ? expected & ~mask : expected | mask;
                 if (enabled && (mask & 1) && (supported & 8)) expected &= ~8u;
                 if (!next_possible) expected &= ~8u;

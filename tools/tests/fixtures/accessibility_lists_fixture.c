@@ -828,6 +828,13 @@ int main(int argc, char **argv)
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
 #endif
     assert(argc == 2);
+    /* Exercise the actual queue cleanup before initializing each list case. */
+    queue_write = 7;
+    queue_read = 3;
+    thumbnail_buf_used = 29;
+    need_shutup = true;
+    talk_force_shutup();
+    assert(queue_write == 0 && queue_read == 0 && thumbnail_buf_used == 0 && !need_shutup);
     struct gui_synclist list = setup();
     const char *scenario = argv[1];
     if (!strcmp(scenario, "position-mode-matrix"))

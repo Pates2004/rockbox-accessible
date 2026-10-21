@@ -70,7 +70,10 @@ static int scanned, next_calls, mute_calls, unmute_calls, unpins, yields;
 static int speak_calls, complete_calls, stop_calls;
 static int spoken[256], status_reads, event_calls, poll_count;
 static int last_button, busy_steps;
-static bool all_busy, no_stations, allocation_fails, confirm_scan, hardware_present;
+static bool no_stations, allocation_fails, confirm_scan, hardware_present;
+#ifdef HAVE_ESPEAK
+static bool all_busy;
+#endif
 static int physical_reads;
 static int automatic_speech_calls, spoken_ids[128], id_calls;
 static bool force_enqueue_next, need_shutup;
@@ -279,7 +282,10 @@ static void reset(void)
     scanned = next_calls = mute_calls = unmute_calls = unpins = yields = 0;
     speak_calls = complete_calls = stop_calls = 0;
     status_reads = event_calls = poll_count = last_button = busy_steps = physical_reads = 0;
-    all_busy = no_stations = allocation_fails = false;
+    no_stations = allocation_fails = false;
+#ifdef HAVE_ESPEAK
+    all_busy = false;
+#endif
     automatic_speech_calls = id_calls = 0;
     force_enqueue_next = need_shutup = true;
     utterance_count = 0;
@@ -452,7 +458,9 @@ static void scan_scenario(const char *scenario)
         input[1] = (struct input_event){ BUTTON_MULTIMEDIA | 1, BUTTON_NONE };
     if (!strcmp(scenario, "no-stations")) no_stations = true;
     if (!strcmp(scenario, "capacity")) fm_region_data[0].freq_max = 96000000;
+#ifdef HAVE_ESPEAK
     if (!strcmp(scenario, "busy")) all_busy = true;
+#endif
     CHECK(presets_scan(NULL) == 1);
     if (!strcmp(scenario, "all-speech-off"))
     {

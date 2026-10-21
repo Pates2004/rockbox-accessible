@@ -703,7 +703,11 @@ int main(int argc, char **argv)
         !strcmp(argv[1], "other-eight-interrupt") ? interrupting_event_case(SYS_EVENT | 8) :
         !strcmp(argv[1], "pending-context") ? pending_context_case() :
         !strcmp(argv[1], "curtain") ? curtain_case() : 2;
-    if (!result) printf("{\"checks\":%d,\"long_bits\":%zu}\n", checks, sizeof(long) * CHAR_BIT);
+    if (!result) {
+        printf("{\"checks\":%d,\"long_bits\":%zu,\"mock_state\":", checks, sizeof(long) * CHAR_BIT);
+        print_action_mock_snapshot();
+        printf(",\"last_splash\":%d}\n", last_splash);
+    }
     return result;
 }
 '''

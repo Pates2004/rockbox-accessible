@@ -256,6 +256,19 @@ static int event(int button, int context)
     ++current_tick;
     return get_action(context, 0);
 }
+static void print_action_mock_snapshot(void)
+{
+    printf("{\"last_poll_context\":%d,\"legacy_clicks\":%d,"
+           "\"ordinary_process_calls\":%d,\"poll_calls\":%d,"
+           "\"custom_buttons\":%d,\"custom_action\":%d,\"manager_action\":%d,"
+           "\"accessible\":%d,\"pending_timer\":%d,\"recover_curtain\":%d,"
+           "\"timer_action\":%d,\"accessibility_forced_lock\":%d,"
+           "\"physical_calls\":%d,\"queued_navigation\":%d,\"navigation_cancel_calls\":%d}",
+           last_poll_context, legacy_clicks, ordinary_process_calls, poll_calls,
+           custom_buttons, custom_action, manager_action, accessible, pending_timer,
+           recover_curtain, timer_action, accessibility_forced_lock, physical_calls,
+           queued_navigation, navigation_cancel_calls);
+}
 """
 
 
@@ -483,7 +496,11 @@ int main(int argc, char **argv)
         !strcmp(argv[1], "poll") ? poll_cases() :
         !strcmp(argv[1], "physical-accessibility") ? physical_accessibility_cases() :
         !strcmp(argv[1], "gesture-lock") ? gesture_lock_cases() : 2;
-    if (!result) printf("{\"checks\":%d}\n", checks);
+    if (!result) {
+        printf("{\"checks\":%d,\"mock_state\":", checks);
+        print_action_mock_snapshot();
+        printf("}\n");
+    }
     return result;
 }
 """

@@ -48,7 +48,7 @@ static long current_tick;
 static char persisted[256], temporary[256];
 static size_t read_offset, written;
 static int failure, reads, writes, syncs, renames, removes, closes;
-static bool temporary_exists, usb, option_usb;
+static bool temporary_exists, usb, option_usb, read_open, write_open;
 #define firmware_enabled touchscreen_wake_enabled()
 static int selection, choice, list_calls, splashes, spoken[128], speech_count;
 static const char *str(int label) { (void)label; return "label"; }
@@ -82,15 +82,19 @@ static int fixture_open(const char *path, int flags, ...) {
     if (flags & O_WRONLY) {
         assert(!strcmp(path, "/.rockbox/touch-wake.cfg.tmp") && (flags & O_EXCL));
         if (failure == 1 || temporary_exists) { errno = EEXIST; return -1; }
+        assert(!write_open);
+        write_open = true;
         temporary_exists = true; written = 0; memset(temporary, 0, sizeof(temporary));
         return 11;
     }
     assert(!strcmp(path, "/.rockbox/touch-wake.cfg")); ++reads; read_offset = 0;
     if (!persisted[0]) { errno = ENOENT; return -1; }
+    assert(!read_open);
+    read_open = true;
     return 10;
 }
 static ssize_t fixture_read(int descriptor, void *data, size_t capacity) {
-    assert(descriptor == 10);
+    assert(descriptor == 10 && read_open);
     if (failure == 6) { errno = EIO; return -1; }
     if (failure == 8) { errno = EINTR; return -1; }
     size_t available = strlen(persisted) - read_offset;
@@ -100,7 +104,7 @@ static ssize_t fixture_read(int descriptor, void *data, size_t capacity) {
     return capacity;
 }
 static ssize_t fixture_write(int descriptor, const void *data, size_t count) {
-    assert(descriptor == 11); ++writes;
+    assert(descriptor == 11 && write_open); ++writes;
     if (failure == 2) return 0;
     if (failure == 9) { errno = EINTR; return -1; }
     if (count > 2) count = 2;
@@ -108,8 +112,14 @@ static ssize_t fixture_write(int descriptor, const void *data, size_t count) {
     memcpy(temporary + written, data, count); written += count;
     return count;
 }
-static int fixture_fsync(int descriptor) { assert(descriptor == 11); ++syncs; return failure == 3 ? -1 : 0; }
-static int fixture_close(int descriptor) { ++closes; return (failure == 4 && descriptor == 11) || (failure == 7 && descriptor == 10) ? -1 : 0; }
+static int fixture_fsync(int descriptor) { assert(descriptor == 11 && write_open); ++syncs; return failure == 3 ? -1 : 0; }
+static int fixture_close(int descriptor) {
+    assert(descriptor == 10 || descriptor == 11);
+    if (descriptor == 10) { assert(read_open); read_open = false; }
+    else { assert(write_open); write_open = false; }
+    ++closes;
+    return (failure == 4 && descriptor == 11) || (failure == 7 && descriptor == 10) ? -1 : 0;
+}
 static int fixture_remove(const char *path) { assert(strstr(path, ".tmp")); ++removes; temporary_exists = false; return 0; }
 static int fixture_rename(const char *source, const char *target) {
     assert(strstr(source, ".tmp") && !strcmp(target, "/.rockbox/touch-wake.cfg")); ++renames;
@@ -168,21 +178,30 @@ static int integration_case(const char *scenario) {
     if (!strcmp(scenario, "integration-factory")) {
         do_key_lock(true);
         assert(!driver_touch_enabled && !touchscreen_wake_filter_needed());
+        assert(navigation_cancels == 1 && lock_queue_clears == 1 && ui_resets == 0);
         assert(action_sample(BUTTON_TOUCHSCREEN, 0) == -100);
+        accessibility_forced_lock = true;
         do_key_lock(false);
         assert(driver_touch_enabled && notices == 2);
+        assert(!accessibility_forced_lock && navigation_cancels == 1);
+        assert(lock_queue_clears == 2 && ui_resets == 0);
     } else if (!strcmp(scenario, "integration-light") || !strcmp(scenario, "integration-unlock")) {
         bool unlock = !strcmp(scenario, "integration-unlock");
         preferences(unlock ? 2 : 1, 0, 0);
         do_key_lock(true);
+        accessibility_forced_lock = true;
         assert(driver_touch_enabled && touchscreen_wake_filter_needed());
+        assert(navigation_cancels == 1 && lock_queue_clears == 1 && ui_resets == 0);
         assert(action_sample(BUTTON_TOUCHSCREEN, 0) == ACTION_NONE);
         assert(action_sample(BUTTON_TOUCHSCREEN | BUTTON_REL, 40) == ACTION_NONE);
         assert(action_sample(BUTTON_NONE, 400) == ACTION_REDRAW);
         assert(action_last.keys_locked == !unlock && backlight_lit && backlights == 1);
         assert(notices == (unlock ? 2 : 1));
+        assert(accessibility_forced_lock == !unlock && navigation_cancels == 1);
+        assert(lock_queue_clears == (unlock ? 2 : 1) && ui_resets == 3);
         assert(touchscreen_wake_filter_needed() == !unlock);
         assert(action_sample(BUTTON_NONE, 500) == -100);
+        assert(ui_resets == 3);
     } else if (!strcmp(scenario, "integration-grid-and-curtain")) {
         preferences(2, 0, 0);
         assert(touchscreen_wake_filter_needed());
@@ -227,6 +246,7 @@ static int integration_case(const char *scenario) {
         assert(wake_save(disabled) && driver_touch_enabled && action_last.keys_locked);
         assert(notices == 1);
     } else assert(false);
+    assert(!read_open && !write_open);
     puts("PASS real firmware and action wake integration");
     return 0;
 }
@@ -258,6 +278,7 @@ int main(int count, char **arguments) {
         return integration_case(scenario);
     if (!strcmp(scenario, "defaults")) {
         assert(!accessibility_touch_wake_enabled() && !firmware_enabled && reads == 1 && !writes);
+        assert(closes == 0);
         assert(accessibility_touch_wake_timeout(-1) == -1);
         assert(event(TOUCHEVENT_PRESS, 10, 20, 0, true, true, 0) == ACCESSIBILITY_TOUCH_WAKE_PASS);
         assert(!accessibility_touch_wake_enabled() && reads == 1);
@@ -339,16 +360,21 @@ int main(int count, char **arguments) {
         assert(accessibility_touch_wake_menu() == 0 && firmware_enabled && !temporary_exists);
         assert(wake_actions[0] == 0 && wake_actions[1] == 2 && wake_actions[2] == 0);
         assert(syncs == 1 && renames == 1 && writes > 1 && !splashes);
+        assert(closes == 1 && !read_open && !write_open);
         assert(!strcmp(persisted, "RBTOUCH-WAKE:1\nsingle:0\ndouble:2\ntriple:0\n"));
         wake_loaded = false; memset(wake_actions, 0, sizeof(wake_actions));
         assert(accessibility_touch_wake_enabled() && wake_actions[1] == 2);
+        assert(closes == 2 && !read_open && !write_open);
     } else if (!strcmp(scenario, "write-failures")) {
         for (int problem = 1; problem <= 9; ++problem) {
             if (problem >= 6 && problem <= 8) continue;
             preferences(0, 0, 0); failure = problem; selection = 0; choice = 2; list_calls = 0;
             int prior = writes;
+            int prior_closes = closes;
             assert(accessibility_touch_wake_menu() == 0 && !firmware_enabled && !wake_actions[0]);
             assert(!strcmp(persisted, TOUCH_WAKE_DEFAULT) && !temporary_exists);
+            assert(closes - prior_closes == (problem == 1 ? 0 : 1));
+            assert(!read_open && !write_open);
             if (problem == 9) assert(writes - prior == 4);
             failure = 0;
         }
@@ -369,12 +395,17 @@ int main(int count, char **arguments) {
             "RBTOUCH-WAKE:1\nsingle:1\ndouble:0\ntriple:0\nx"};
         for (unsigned int index = 0; index < sizeof(invalid) / sizeof(*invalid); ++index) {
             wake_loaded = false; memset(wake_actions, 0, sizeof(wake_actions)); strcpy(persisted, invalid[index]);
+            int prior_closes = closes;
             assert(!accessibility_touch_wake_enabled() && !writes);
+            assert(closes == prior_closes + 1 && !read_open && !write_open);
         }
         for (failure = 6; failure <= 8; ++failure) {
+            int prior_closes = closes;
             preferences(1, 1, 1); assert(!firmware_enabled && !wake_actions[0]);
+            assert(closes == prior_closes + 1 && !read_open && !write_open);
         }
     } else assert(false);
+    assert(!read_open && !write_open);
     puts("PASS real touch wake");
     return 0;
 }
