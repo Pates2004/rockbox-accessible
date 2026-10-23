@@ -2094,7 +2094,7 @@ static void kbd_move_picker_vertical(struct keyboard_parameters *pm,
         else if (pm->line_edit)
             pm->line_edit = false;
 #else /* edit line above picker */
-        if (pm->y >= pm->lines)
+        if (pm->y >= pm->lines && !pm->line_edit)
         {
             pm->y = pm->lines;
         }

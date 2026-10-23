@@ -231,6 +231,7 @@ enum touchscreen_mode touchscreen_get_mode(void) { return touch_mode; }
 void touchscreen_set_mode(enum touchscreen_mode mode) { touch_mode = mode; }
 static struct keyboard_parameters kbd_param[NB_SCREENS];
 static bool kbd_loaded;
+static int test_picker_lines = 8, test_picker_pages = 3;
 static struct viewport test_viewports[3];
 static int kbd_create_viewports(struct keyboard_parameters *parameters)
 {
@@ -245,8 +246,8 @@ static void kbd_calc_pm_params(struct keyboard_parameters *parameters,
     parameters->font_w = 44;
     parameters->font_h = 44;
     parameters->max_chars = 10;
-    parameters->lines = 8;
-    parameters->pages = 3;
+    parameters->lines = test_picker_lines;
+    parameters->pages = test_picker_pages;
     parameters->show_buttons = true;
 }
 static void keyboard_layout(struct viewport *viewports,
@@ -320,6 +321,8 @@ void probe_reset(void)
     memset(spelled, 0, sizeof(spelled));
     memset(kbd_param, 0, sizeof(kbd_param));
     kbd_loaded = false;
+    test_picker_lines = 8;
+    test_picker_pages = 3;
 }
 void probe_empty_mode(int mode) { empty_feedback_mode = mode; }
 int probe_empty_speeches(void)
@@ -384,6 +387,36 @@ int probe_run_ex(char *text, int capacity, bool *usb)
 void probe_fail_viewport(void) { viewport_failure = true; }
 void probe_enabled(bool value) { enabled = value; }
 void probe_wrap(bool value) { global_settings.list_wraparound = value; }
+int probe_run_numeric(char *text, int capacity)
+{
+    static ucschar_t digits[] = {
+        10, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 0xfeff
+    };
+    /* Geometry is fixture input; navigation and input loop remain production C. */
+    test_picker_lines = test_picker_pages = 1;
+    return kbd_input_ex(text, capacity, digits, NULL);
+}
+static struct edit_state picker_probe_state;
+void probe_picker_set(int lines, int editing, int row, int control, int wrap)
+{
+    struct keyboard_parameters *pm = kbd_param;
+    pm->lines = lines;
+    pm->line_edit = editing;
+    pm->y = row;
+    pm->typing_control = control;
+    global_settings.list_wraparound = wrap;
+    memset(&picker_probe_state, 0, sizeof(picker_probe_state));
+}
+void probe_picker_vertical(int direction)
+{
+    kbd_move_picker_vertical(kbd_param, &picker_probe_state, direction);
+}
+int probe_picker_value(int index)
+{
+    int values[] = {kbd_param->y, kbd_param->line_edit, kbd_param->typing_control};
+    assert(index >= 0 && index < 3);
+    return values[index];
+}
 int probe_hit(int x, int y) { return kbd_typing_hit(kbd_param, screens, x, y); }
 void probe_short_row(void)
 {
@@ -905,6 +938,77 @@ class AccessibilityTypingTests(unittest.TestCase):
             self.library.accessibility_typing_begin()
             self.expect_none(self.process("RELEASE", time=iteration * 10 + 1))
         self.assertEqual(self.library.probe_stat(0), 0)
+
+    def test_actual_one_row_numeric_keyboard_home_inserts_zero(self):
+        self.mode(2)
+        for _ in range(12):
+            self.action("ACTION_KBD_UP")
+        self.action("ACTION_KBD_DOWN")
+        for _ in range(32):
+            self.action("ACTION_KBD_LEFT")
+        self.action("ACTION_KBD_SELECT")
+        self.action("ACTION_KBD_DONE")
+        self.library.probe_run_numeric.argtypes = [ctypes.c_char_p, ctypes.c_int]
+        buffer = ctypes.create_string_buffer(21)
+        self.assertEqual(self.library.probe_run_numeric(buffer, 21), 0)
+        self.assertEqual(buffer.value, b"0")
+        self.assertFalse(self.library.accessibility_typing_active())
+
+    def test_actual_picker_edit_line_transitions_for_one_and_eight_rows(self):
+        self.mode(2)
+        no_target = self.constant("ACCESSIBILITY_TYPING_NO_TARGET")
+        for lines in (1, 8):
+            for wrap in (False, True):
+                for direction in (-1, 1):
+                    with self.subTest(lines=lines, wrap=wrap, direction=direction):
+                        self.library.probe_picker_set(lines, True, 0, no_target, wrap)
+                        self.library.probe_picker_vertical(direction)
+                        expected = ((0, True, no_target) if direction < 0 and not wrap else
+                                    (lines - 1 if direction < 0 else 0, False, no_target))
+                        actual = tuple(self.library.probe_picker_value(index) for index in range(3))
+                        self.assertEqual(actual, expected)
+                        if direction < 0 and not wrap:
+                            self.library.probe_picker_vertical(-1)
+                            self.assertEqual(tuple(self.library.probe_picker_value(index) for index in range(3)),
+                                             (0, True, no_target))
+                            self.library.probe_picker_vertical(1)
+                            self.assertEqual(tuple(self.library.probe_picker_value(index) for index in range(3)),
+                                             (0, False, no_target))
+
+    def test_actual_picker_control_vertical_transitions_preserve_wrap_policy(self):
+        self.mode(2)
+        no_target = self.constant("ACCESSIBILITY_TYPING_NO_TARGET")
+        for lines in (1, 8):
+            for wrap in (False, True):
+                for name in ("ACCESSIBILITY_TYPING_DONE", "ACCESSIBILITY_TYPING_CANCEL"):
+                    control = self.constant(name)
+                    for direction in (-1, 1):
+                        with self.subTest(lines=lines, wrap=wrap, control=name, direction=direction):
+                            self.library.probe_picker_set(lines, False, lines - 1, control, wrap)
+                            self.library.probe_picker_vertical(direction)
+                            expected = ((lines - 1, False, no_target) if direction < 0 else
+                                        (0, True, no_target) if wrap else
+                                        (lines - 1, False, control))
+                            self.assertEqual(tuple(self.library.probe_picker_value(index) for index in range(3)),
+                                             expected)
+
+    def test_actual_one_row_numeric_arrows_keep_done_delete_and_cancel(self):
+        self.library.probe_run_numeric.argtypes = [ctypes.c_char_p, ctypes.c_int]
+        for horizontal_steps, expected_result, expected_text in ((0, 0, b"abc"), (1, 0, b"ab"), (2, -1, b"abc")):
+            with self.subTest(control=horizontal_steps):
+                self.library.probe_reset()
+                self.library.accessibility_typing_begin()
+                self.mode(2)
+                self.action("ACTION_KBD_DOWN")
+                for _ in range(horizontal_steps):
+                    self.action("ACTION_KBD_RIGHT")
+                self.action("ACTION_KBD_SELECT")
+                if horizontal_steps == 1:
+                    self.action("ACTION_KBD_DONE")
+                buffer = ctypes.create_string_buffer(b"abc", 21)
+                self.assertEqual(self.library.probe_run_numeric(buffer, 21), expected_result)
+                self.assertEqual(buffer.value, expected_text)
+                self.assertFalse(self.library.accessibility_typing_active())
 
     def test_actual_keyboard_fast_touch_commits_last_character_once(self):
         self.touch("PRESS", 10, 60, 0)

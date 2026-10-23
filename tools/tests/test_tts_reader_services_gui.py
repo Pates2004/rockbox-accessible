@@ -251,7 +251,11 @@ def prepare_language(build, directory, language, labels, report):
     # Exactly one preparation per language. No call to configure_session/preserve_runtime_changes.
     runtime = services.prepare_runtime(build, directory, report)
     resources = runtime / "simdisk/.rockbox"
-    profile = services.mapping_profile(services.mapping_contract()).replace("enabled:0\n", "enabled:1\n", 1)
+    # The synthetic 300ms recognizer matches the bounded .42s context hold.
+    # Keep production defaults and the <.8s input/release bound unchanged.
+    profile = (services.mapping_profile(services.mapping_contract())
+               .replace("enabled:0\n", "enabled:1\n", 1)
+               .replace("hold:700\n", "hold:300\n", 1))
     seed = {
         "config.cfg": services.synthetic_config(language, True, True) +
             "list wraparound: off\nshow filename exts: on\ntouchscreen mode: point\n"
@@ -1133,6 +1137,68 @@ def execute(arguments):
 
 
 class ReaderDriverContracts(unittest.TestCase):
+    def test_prepare_language_seeds_context_hold_profile_once(self):
+        from tempfile import TemporaryDirectory
+
+        documents = {CASE_NAME: CASE_BYTES, LINE_NAME: LINE_BYTES, EMPTY_NAME: b"",
+                     BOM_NAME: b"\xef\xbb\xbf", CACHE_NAME: CACHE_BYTES}
+        central = project_materials_root(ROOT).resolve()
+        with TemporaryDirectory(prefix="reader-seed-contract-", dir=central) as temporary:
+            temporary = Path(temporary).resolve()
+            self.assertEqual(temporary.parent, central)
+            for language in ("polski", "english"):
+                with self.subTest(language=language):
+                    directory = temporary / language
+                    runtime = directory / "fixture"
+                    resources = runtime / "simdisk/.rockbox"
+                    resources.mkdir(parents=True)
+                    build, report = temporary / "unread-build", {}
+                    with mock.patch.object(services, "prepare_runtime", return_value=runtime) as prepare, \
+                            mock.patch.object(services, "make_tone") as tone:
+                        result = prepare_language(build, directory, language, {}, report)
+                        self.assertEqual(result, runtime)
+                        prepare.assert_called_once_with(build, directory, report)
+                        tone.assert_called_once_with(runtime / "simdisk" / MUSIC_NAME)
+
+                        profile = (resources / "accessibility.cfg").read_bytes()
+                        parsed = services.parse_mapping_profile(profile)
+                        original = services.parse_mapping_profile(
+                            services.mapping_profile(services.mapping_contract()).encode("utf-8"))
+                        self.assertEqual(parsed, dict(original, enabled=True, hold_ms=300))
+                        seeded = report["seeded_once"]
+                        self.assertEqual(seeded["language"], language)
+                        self.assertIs(seeded["query_injection"], False)
+                        self.assertIs(seeded["reader_preferences_injection"], False)
+                        self.assertEqual(set(seeded["profiles"]),
+                                         {"config.cfg", "accessibility.cfg", "accessibility-typing.cfg"})
+                        for name, text in seeded["profiles"].items():
+                            self.assertEqual((resources / name).read_bytes(), text.encode("utf-8"))
+                        config = seeded["profiles"]["config.cfg"]
+                        self.assertTrue(config.startswith(services.synthetic_config(language, True, True)))
+                        self.assertEqual(seeded["profiles"]["accessibility-typing.cfg"],
+                                         "RBACCESSIBILITY-TYPING:1\nmode:2\n")
+                        self.assertEqual(seeded["documents"], {
+                            name: {"bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+                            for name, data in documents.items()})
+                        for name, data in documents.items():
+                            self.assertEqual((runtime / "simdisk" / name).read_bytes(), data)
+                        self.assertEqual(
+                            {path.relative_to(runtime).as_posix()
+                             for path in runtime.rglob("*") if path.is_file()},
+                            {"simdisk/.rockbox/" + name for name in seeded["profiles"]} |
+                            {"simdisk/" + name for name in documents})
+                        self.assertEqual(json.loads((directory / "initial-profile.json").read_text(
+                            encoding="utf-8")), seeded)
+
+                        before = {path.relative_to(directory).as_posix(): path.read_bytes()
+                                  for path in directory.rglob("*") if path.is_file()}
+                        with self.assertRaisesRegex(AssertionError, "Refusing synthetic profile overwrite"):
+                            prepare_language(build, directory, language, {}, report)
+                        self.assertEqual(
+                            {path.relative_to(directory).as_posix(): path.read_bytes()
+                             for path in directory.rglob("*") if path.is_file()}, before)
+                        tone.assert_called_once_with(runtime / "simdisk" / MUSIC_NAME)
+
     def test_music_expectation_changes_at_actual_wav_launch_capture(self):
         # Exercise music_case through its real open_document selection/capture.
         # The observer models the existing settle contract: music may be
@@ -1390,6 +1456,9 @@ def main(argv=None):
     if arguments.worker:
         return worker(arguments)
     if arguments.self_test:
+        # Resolve the real central workspace before blocking test processes.
+        # WSL drive discovery uses read-only Windows volume queries.
+        project_materials_root(ROOT)
         with mock.patch.object(subprocess, "Popen", side_effect=AssertionError("Contract tests cannot launch processes")):
             result = unittest.TextTestRunner(verbosity=2).run(
                 unittest.defaultTestLoader.loadTestsFromTestCase(ReaderDriverContracts))
