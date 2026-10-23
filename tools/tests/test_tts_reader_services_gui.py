@@ -1011,8 +1011,8 @@ def worker(arguments):
 
 def execute(arguments):
     require(sys.platform == "win32", "Run with native Windows Python only")
-    require(10 <= arguments.timeout <= 60 and 60 <= arguments.session_budget <= 3600 and
-            120 <= arguments.overall_timeout <= 10800, "Invalid explicit timeout bounds")
+    require(10 <= arguments.timeout <= 60 and 60 <= arguments.session_budget <= 10800 and
+            120 <= arguments.overall_timeout <= 28800, "Invalid explicit timeout bounds")
     freeze, build = validate_authorization(arguments)
     native = services.PrivateDesktop()
     labels = compiled_labels(build)
@@ -1137,6 +1137,71 @@ def execute(arguments):
 
 
 class ReaderDriverContracts(unittest.TestCase):
+    def test_default_budgets_cover_disjoint_reader_schedule_floor(self):
+        # Conservative, non-overlapping fixed waits from the actual input path:
+        # ServicesProbe.press: .08s hold + .4s settle; capture: fresh 1.2s quiet.
+        # ReaderProbe context: .42s; picker chord: .04s + .4s, then quiet.
+        # Compute in centiseconds, independently of parser/execute budget values.
+        press, quiet, context, chord = 8 + 40, 120, 42, 4 + 40
+        row = press + quiet
+        home = (12 + 1 + 32) * press + quiet  # keyboard_home: Up, Down, Left.
+        typed = context + quiet + row + chord + quiet + quiet
+        untyped = context + quiet + row + quiet
+        index = READER_ROWS.index
+        percent = index("LANG_TTS_GOTO_PERCENT")
+        line, page = index("LANG_TTS_GOTO_LINE"), index("LANG_TTS_GOTO_PAGE")
+        find = index("LANG_TTS_FIND")
+        next_row, previous_row = index("LANG_TTS_FIND_NEXT"), index("LANG_TTS_FIND_PREVIOUS")
+        inventory = context + quiet + (len(READER_ROWS) - 1) * row + row
+        preferences = sum(context + quiet + index(identifier) * row + captures * row
+            for identifier, captures in (("LANG_TTS_SEARCH_CASE", 3),
+                ("LANG_TTS_SEARCH_WRAP", 3), ("LANG_TTS_SEARCH_CASE", 4)))
+
+        # D: common Stop branch, reader_regressions, five USB sites, list-policy
+        # toggles and music. Omit browsing, movement/deletion, speech and shutdown.
+        usb_sites = ("query", "numeric", "case", "wrap", "ask")
+        regression_percent = 8 + 2 * 2 + 3
+        regression_line = len(LINE_STARTS) + len(("", "0", "8", "18446744073709551616")) + 1 + 2
+        regression_page = len((1, 2, 4)) + 1 + 2
+        usb_percent = 2 * len(usb_sites) + 1
+        numeric = 6 + regression_percent + regression_line + regression_page + usb_percent + 2 + 2
+        numeric_rows = ((6 + regression_percent + usb_percent + 2 + 2) * percent +
+                        regression_line * line + regression_page * page)
+        complete_finds, usb_query_editors, usb_numeric_editors = 5 + 5, 2, 1
+        homes = numeric + complete_finds + usb_query_editors + usb_numeric_editors
+        # Only one numeric entry is empty. Count one character for every other
+        # numeric value; longer values and the music Find are deliberately omitted.
+        characters = (numeric - 1 + sum((4, 9, 4, 4, 4)) +
+                      sum((3, 3, 4, 0, 4)) + sum((3, 1, 4)))
+        d_floor = (homes * home + numeric_rows * row + numeric * typed +
+            (complete_finds + usb_query_editors) * find * row + complete_finds * typed +
+            usb_query_editors * (context + quiet + row) +
+            usb_numeric_editors * (context + quiet + line * row + row) +
+            (10 * next_row + previous_row) * row + 11 * untyped +
+            characters * row + inventory + preferences)
+        # A/B/C each contain this smaller common subset, regardless of wrap mode.
+        common_floor = (5 * (home + percent * row + typed) + 5 * row +
+            4 * (home + find * row + typed) + 21 * row +
+            2 * (next_row * row + untyped) + inventory + preferences)
+        heavy_stages = sum(next_case is None for _, _, _, next_case, _ in STAGES)
+        schedule_floor = len(("polski", "english")) * (
+            heavy_stages * d_floor + (len(STAGES) - heavy_stages) * common_floor)
+        self.assertEqual((d_floor, common_floor, schedule_floor), (370416, 60354, 1102956))
+
+        # Exercise the actual CLI defaults and dispatch, with all GUI execution
+        # replaced at its boundary. The self-test's unconditional Popen block stays.
+        with mock.patch.object(sys.modules[__name__], "execute", return_value=23) as requested:
+            self.assertEqual(main(["--execute"]), 23)
+        requested.assert_called_once()
+        arguments = requested.call_args.args[0]
+        self.assertEqual((arguments.execute, arguments.worker, arguments.self_test), (True, False, False))
+        with self.subTest(budget="session"):
+            self.assertGreater(arguments.session_budget * 100, d_floor)
+        with self.subTest(budget="overall"):
+            self.assertGreater(arguments.overall_timeout * 100, schedule_floor)
+        self.assertLessEqual(arguments.session_budget, arguments.overall_timeout)
+        self.assertLess(arguments.overall_timeout, float("inf"))
+
     def test_prepare_language_seeds_context_hold_profile_once(self):
         from tempfile import TemporaryDirectory
 
@@ -1442,8 +1507,8 @@ def parser():
     result.add_argument("--freeze-sha256")
     result.add_argument("--exe-sha256")
     result.add_argument("--timeout", type=float, default=45)
-    result.add_argument("--session-budget", type=float, default=3600)
-    result.add_argument("--overall-timeout", type=float, default=10800)
+    result.add_argument("--session-budget", type=float, default=10800)
+    result.add_argument("--overall-timeout", type=float, default=28800)
     result.add_argument("--desktop", help=argparse.SUPPRESS)
     result.add_argument("--gate", type=int, help=argparse.SUPPRESS)
     result.add_argument("--descriptor", type=Path, help=argparse.SUPPRESS)
