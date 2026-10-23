@@ -21,7 +21,8 @@ INPUTS = (
     "apps/accessibility_touch_wake.h",
     "apps/gui/bitmap/list.c", "apps/gui/list.c", "apps/gui/list.h",
     "apps/gui/viewport.c", "apps/tts_reader.c", "apps/settings.c",
-    "apps/settings.h", "apps/talk.h",
+    "apps/settings.h", "apps/talk.h", "apps/tts_reader_settings.h",
+    "lib/utf8proc/utf8proc.h",
     "apps/menus/settings_menu.c", "apps/SOURCES", "firmware/export/button.h",
     "firmware/export/touchscreen.h",
     "firmware/target/hosted/hiby/r1/button-target.h",
@@ -56,7 +57,7 @@ def balanced_definition(text, pattern):
 
 def function(text, name):
     return balanced_definition(text, r'^[ \t]*(?:static\s+)?(?:inline\s+)?'
-                               r'(?:bool|int|void|unsigned(?:\s+int)?|const\s+char\s*\*)\s*\b' + re.escape(name)
+                               r'(?:bool|int|void|uint64_t|unsigned(?:\s+int)?|const\s+char\s*\*)\s*\b' + re.escape(name)
                                + r'\s*\([^;{}]*\)\s*\{')
 
 
@@ -808,8 +809,6 @@ static size_t trace_length;
 static int explore_x, explore_y;
 static bool point_ready, point_force;
 static const char *last_error = "";
-typedef int32_t utf8proc_int32_t;
-typedef uint8_t utf8proc_uint8_t;
 static struct viewport *display_viewport;
 static int character_height = 10;
 static int drawn_rows;
@@ -1238,15 +1237,31 @@ def reader_harness(inputs, mutation=None):
         sync = function(reader, "reader_sync")
         modified = replace_once(sync, "reader->cursor = cursor;", "reader->cursor = reader->next;")
         reader = replace_once(reader, sync.strip(), modified.strip())
+    # These fixtures compile C99/C11, so use the real header's stdint types.
+    declarations = []
+    for underlying, alias in (("int32_t", "utf8proc_int32_t"),
+                              ("uint8_t", "utf8proc_uint8_t")):
+        definitions = re.findall(r"^typedef " + underlying + r"\s+" + alias + r";$",
+                                 inputs["lib/utf8proc/utf8proc.h"], re.MULTILINE)
+        if len(definitions) != 1:
+            raise AssertionError(f"Expected one C99 header declaration for {alias}")
+        declarations.append(definitions[0] + "\n")
+    declarations.append(without_includes(inputs["apps/tts_reader_settings.h"]))
     start = reader.index("#define READER_CHUNK_SIZE")
     end = reader.index("#if !defined(HIBY_R1)", start)
+    # This projection tests reader rendering/playback, not search-job ownership.
+    # Keep the actual types/size assertion, without unused production storage.
+    reader_types = replace_once(reader[start:end],
+                                "static struct reader_job reader_job;\n", "")
     names = (
-        "reader_unit", "reader_unit_label", "reader_percent", "reader_report_state",
+        "reader_unit", "reader_unit_label", "reader_percent_offset", "reader_percent",
+        "reader_report_state",
         "reader_label", "reader_load", "reader_audio_busy", "reader_sync",
         "reader_finish", "reader_step", "reader_interrupt", "reader_current_text",
         "reader_space", "reader_draw", "reader_explore",
     )
-    return (COMMON + "#define HAVE_TOUCHSCREEN\n" + reader[start:end] + READER_MOCKS
+    return (COMMON + "#define HAVE_TOUCHSCREEN\n" + "".join(declarations)
+            + reader_types + READER_MOCKS
             + function(inputs["apps/gui/viewport.c"], "viewport_point_within_vp")
             + "\n".join(function(reader, name) for name in names) + READER_CASES)
 
