@@ -33,6 +33,16 @@ def empty_feedback_policy():
 
 
 
+def reader_id2p_macro():
+    """Keep the production macro's operand precedence in the C fixture."""
+    settings = (ROOT / "apps/settings.h").read_text(encoding="utf-8")
+    definitions = re.findall(r'^#define ID2P\(id\) [^\n]*', settings,
+                             flags=re.MULTILINE)
+    if len(definitions) != 1:
+        raise RuntimeError("Expected one ID2P definition in apps/settings.h")
+    return definitions[0] + "\n"
+
+
 def reader_support_glue():
     """Only preferences/UI endpoints are scripted; decoder/matcher are actual C."""
     header = (ROOT / "apps/tts_reader_settings.h").read_text(encoding="utf-8")
@@ -265,7 +275,8 @@ struct text_bookmark { off_t offset; off_t size; uint32_t signature; int unit; }
 struct menu_item_ex { int unused; };
 const struct menu_item_ex tts_reader_settings_menu = {0};
 const struct menu_item_ex tts_settings_menu = {0};
-#define ID2P(identifier) ((char *)0x10000 + (identifier))
+#define VIRT_PTR ((char *)0x10000)
+""" + reader_id2p_macro() + r"""
 #define MENUITEM_STRINGLIST(name, ...) struct menu_item_ex name = {0}
 static int menu_choices[32];
 static int menu_count;
@@ -961,6 +972,35 @@ class TextReaderTests(unittest.TestCase):
         self.assertEqual(self.library.test_pending(), 1)
         self.assertEqual(self.library.test_position64(), 0)
         self.assertEqual(self.library.test_accepted_query(), b"")
+
+    def test_menu_invalid_text_announces_exact_label_and_preserves_position(self):
+        for row, text, prompt in ((7, "missing", b"Find"),
+                                  (10, "2", b"Go to line")):
+            with self.subTest(row=row):
+                self.reset(b"a" * 1600 + b"\xff\nlast")
+                self.configure_extended_reader()
+                self.library.test_cursor64(4)
+                self.assertFalse(self.reader_operation(row, text))
+                self.assertEqual(self.library.test_speech_count(), 2)
+                self.assertEqual([self.library.test_speech(index) for index in range(2)],
+                                 [prompt, b"Invalid text"])
+                self.assertEqual(self.library.test_position64(), 4)
+                self.assertEqual(self.library.test_accepted_query(), b"")
+
+    def test_menu_io_failure_announces_exact_label_and_preserves_position(self):
+        for row, text, prompt in ((7, "missing", b"Find"),
+                                  (10, "2", b"Go to line")):
+            with self.subTest(row=row):
+                self.reset(b"a" * 1600 + b"\nlast")
+                self.configure_extended_reader()
+                self.library.test_cursor64(4)
+                self.library.test_fail_after(768)
+                self.assertFalse(self.reader_operation(row, text))
+                self.assertEqual(self.library.test_speech_count(), 2)
+                self.assertEqual([self.library.test_speech(index) for index in range(2)],
+                                 [prompt, b"Text operation failed; position unchanged"])
+                self.assertEqual(self.library.test_position64(), 4)
+                self.assertEqual(self.library.test_accepted_query(), b"")
 
     def test_menu_usb_edit_confirmation_and_preferences_do_not_commit(self):
         self.reset(b"abc abc")

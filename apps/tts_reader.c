@@ -1487,8 +1487,11 @@ static bool reader_menu(struct text_reader *reader)
             if (status == READER_CANCELLED || status > 0 || usb)
                 break;
             if (status < 0)
-                splash(HZ * 2, ID2P(status == READER_INVALID_TEXT ?
-                    LANG_TTS_INVALID_TEXT : LANG_TTS_OPERATION_FAILED));
+            {
+                int message = status == READER_INVALID_TEXT ?
+                    LANG_TTS_INVALID_TEXT : LANG_TTS_OPERATION_FAILED;
+                splash(HZ * 2, ID2P(message));
+            }
         }
         else if (choice == 13 || choice == 14)
             usb = reader_preference_menu(choice == 13);
