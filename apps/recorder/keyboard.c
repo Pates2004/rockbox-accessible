@@ -470,8 +470,10 @@ static void kbd_move_picker_horizontal(struct keyboard_parameters *pm,
 static void kbd_move_picker_vertical(struct keyboard_parameters *pm,
                                      struct edit_state *state, int dir);
 
-int kbd_input(char* text, int buflen, ucschar_t *kbd)
+int kbd_input_ex(char *text, int buflen, ucschar_t *kbd, bool *usb_connected)
 {
+    if (usb_connected)
+        *usb_connected = false;
     bool done = false;
     uint32_t blink_tick = (uint32_t)current_tick;
     struct keyboard_parameters * const param = kbd_param;
@@ -946,6 +948,12 @@ int kbd_input(char* text, int buflen, ucschar_t *kbd)
                 {
                     FOR_NB_SCREENS(l)
                         screens[l].setfont(FONT_SYSFIXED);
+                    if (usb_connected)
+                    {
+                        *usb_connected = true;
+                        ret = -1;
+                        done = true;
+                    }
 #if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
                     if (accessibility_typing_active())
                     {
@@ -2113,4 +2121,10 @@ static void kbd_move_picker_vertical(struct keyboard_parameters *pm,
     {
         pm->line_edit = true;
     }
+}
+
+/* Preserve the existing core and plugin function-pointer contract. */
+int kbd_input(char *text, int buflen, ucschar_t *kbd)
+{
+    return kbd_input_ex(text, buflen, kbd, NULL);
 }

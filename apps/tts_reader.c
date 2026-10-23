@@ -5,6 +5,10 @@
 #include <string.h>
 #include "system.h"
 #include "kernel.h"
+#include "rbunicode.h"
+#include "keyboard.h"
+#include "tts_reader_settings.h"
+#include "yesno.h"
 #include "file.h"
 #include "action.h"
 #include "button.h"
@@ -34,6 +38,43 @@
 #define READER_INVALID_TEXT (-2)
 #define READER_CANCELLED (-3)
 
+#define READER_QUERY_BYTES 128
+#define READER_RESULT_BYTES 1024
+
+struct text_reader;
+struct reader_job
+{
+    struct text_reader *owner;
+    char accepted_query[READER_QUERY_BYTES + 1];
+    char edit[READER_QUERY_BYTES + 1];
+    union
+    {
+        struct
+        {
+            utf8proc_int32_t pattern[READER_QUERY_BYTES];
+            uint8_t prefix[READER_QUERY_BYTES];
+            off_t starts[READER_QUERY_BYTES];
+        } matcher;
+        struct
+        {
+            char chunk[READER_CHUNK_SIZE + 1];
+            char result[READER_RESULT_BYTES];
+        } staging;
+    } scratch;
+    struct tts_reader_preferences preferences;
+    off_t target;
+    off_t next;
+    int length;
+    size_t result_length;
+    unsigned int pattern_length;
+    bool new_query;
+    bool ready;
+};
+
+/* Owned by the main UI reader for its entire lifetime, including nested menus. */
+static struct reader_job reader_job;
+typedef char reader_job_must_fit[(sizeof(struct reader_job) <= 2304) ? 1 : -1];
+
 enum reader_state
 {
     READER_READING,
@@ -59,6 +100,7 @@ struct text_reader
     int touch_lines;
     int touch_row;
 #endif
+    struct reader_job *job;
     const char *path;
     const char *name;
     int descriptor;
@@ -579,11 +621,33 @@ static int reader_seek_unit(struct text_reader *reader, bool forward,
     }
 }
 
+/* Both products are bounded by size, including signed 64-bit file offsets. */
+static uint64_t reader_percent_offset(uint64_t size, unsigned int percent,
+                                      bool round_up)
+{
+    return (size / 100) * percent +
+        ((size % 100) * percent + (round_up ? 99 : 0)) / 100;
+}
+
 static unsigned int reader_percent(const struct text_reader *reader)
 {
     if (reader->size <= 0)
         return reader->state == READER_FINISHED ? 100 : 0;
-    return (uint64_t)reader->cursor * 100 / reader->size;
+    if (reader->cursor <= 0)
+        return 0;
+    if (reader->cursor >= reader->size)
+        return 100;
+    unsigned int low = 0, high = 100;
+    while (low < high)
+    {
+        unsigned int middle = low + (high - low + 1) / 2;
+        if ((uint64_t)reader->cursor >=
+            reader_percent_offset((uint64_t)reader->size, middle, true))
+            low = middle;
+        else
+            high = middle - 1;
+    }
+    return low;
 }
 
 static void reader_report_state(const struct text_reader *reader)
@@ -930,6 +994,433 @@ static int reader_property_speak(int selected, void *data)
     return tts_speak(buffer, strlen(buffer), false);
 }
 
+
+static bool reader_job_acquire(struct text_reader *reader)
+{
+    if (reader_job.owner)
+        return false;
+    /* No yield between ownership check and assignment: main UI context only. */
+    memset(&reader_job, 0, sizeof(reader_job));
+    reader_job.owner = reader;
+    reader->job = &reader_job;
+    return true;
+}
+
+static void reader_job_release(struct text_reader *reader)
+{
+    if (reader->job && reader->job->owner == reader)
+    {
+        reader->job->owner = NULL;
+        reader->job = NULL;
+    }
+}
+
+static size_t reader_preview_length(const char *text, size_t length)
+{
+    size_t position = 0;
+    while (position < length)
+    {
+        utf8proc_int32_t codepoint;
+        int width = utf8proc_iterate((const utf8proc_uint8_t *)text + position,
+                                     length - position, &codepoint);
+        if (width <= 0 || reader_newline(codepoint) ||
+            (reader_unit() == READER_WORD && reader_space(codepoint)))
+            break;
+        position += width;
+    }
+    return position;
+}
+
+static int reader_compile_query(struct reader_job *job, const char *query)
+{
+    size_t bytes = strlen(query), position = 0;
+    job->pattern_length = 0;
+    if (!bytes || bytes > READER_QUERY_BYTES)
+        return READER_INVALID_TEXT;
+    while (position < bytes)
+    {
+        utf8proc_int32_t codepoint;
+        int width = utf8proc_iterate((const utf8proc_uint8_t *)query + position,
+                                     bytes - position, &codepoint);
+        if (width <= 0 || !reader_valid(codepoint) ||
+            job->pattern_length == READER_QUERY_BYTES)
+            return READER_INVALID_TEXT;
+        job->scratch.matcher.pattern[job->pattern_length++] =
+            job->preferences.match_case ? codepoint : utf8proc_tolower(codepoint);
+        position += width;
+    }
+    job->scratch.matcher.prefix[0] = 0;
+    unsigned int matched = 0;
+    for (unsigned int index = 1; index < job->pattern_length; ++index)
+    {
+        while (matched && job->scratch.matcher.pattern[index] !=
+               job->scratch.matcher.pattern[matched])
+            matched = job->scratch.matcher.prefix[matched - 1];
+        if (job->scratch.matcher.pattern[index] ==
+            job->scratch.matcher.pattern[matched])
+            ++matched;
+        job->scratch.matcher.prefix[index] = matched;
+    }
+    return 0;
+}
+
+/* Eligibility constrains match STARTS, with bounded lookahead past hi.
+ * A forward pass can also retain the last match for Previous. */
+static int reader_search_range(struct text_reader *reader, off_t low, off_t high,
+                               bool previous, off_t *target)
+{
+    struct reader_job *job = reader->job;
+    if (low >= high)
+        return 0;
+    unsigned int matched = 0, ring = 0;
+    off_t position = low;
+    bool found = false;
+    while (position < reader->size)
+    {
+        if (position >= high &&
+            (!matched || job->scratch.matcher.starts[
+                (ring + READER_QUERY_BYTES - matched) % READER_QUERY_BYTES] >= high))
+            break;
+        utf8proc_int32_t codepoint;
+        int width = reader_decode(reader, position, &codepoint);
+        if (width < 0)
+            return width;
+        job->scratch.matcher.starts[ring] = position;
+        ring = (ring + 1) % READER_QUERY_BYTES;
+        if (!job->preferences.match_case)
+            codepoint = utf8proc_tolower(codepoint);
+        while (matched && codepoint != job->scratch.matcher.pattern[matched])
+            matched = job->scratch.matcher.prefix[matched - 1];
+        if (codepoint == job->scratch.matcher.pattern[matched])
+            ++matched;
+        if (matched == job->pattern_length)
+        {
+            off_t start = job->scratch.matcher.starts[
+                (ring + READER_QUERY_BYTES - matched) % READER_QUERY_BYTES];
+            if (start >= low && start < high)
+            {
+                *target = start;
+                found = true;
+                if (!previous)
+                    return 1;
+            }
+            matched = job->scratch.matcher.prefix[matched - 1];
+        }
+        position += width;
+    }
+    return found ? 1 : 0;
+}
+
+static int reader_stage_result(struct text_reader *reader, off_t target,
+                               int label, const char *value)
+{
+    struct reader_job *job = reader->job;
+    job->target = target;
+    job->length = reader_read_chunk(reader->descriptor, target, reader->size,
+                                    job->scratch.staging.chunk, &job->next);
+    if (job->length < 0)
+        return job->length;
+    char *result = job->scratch.staging.result;
+    int length = snprintf(result, READER_RESULT_BYTES, "%s%s%s",
+                          str(label), value ? ": " : "", value ? value : "");
+    if (length <= 0 || length >= READER_RESULT_BYTES)
+        return READER_INVALID_TEXT;
+    size_t used = length;
+    size_t preview = reader_preview_length(job->scratch.staging.chunk, job->length);
+    if (preview && used + 2 < READER_RESULT_BYTES)
+    {
+        result[used++] = '.';
+        result[used++] = ' ';
+        size_t position = 0;
+        while (position < preview)
+        {
+            utf8proc_int32_t codepoint;
+            int width = utf8proc_iterate(
+                (const utf8proc_uint8_t *)job->scratch.staging.chunk + position,
+                preview - position, &codepoint);
+            if (width <= 0 || used + width >= READER_RESULT_BYTES)
+                break;
+            memcpy(result + used, job->scratch.staging.chunk + position, width);
+            used += width;
+            position += width;
+        }
+    }
+    result[used] = '\0';
+    job->result_length = used;
+    job->ready = true;
+    return 1;
+}
+
+static int reader_commit_result(struct text_reader *reader)
+{
+    struct reader_job *job = reader->job;
+    if (!job->ready)
+        return 0;
+    job->ready = false;
+    reader->scanning = true;
+    reader->scan_work = READER_SCAN_BUDGET - 1;
+    int status = reader_checkpoint(reader);
+    reader->scanning = false;
+    if (status < 0)
+        return status;
+    if (tts_speak(job->scratch.staging.result, job->result_length, false) != 0)
+        return READER_READ_ERROR;
+    /* Queue acceptance is the transaction boundary, not proof of hearing. */
+    reader->cursor = reader->start = job->target;
+    DEBUGF("TTS reader cursor: %llu\n", (unsigned long long)reader->cursor);
+    reader->next = job->next;
+    reader->length = job->length;
+    memcpy(reader->text, job->scratch.staging.chunk, job->length + 1);
+    reader->loaded = true;
+    reader->submitted = false;
+    reader->feedback = true;
+    reader->dirty = true;
+    reader->state = job->target == reader->size ? READER_FINISHED : READER_PAUSED;
+    if (job->new_query)
+        memcpy(job->accepted_query, job->edit, strlen(job->edit) + 1);
+    reader_report_state(reader);
+    return 1;
+}
+
+static int reader_search(struct text_reader *reader, int direction, bool new_query,
+                         bool *usb)
+{
+    struct reader_job *job = reader->job;
+    job->ready = false;
+    job->new_query = new_query;
+    if (new_query)
+    {
+        memcpy(job->edit, job->accepted_query, sizeof(job->edit));
+        splash(HZ, ID2P(LANG_TTS_FIND));
+        if (kbd_input_ex(job->edit, sizeof(job->edit), NULL, usb) != 0)
+            return 0;
+    }
+    else if (!job->accepted_query[0])
+    {
+        splash(HZ * 2, ID2P(LANG_TTS_QUERY_REQUIRED));
+        return 0;
+    }
+    if (tts_reader_preferences_get(&job->preferences))
+    {
+        splash(HZ * 2, ID2P(LANG_TTS_READER_STORAGE_ERROR));
+        if (job->preferences.cleanup_error)
+            splash(HZ * 2, ID2P(LANG_TTS_READER_TEMP_ERROR));
+    }
+    int status = reader_compile_query(job, new_query ? job->edit : job->accepted_query);
+    if (status < 0)
+    {
+        splash(HZ * 2, ID2P(LANG_TTS_QUERY_INVALID));
+        return 0;
+    }
+    reader->scanning = true;
+    reader->scan_work = 0;
+    status = reader_prepare(reader);
+    off_t boundary = reader->cursor;
+    bool previous = direction < 0, wrapped = false;
+    if (status >= 0 && direction > 0 && boundary < reader->size)
+    {
+        utf8proc_int32_t codepoint;
+        status = reader_decode(reader, boundary, &codepoint);
+        if (status > 0)
+            boundary += status;
+    }
+    off_t target = reader->cursor;
+    if (status >= 0)
+        status = reader_search_range(reader, previous ? reader->first : boundary,
+                                      previous ? boundary : reader->size,
+                                      previous, &target);
+    if (status == 0 && job->preferences.wrap != TTS_READER_WRAP_STOP)
+    {
+        bool wrap = job->preferences.wrap == TTS_READER_WRAP_AUTO;
+        if (!wrap)
+        {
+            const char *question = (const char *)str(LANG_TTS_WRAP_QUESTION);
+            const struct text_message message = { &question, 1 };
+            enum yesno_res answer = gui_syncyesno_run(&message, NULL, NULL);
+            *usb = answer == YESNO_USB;
+            wrap = answer == YESNO_YES;
+        }
+        if (wrap && !*usb)
+        {
+            wrapped = true;
+            status = reader_search_range(reader, previous ? boundary : reader->first,
+                                          previous ? reader->size : boundary,
+                                          previous, &target);
+        }
+    }
+    if (status > 0)
+        status = reader_stage_result(reader, target, wrapped ?
+            LANG_TTS_FOUND_WRAPPED : LANG_TTS_FOUND, NULL);
+    reader->scanning = false;
+    if (status == 0 && !*usb)
+        splash(HZ * 2, ID2P(LANG_TTS_NO_MORE_MATCHES));
+    return status;
+}
+
+static bool reader_decimal(const char *text, uint64_t *value)
+{
+    *value = 0;
+    if (!*text)
+        return false;
+    while (*text)
+    {
+        if (*text < '0' || *text > '9')
+            return false;
+        unsigned int digit = *text++ - '0';
+        if (*value > (UINT64_MAX - digit) / 10)
+            return false;
+        *value = *value * 10 + digit;
+    }
+    return true;
+}
+
+static int reader_ordinal(struct text_reader *reader, uint64_t ordinal,
+                          bool page, off_t *target)
+{
+    if (!ordinal)
+        return 0;
+    int lines = page ? global_settings.tts_reader_page_lines : 1;
+    if (lines < 1 || lines > 100)
+        lines = 20;
+    off_t position = reader->first;
+    uint64_t current = 1;
+    int count = 0;
+    while (position < reader->size)
+    {
+        if (current == ordinal)
+        {
+            *target = position;
+            return 1;
+        }
+        bool blank;
+        int status = reader_line_after(reader, position, &position, &blank);
+        if (status < 0)
+            return status;
+        if (++count == lines)
+        {
+            count = 0;
+            if (current == UINT64_MAX)
+                return READER_READ_ERROR;
+            ++current;
+        }
+    }
+    return 0;
+}
+
+static int reader_percentage(struct text_reader *reader, unsigned int percent,
+                             off_t *target)
+{
+    if (percent > 100)
+        return 0;
+    if (!percent || reader->first == reader->size)
+    {
+        *target = percent == 100 ? reader->size : reader->first;
+        return 1;
+    }
+    if (percent == 100)
+    {
+        *target = reader->size;
+        return 1;
+    }
+    off_t position = reader_percent_offset((uint64_t)reader->size, percent, false);
+    if (position < reader->first)
+        position = reader->first;
+    off_t original = position;
+    int value = reader_byte(reader, position);
+    if (value < 0)
+        return value;
+    while ((value & 0xc0) == 0x80 && position > reader->first &&
+           original - position < 3)
+    {
+        value = reader_byte(reader, --position);
+        if (value < 0)
+            return value;
+    }
+    utf8proc_int32_t codepoint;
+    int width = reader_decode(reader, position, &codepoint);
+    if (width < 0)
+        return width;
+    if (width == 0 || original - position >= width)
+        return READER_INVALID_TEXT;
+    if (codepoint == '\n' && position > reader->first)
+    {
+        value = reader_byte(reader, position - 1);
+        if (value < 0)
+            return value;
+        if (value == '\r')
+            --position;
+    }
+    *target = position;
+    return 1;
+}
+
+static int reader_go_to(struct text_reader *reader, int kind, bool *usb)
+{
+    static ucschar_t digits[] = {
+        10, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 0xfeff
+    };
+    static const int labels[] = {
+        LANG_TTS_GOTO_LINE, LANG_TTS_GOTO_PAGE, LANG_TTS_GOTO_PERCENT
+    };
+    struct reader_job *job = reader->job;
+    job->ready = job->new_query = false;
+    job->edit[0] = '\0';
+    splash(HZ, ID2P(labels[kind]));
+    if (kbd_input_ex(job->edit, 21, digits, usb) != 0)
+        return 0;
+    uint64_t value;
+    if (!reader_decimal(job->edit, &value) ||
+        (kind == 2 ? value > 100 : value == 0))
+    {
+        splash(HZ * 2, ID2P(LANG_TTS_DESTINATION_INVALID));
+        return 0;
+    }
+    reader->scanning = true;
+    reader->scan_work = 0;
+    int status = reader_prepare(reader);
+    off_t target = reader->cursor;
+    if (status >= 0)
+        status = kind == 2 ? reader_percentage(reader, value, &target) :
+            reader_ordinal(reader, value, kind == 1, &target);
+    if (status > 0)
+        status = reader_stage_result(reader, target, labels[kind], job->edit);
+    reader->scanning = false;
+    if (status == 0)
+        splash(HZ * 2, ID2P(LANG_TTS_DESTINATION_INVALID));
+    return status;
+}
+
+static bool reader_preference_menu(bool match_case)
+{
+    MENUITEM_STRINGLIST(case_menu, ID2P(LANG_TTS_SEARCH_CASE), NULL,
+                        ID2P(LANG_TTS_IGNORE_CASE), ID2P(LANG_TTS_MATCH_CASE));
+    MENUITEM_STRINGLIST(wrap_menu, ID2P(LANG_TTS_SEARCH_WRAP), NULL,
+                        ID2P(LANG_TTS_WRAP_STOP), ID2P(LANG_TTS_WRAP_ASK),
+                        ID2P(LANG_TTS_WRAP_AUTO));
+    struct tts_reader_preferences preferences;
+    if (tts_reader_preferences_get(&preferences))
+    {
+        splash(HZ * 2, ID2P(LANG_TTS_READER_STORAGE_ERROR));
+        if (preferences.cleanup_error)
+            splash(HZ * 2, ID2P(LANG_TTS_READER_TEMP_ERROR));
+    }
+    int selected = match_case ? preferences.match_case : (int)preferences.wrap;
+    int choice = do_menu(match_case ? &case_menu : &wrap_menu, &selected, NULL, false);
+    if (choice == MENU_ATTACHED_USB)
+        return true;
+    /* selected is a cursor, including on Cancel; only choice is acceptance. */
+    if (choice >= 0 && choice < (match_case ? 2 : 3) &&
+        tts_reader_preferences_set(match_case ? TTS_READER_PREF_MATCH_CASE :
+                                   TTS_READER_PREF_WRAP, choice))
+    {
+        tts_reader_preferences_get(&preferences);
+        splash(HZ * 2, ID2P(LANG_TTS_READER_STORAGE_ERROR));
+        if (preferences.cleanup_error)
+            splash(HZ * 2, ID2P(LANG_TTS_READER_TEMP_ERROR));
+    }
+    return false;
+}
+
 static bool reader_menu(struct text_reader *reader)
 {
     extern const struct menu_item_ex tts_reader_settings_menu;
@@ -938,7 +1429,11 @@ static bool reader_menu(struct text_reader *reader)
                         ID2P(LANG_TTS_RESUME), ID2P(LANG_BOOKMARK_MENU),
                         ID2P(LANG_PROPERTIES), ID2P(LANG_TTS_BEGINNING),
                         ID2P(LANG_TTS_END), ID2P(LANG_TTS_READER_SETTINGS),
-                        ID2P(LANG_TTS));
+                        ID2P(LANG_TTS), ID2P(LANG_TTS_FIND),
+                        ID2P(LANG_TTS_FIND_NEXT), ID2P(LANG_TTS_FIND_PREVIOUS),
+                        ID2P(LANG_TTS_GOTO_LINE), ID2P(LANG_TTS_GOTO_PAGE),
+                        ID2P(LANG_TTS_GOTO_PERCENT), ID2P(LANG_TTS_SEARCH_CASE),
+                        ID2P(LANG_TTS_SEARCH_WRAP));
     bool finished = reader->state == READER_FINISHED;
     reader_interrupt(reader);
     if (finished || (reader->initialized && reader->cursor == reader->size))
@@ -946,6 +1441,7 @@ static bool reader_menu(struct text_reader *reader)
     action_wait_for_release();
     int selected = 0;
     bool usb = false;
+    reader->job->ready = false;
     while (!usb)
     {
         int choice = do_menu(&menu, &selected, NULL, false);
@@ -982,27 +1478,36 @@ static bool reader_menu(struct text_reader *reader)
         else if (choice == 5 || choice == 6)
             usb = do_menu(choice == 5 ? &tts_reader_settings_menu :
                           &tts_settings_menu, NULL, NULL, false) == MENU_ATTACHED_USB;
+        else if (choice >= 7 && choice <= 12)
+        {
+            int status = choice <= 9 ?
+                reader_search(reader, choice == 7 ? 0 : choice == 8 ? 1 : -1,
+                              choice == 7, &usb) :
+                reader_go_to(reader, choice - 10, &usb);
+            if (status == READER_CANCELLED || status > 0 || usb)
+                break;
+            if (status < 0)
+                splash(HZ * 2, ID2P(status == READER_INVALID_TEXT ?
+                    LANG_TTS_INVALID_TEXT : LANG_TTS_OPERATION_FAILED));
+        }
+        else if (choice == 13 || choice == 14)
+            usb = reader_preference_menu(choice == 13);
     }
     talk_force_shutup();
     action_wait_for_release();
+    if (!usb && reader->job->ready)
+    {
+        int status = reader_commit_result(reader);
+        if (status < 0 && status != READER_CANCELLED)
+            splash(HZ * 2, ID2P(LANG_TTS_OPERATION_FAILED));
+    }
     reader->dirty = true;
     return usb;
 }
 
 static size_t reader_feedback_length(const struct text_reader *reader)
 {
-    size_t position = 0;
-    while (position < (size_t)reader->length)
-    {
-        utf8proc_int32_t codepoint;
-        int width = utf8proc_iterate((const utf8proc_uint8_t *)reader->text + position,
-                                     reader->length - position, &codepoint);
-        if (width <= 0 || reader_newline(codepoint) ||
-            (reader_unit() == READER_WORD && reader_space(codepoint)))
-            break;
-        position += width;
-    }
-    return position;
+    return reader_preview_length(reader->text, reader->length);
 }
 
 static void reader_navigate(struct text_reader *reader, bool forward)
@@ -1231,7 +1736,10 @@ static void reader_cleanup(void *context)
 {
     struct text_reader *reader = context;
     if (!reader->active)
+    {
+        reader_job_release(reader);
         return;
+    }
 #ifdef HAVE_TOUCHSCREEN
     accessibility_reset();
 #endif
@@ -1248,19 +1756,27 @@ static void reader_cleanup(void *context)
         viewportmanager_theme_undo(screen_index, true);
     }
     reader->active = false;
+    /* Release LAST: normal cleanup may yield through speech/views/files. */
+    reader_job_release(reader);
 }
 
 static bool reader_open_file(const char *path,
                               const struct text_bookmark *bookmark)
 {
     struct text_reader reader = { .descriptor = -1, .state = READER_READING };
+    bool usb = false;
+    int preparation_status;
+    if (!path)
+        return false;
+    if (!reader_job_acquire(&reader))
+    {
+        splash(HZ * 2, ID2P(LANG_TTS_READER_BUSY));
+        return false;
+    }
 #ifdef HAVE_TOUCHSCREEN
     reader.touch_row = -2;
     accessibility_set_target(&reader);
 #endif
-    bool usb = false;
-    if (!path)
-        return false;
     const char *separator = strrchr(path, '/');
     reader.path = path;
     reader.name = separator ? separator + 1 : path;
@@ -1286,6 +1802,9 @@ static bool reader_open_file(const char *path,
             reader.size = 0;
             reader_fail(&reader, LANG_READ_FAILED);
         }
+        /* Establish BOM/content origin before speech busy can defer reader_step. */
+        else if ((preparation_status = reader_prepare(&reader)) < 0)
+            reader_read_failed(&reader, preparation_status);
         else if (bookmark && !reader_restore_bookmark(&reader, bookmark))
             reader_fail(&reader, LANG_TTS_BOOKMARK_CHANGED);
         else

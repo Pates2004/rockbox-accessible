@@ -256,6 +256,8 @@ const char *echo_probe_text(int index)
 { assert(index >= 0 && index < echo_event_count); return echo_events[index].text; }
 int echo_probe_run(char *text, int capacity, const uint16_t *layout)
 { return kbd_input(text, capacity, (ucschar_t *)layout); }
+int echo_probe_run_ex(char *text, int capacity, const uint16_t *layout, bool *usb)
+{ return kbd_input_ex(text, capacity, (ucschar_t *)layout, usb); }
 void echo_probe_script_clear(void)
 {
     assert(action_count < 1024);

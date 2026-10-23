@@ -115,6 +115,10 @@ class ClipplusPackageTests(unittest.TestCase):
         for prefix in ('.rockbox/', '.rockbox/cache/'):
             for name in ('accessibility.cfg', 'ACCESSIBILITY.CFG',
                          'accessibility-screen.cfg', 'ACCESSIBILITY-SCREEN.CFG',
+                         'tts-reader.cfg', 'TTS-READER.CFG', 'Tts-Reader.Cfg',
+                         'tts-reader.cfg.tmp', 'TTS-READER.CFG.NEW', 'tts-reader.cfg.future', 'Tts-Reader.Cfg.BaK',
+                         'bluetooth.cfg', 'BLUETOOTH.CFG', 'BlueTooth.Cfg',
+                         'bluetooth.cfg.tmp', 'BLUETOOTH.CFG.NEW', 'bluetooth.cfg.future', 'BlueTooth.Cfg.BaK',
                          'empty-feedback.cfg', 'EMPTY-FEEDBACK.CFG', 'Empty-Feedback.Cfg',
                          'empty-feedback.cfg.tmp', 'EMPTY-FEEDBACK.CFG.NEW', 'empty-feedback.cfg.future',
                          'Empty-Feedback.Cfg.BaK',

@@ -157,6 +157,7 @@ class WindowsBackend:
             "Left": (0x25, 0x4B, True), "Right": (0x27, 0x4D, True),
             "Insert": (0x2D, 0x52, True), "space": (0x20, 0x39, False),
             "Escape": (0x1B, 0x01, False),
+            "c": (0x43, 0x2E, False),  # Owned-HWND simulator USB toggle only.
         }[key]
         flags = 1 | (scan_code << 16) | (int(extended) << 24)
         if not pressed:

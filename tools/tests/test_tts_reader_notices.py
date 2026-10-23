@@ -24,7 +24,7 @@ from project_materials import confined_path, project_materials_root
 ROOT = Path(__file__).resolve().parents[2]
 INPUTS = (
     "apps/tts.c", "apps/tts.h", "apps/voice_thread.c", "apps/voice_thread.h",
-    "apps/tts_reader.c", "apps/talk.c", "apps/accessibility_screen.c",
+    "apps/tts_reader.c", "apps/tts_reader_settings.h", "apps/talk.c", "apps/accessibility_screen.c",
     "apps/accessibility.c", "apps/accessibility.h",
     "apps/gui/list.c", "apps/gui/list.h", "apps/settings.h",
     "lib/utf8proc/utf8proc.c", "lib/utf8proc/utf8proc.h",
@@ -33,6 +33,7 @@ INPUTS = (
     "tools/project_materials.py", "tools/tests/test_tts_reader_notices.py",
 )
 SCENARIOS = (
+    "reader_search_result_queue", "reader_search_result_rejected",
     "repeat_time", "time_then_lock", "time_then_unlock", "loop_time", "loop_lock",
     "bookmark", "notice_paused", "pending_cancel", "paused_unstarted",
     "active_synthesis", "utf8_repeated", "stale_callbacks", "stale_clock_generation",
@@ -320,6 +321,10 @@ static unsigned int synth_calls;
 static void (*synthesis_hook)(void);
 static struct synthesis_context saved_context;
 static char saved_text[TTS_TEXT_SIZE];
+/* Observe every synthesis separately; stale tracked callback tests keep saved_text. */
+static char synthesized_text[TTS_TEXT_SIZE];
+static bool synthesized_tracked;
+static unsigned int synthesized_text_count;
 static bool loop_mode;
 static int loop_index;
 static int loop_kind;
@@ -440,6 +445,9 @@ int rb_espeak_synth_tracked(const char *text, const char *language,
     (void)language; (void)variant; (void)rate; (void)pitch; (void)volume;
     (void)range; (void)wordgap; (void)punctuation;
     ++synth_calls;
+    snprintf(synthesized_text, sizeof(synthesized_text), "%s", text);
+    synthesized_tracked = position_callback != NULL;
+    ++synthesized_text_count;
     if (position_callback)
     {
         position_callback(1, 0, context);
@@ -543,6 +551,9 @@ static void setup(void)
     global_settings.tts_enabled = true;
     global_settings.tts_announce_position = TTS_POSITION_OFF;
     generation = pending_count = queue_head = 0;
+    synthesized_text[0] = '\0';
+    synthesized_tracked = false;
+    synthesized_text_count = 0;
     read_mark_count = read_mark_cursor = read_offset = 0;
     need_shutup = force_enqueue_next = false;
     for (size_t index = 0; index < ARRAYLEN(voice_offsets); ++index) voice_offsets[index] = UINT32_MAX;
@@ -709,7 +720,42 @@ int main(int argc, char **argv)
     assert(argc == 2);
     const char *scenario = argv[1];
     setup();
-    if (!strncmp(scenario, "screen_", 7))
+    if (!strcmp(scenario, "reader_search_result_queue"))
+    {
+        start_reader();
+        test_edit("one", 0, false);
+        test_menu_choice(7);
+        assert(!reader_menu(&reader));
+        assert(reader.cursor == 4 && reader.state == READER_PAUSED);
+        assert(!reader.submitted && reader.feedback && pending_count == 1);
+        assert(!strcmp(reader.job->accepted_query, "one"));
+        unsigned int before_result = synthesized_text_count;
+        run_worker(1);
+        assert(synthesized_text_count == before_result + 1 && !synthesized_tracked);
+        assert(strstr(synthesized_text, "Text found") && voice_unplayed_frames() > 0);
+        assert(!strncmp(saved_text, "one ", 4)); /* tracked callback context stays intact */
+        drain_pcm();
+        reader_step(&reader);
+        assert(reader.cursor == 4 && reader.state == READER_PAUSED);
+        reader_toggle(&reader);
+        reader_step(&reader);
+        assert(reader.submitted && tts_read_position() == 0);
+    }
+    else if (!strcmp(scenario, "reader_search_result_rejected"))
+    {
+        start_reader();
+        reader_interrupt(&reader);
+        strcpy(reader.job->accepted_query, "one");
+        strcpy(reader.job->edit, "ne");
+        reader.job->new_query = true;
+        assert(reader_stage_result(&reader, 5, LANG_TTS_FOUND, NULL) == 1);
+        talk_force_shutup();
+        global_settings.tts_enabled = false;
+        assert(reader_commit_result(&reader) < 0);
+        assert(reader.cursor == 4 && !reader.job->ready && !pending_count);
+        assert(!strcmp(reader.job->accepted_query, "one"));
+    }
+    else if (!strncmp(scenario, "screen_", 7))
         screen_notice_scenario(scenario);
     else if (!strncmp(scenario, "status_", 7))
     {

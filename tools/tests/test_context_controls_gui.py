@@ -376,9 +376,9 @@ class RapidWrapGuiProtocolTests(unittest.TestCase):
 
 
 class ContextGuiProtocolTests(unittest.TestCase):
-    def test_phase_and_eleven_talkbox_rows_are_pinned_to_current_alpha17(self):
-        self.assertEqual(services.SCOPE, "publication-position-20261021/services-gui")
-        self.assertEqual(services.EXPECTED_VERSION, "0ed3734e5e-espeak-r34-hibyr1-win-alpha17-20261021")
+    def test_phase_and_eleven_talkbox_rows_are_pinned_to_current_version(self):
+        self.assertEqual(services.SCOPE, "reader-tr01-tr05-20261023/services-gui")
+        self.assertEqual(services.EXPECTED_VERSION, "0ed3734e5e-espeak-r34-hibyr1-win-alpha18-20261023")
         self.assertEqual(services.TALKBOX_ROWS, (
             "LANG_TTS", "LANG_TTS_ENABLED", "LANG_TTS_DUCKING", "LANG_TTS_DUCKING_LEVEL",
             "LANG_TTS_READER_SETTINGS", "LANG_ACCESSIBILITY", "LANG_ACCESSIBILITY_DISPLAY_SETTINGS",

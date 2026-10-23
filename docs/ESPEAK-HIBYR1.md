@@ -41,6 +41,13 @@ This target reuses our shared eSpeak 1.44.05 r34, speech queue, text reader and
 text/audio bookmark integration. It is not a rewritten reader or a substitute
 system synthesizer. The R1 build is a Linux application, not bare-metal firmware.
 
+The shared reader provides Find, Find next, Find previous and
+typed line, page and percentage destinations in Text options. Hold Next to open
+that menu, then use the existing menu and typing controls. Its separate saved
+search choices default to Ignore case and Stop and announce. See
+[Talkbox settings](ESPEAK-ROCKBOX.md) for all case and wrap choices, and
+[text reading and bookmarks](ESPEAK-BOOKMARKS.md) for the detailed behavior.
+
 Battery life and available RAM have not been measured on the native device
 by this project. A successful MIPS build or Windows simulator is not hardware
 acceptance. The core arena remains 15 MiB; the device's nominal 64 MB is not a

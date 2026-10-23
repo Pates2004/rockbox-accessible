@@ -221,7 +221,7 @@ def main():
     if arguments.target == "sansaclipzip":
         version = "0ed3734e5e-espeak-r29-clipzip-" + ("win-" if windows else "") + "alpha8-20261011"
     elif arguments.target == "hibyr1":
-        version = "0ed3734e5e-espeak-r34-hibyr1-" + ("win-alpha17-20261021" if windows else "alpha14-20261021")
+        version = "0ed3734e5e-espeak-r34-hibyr1-" + ("win-alpha18-20261023" if windows else "alpha15-20261023")
     environment = dict(os.environ, OMP_NUM_THREADS=str(arguments.jobs), VERSION=version)
     sdk = arguments.sdl_sdk.resolve()
     if windows:

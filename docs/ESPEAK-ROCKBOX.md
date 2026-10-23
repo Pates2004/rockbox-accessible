@@ -54,3 +54,23 @@ This reorganization preserves saved configuration keys and values, private
 input profiles and the plugin settings layout. Menu labels have both display
 and spoken translations in English and Polish. Runtime speech, PCM and actual
 keyboard navigation still require validation against a newly built product.
+
+## Text-reader commands
+
+The shared reader provides **Find**, **Find next**, **Find previous**,
+**Go to line**, **Go to page** and **Go to percent** in the reader's
+**Text options** context menu. Navigation unit and Lines per page remain in
+Text reading settings.
+
+Two separate choices in Text options are saved between runs:
+**Search case sensitivity** offers **Ignore case** (default) and **Match case**;
+**Search at document boundary** offers **Stop and announce** (default),
+**Ask to wrap** and **Wrap automatically**. Search includes Polish case pairs;
+accents remain distinct. The last successful query is kept only while that
+reader session is open. Successful search and typed navigation leave reading
+paused; resume when ready.
+
+See [text reading and bookmarks](ESPEAK-BOOKMARKS.md) for input limits,
+logical line/page numbering, byte-based percentages and cancellation behavior.
+Availability depends on the package; dated release descriptions retain their
+original scope.

@@ -71,7 +71,7 @@ STATE_NAMES = {'.resume.cfg', '.resume.cfg.new', 'config.cfg.new', 'nvram.bin',
                'accessibility.cfg', 'accessibility-typing.cfg', 'accessibility-screen.cfg',
                'accessibility-shortcut.cfg', 'connectivity.cfg', 'accessibility.cfg.pending',
                'accessibility-typing-echo.cfg', 'accessibility-lock.cfg', 'touch-sensitivity.cfg', 'empty-feedback.cfg',
-               'accessibility.cfg.new', 'accessibility.cfg.bak'}
+               'accessibility.cfg.new', 'accessibility.cfg.bak', 'tts-reader.cfg', 'bluetooth.cfg'}
 DIAGNOSTIC_CARD_STATE_NAMES = {
     'rockbox.r1.connectivity-original', '.connectivity-state.json', '.connectivity-stage', 'r1-connectivity.log',
     'rockbox.r1.audio-original', 'rockbox.r1.audio-new', 'r1-audio-trace.so',
@@ -431,7 +431,7 @@ def validate_package_entry(name, content, target=CLIPPLUS):
     if (diagnostic_card_state(relative) or lower in STATE_NAMES or lower.startswith(('accessibility.cfg.', 'accessibility-typing.cfg.', 'accessibility-screen.cfg.',
                                                 'accessibility-shortcut.cfg.', 'connectivity.cfg.',
                                                 'accessibility-typing-echo.cfg.', 'accessibility-lock.cfg.', 'touch-sensitivity.cfg.',
-                                                'empty-feedback.cfg.')) or
+                                                'empty-feedback.cfg.', 'tts-reader.cfg.', 'bluetooth.cfg.')) or
             lower.endswith(('.bmark', '.bookmark')) or '.bmark.' in lower or
             '.bookmark.' in lower or
             lower.endswith(('.voice', '.talk', '.gc')) or

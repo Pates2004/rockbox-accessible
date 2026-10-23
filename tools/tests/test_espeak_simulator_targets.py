@@ -32,8 +32,8 @@ EXPECTED_VERSIONS = {
         'linux': '0ed3734e5e-espeak-r29-clipzip-alpha8-20261011',
     },
     'hibyr1': {
-        'windows': '0ed3734e5e-espeak-r34-hibyr1-win-alpha17-20261021',
-        'linux': '0ed3734e5e-espeak-r34-hibyr1-alpha14-20261021',
+        'windows': '0ed3734e5e-espeak-r34-hibyr1-win-alpha18-20261023',
+        'linux': '0ed3734e5e-espeak-r34-hibyr1-alpha15-20261023',
     },
 }
 

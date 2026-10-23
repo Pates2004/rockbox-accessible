@@ -22,7 +22,7 @@ from test_keyclick_pcm import definition
 ROOT = Path(__file__).resolve().parents[2]
 INPUTS = (
     "apps/accessibility_typing.c", "apps/accessibility_typing.h",
-    "apps/recorder/keyboard.c", "firmware/common/unicode.c",
+    "apps/recorder/keyboard.c", "apps/keyboard.h", "firmware/common/unicode.c",
     "tools/tests/test_accessibility_typing.py",
     "apps/accessibility.c", "apps/accessibility.h",
 )
@@ -379,7 +379,10 @@ void probe_cancel(void)
     script[action_count++] = (struct scripted_action){ .type = -2 };
 }
 int probe_run(char *text, int capacity) { return kbd_input(text, capacity, NULL); }
+int probe_run_ex(char *text, int capacity, bool *usb)
+{ return kbd_input_ex(text, capacity, NULL, usb); }
 void probe_fail_viewport(void) { viewport_failure = true; }
+void probe_enabled(bool value) { enabled = value; }
 void probe_wrap(bool value) { global_settings.list_wraparound = value; }
 int probe_hit(int x, int y) { return kbd_typing_hit(kbd_param, screens, x, y); }
 void probe_short_row(void)
@@ -431,7 +434,7 @@ class AccessibilityTypingTests(unittest.TestCase):
         typing = (ROOT / INPUTS[0]).read_text(encoding="utf-8")
         header = (ROOT / INPUTS[1]).read_text(encoding="utf-8")
         keyboard = (ROOT / INPUTS[2]).read_text(encoding="utf-8")
-        unicode = (ROOT / INPUTS[3]).read_text(encoding="utf-8")
+        unicode = (ROOT / "firmware/common/unicode.c").read_text(encoding="utf-8")
         manager = (ROOT / "apps/accessibility.c").read_text(encoding="utf-8")
         manager_header = (ROOT / "apps/accessibility.h").read_text(encoding="utf-8")
         action = (ROOT / "apps/action.h").read_text(encoding="utf-8")
@@ -453,7 +456,7 @@ class AccessibilityTypingTests(unittest.TestCase):
             "kbd_spellchar", "kbd_inschar", "kbd_delchar", "get_kbd_ch", "get_kbd_row_len",
             "kbd_insert_selected", "kbd_backspace", "kbd_move_cursor", "kbd_speak_typing_target",
             "kbd_typing_hit", "kbd_typing_focus", "keyboard_accessible_touch",
-            "kbd_move_picker_horizontal", "kbd_move_picker_vertical", "kbd_input"])
+            "kbd_move_picker_horizontal", "kbd_move_picker_vertical", "kbd_input_ex", "kbd_input"])
         feedback = function(PREAMBLE, "accessibility_explore_feedback")
         state = (
             "static bool feedback_valid, feedback_occupied, empty_speech_pending, empty_feedback_force;\n"
@@ -510,6 +513,7 @@ class AccessibilityTypingTests(unittest.TestCase):
         cls.library.probe_spelled.restype = ctypes.c_char_p
         cls.library.probe_touch.argtypes = [ctypes.c_int] * 3 + [ctypes.c_long]
         cls.library.probe_run.argtypes = [ctypes.c_char_p, ctypes.c_int]
+        cls.library.probe_run_ex.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.POINTER(ctypes.c_bool)]
         cls.library.probe_wrap.argtypes = [ctypes.c_bool]
         cls.constants.update({name: cls.library.probe_constant(index) for index, name in enumerate(names)})
         print("Typing behavior evidence:", cls.workspace, flush=True)
@@ -1001,6 +1005,41 @@ class AccessibilityTypingTests(unittest.TestCase):
         self.assertEqual(self.run_keyboard("original"), (-1, "original"))
         self.assertEqual(self.library.probe_stat(8), 2)
         self.assertEqual(self.library.probe_take(), -1)
+
+    def test_actual_keyboard_explicit_usb_and_non_usb_status(self):
+        for mode in range(3):
+            with self.subTest(mode=mode):
+                self.library.probe_reset()
+                self.mode(mode)
+                self.library.probe_action(0x40000001)
+                buffer = ctypes.create_string_buffer(b"original", 256)
+                usb = ctypes.c_bool(False)
+                self.assertEqual(self.library.probe_run_ex(buffer, 256, ctypes.byref(usb)), -1)
+                self.assertTrue(usb.value)
+                self.assertEqual(buffer.value, b"original")
+                self.assertFalse(self.library.accessibility_typing_active())
+                self.assertEqual(self.library.probe_take(), -1)
+        self.library.probe_reset()
+        self.library.probe_enabled(False)
+        self.library.probe_action(0x40000001)
+        buffer = ctypes.create_string_buffer(b"original", 256)
+        usb = ctypes.c_bool(False)
+        self.assertEqual(self.library.probe_run_ex(buffer, 256, ctypes.byref(usb)), -1)
+        self.assertTrue(usb.value)
+        self.assertFalse(self.library.accessibility_typing_active())
+        for failure in ("Done", "Cancel", "viewport"):
+            with self.subTest(non_usb=failure):
+                self.library.probe_reset()
+                if failure == "viewport":
+                    self.library.probe_fail_viewport()
+                else:
+                    self.action("ACTION_KBD_DONE" if failure == "Done" else "ACTION_KBD_ABORT")
+                buffer = ctypes.create_string_buffer(b"original", 256)
+                usb = ctypes.c_bool(True)
+                result = self.library.probe_run_ex(buffer, 256, ctypes.byref(usb))
+                self.assertEqual(result, 0 if failure == "Done" else -1)
+                self.assertFalse(usb.value)
+                self.assertEqual(buffer.value, b"original")
 
     def test_actual_keyboard_viewport_failure_cancels_and_restores_theme(self):
         for was_active in [False, True]:

@@ -52,6 +52,7 @@ voice_thread.c
 #ifdef HAVE_ESPEAK
 tts.c
 tts_reader.c
+tts_reader_settings.c
 accessibility_screen.c
 accessibility_shortcut.c
 accessibility_services.c

@@ -20,9 +20,13 @@
 #ifndef _KEYBOARD_H
 #define _KEYBOARD_H
 
+#include <stdbool.h>
+
 /* '*kbd', same format as https://www.rockbox.org/wiki/LoadableKeyboardLayouts */
 
 int kbd_input(char* buffer, int buflen, ucschar_t *kbd);
+/* Core-only USB status; the plugin-facing legacy entry remains unchanged. */
+int kbd_input_ex(char *buffer, int buflen, ucschar_t *kbd, bool *usb_connected);
 
 int load_kbd(unsigned char* filename);
 

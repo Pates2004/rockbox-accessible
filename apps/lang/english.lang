@@ -22795,3 +22795,340 @@
     *: "Reconnecting"
   </voice>
 </phrase>
+
+<phrase>
+  id: LANG_TTS_FIND
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Find"
+  </source>
+  <dest>
+    *: "Find"
+  </dest>
+  <voice>
+    *: "Find"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_FIND_NEXT
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Find next"
+  </source>
+  <dest>
+    *: "Find next"
+  </dest>
+  <voice>
+    *: "Find next"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_FIND_PREVIOUS
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Find previous"
+  </source>
+  <dest>
+    *: "Find previous"
+  </dest>
+  <voice>
+    *: "Find previous"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_GOTO_LINE
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Go to line"
+  </source>
+  <dest>
+    *: "Go to line"
+  </dest>
+  <voice>
+    *: "Go to line"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_GOTO_PAGE
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Go to page"
+  </source>
+  <dest>
+    *: "Go to page"
+  </dest>
+  <voice>
+    *: "Go to page"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_GOTO_PERCENT
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Go to percent"
+  </source>
+  <dest>
+    *: "Go to percent"
+  </dest>
+  <voice>
+    *: "Go to percent"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_SEARCH_CASE
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Search case sensitivity"
+  </source>
+  <dest>
+    *: "Search case sensitivity"
+  </dest>
+  <voice>
+    *: "Search case sensitivity"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_IGNORE_CASE
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Ignore case"
+  </source>
+  <dest>
+    *: "Ignore case"
+  </dest>
+  <voice>
+    *: "Ignore case"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_MATCH_CASE
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Match case"
+  </source>
+  <dest>
+    *: "Match case"
+  </dest>
+  <voice>
+    *: "Match case"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_SEARCH_WRAP
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Search at document boundary"
+  </source>
+  <dest>
+    *: "Search at document boundary"
+  </dest>
+  <voice>
+    *: "Search at document boundary"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_WRAP_STOP
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Stop and announce"
+  </source>
+  <dest>
+    *: "Stop and announce"
+  </dest>
+  <voice>
+    *: "Stop and announce"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_WRAP_ASK
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Ask to wrap"
+  </source>
+  <dest>
+    *: "Ask to wrap"
+  </dest>
+  <voice>
+    *: "Ask to wrap"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_WRAP_AUTO
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Wrap automatically"
+  </source>
+  <dest>
+    *: "Wrap automatically"
+  </dest>
+  <voice>
+    *: "Wrap automatically"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_WRAP_QUESTION
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "No further match. Search from the other end?"
+  </source>
+  <dest>
+    *: "No further match. Search from the other end?"
+  </dest>
+  <voice>
+    *: "No further match. Search from the other end?"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_FOUND
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Text found"
+  </source>
+  <dest>
+    *: "Text found"
+  </dest>
+  <voice>
+    *: "Text found"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_FOUND_WRAPPED
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Text found after wrapping"
+  </source>
+  <dest>
+    *: "Text found after wrapping"
+  </dest>
+  <voice>
+    *: "Text found after wrapping"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_NO_MORE_MATCHES
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "No further matches"
+  </source>
+  <dest>
+    *: "No further matches"
+  </dest>
+  <voice>
+    *: "No further matches"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_QUERY_REQUIRED
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Enter a search first"
+  </source>
+  <dest>
+    *: "Enter a search first"
+  </dest>
+  <voice>
+    *: "Enter a search first"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_QUERY_INVALID
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Enter valid text, up to 128 UTF-8 bytes"
+  </source>
+  <dest>
+    *: "Enter valid text, up to 128 UTF-8 bytes"
+  </dest>
+  <voice>
+    *: "Enter valid text, up to 128 UTF-8 bytes"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_DESTINATION_INVALID
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Invalid destination"
+  </source>
+  <dest>
+    *: "Invalid destination"
+  </dest>
+  <voice>
+    *: "Invalid destination"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_READER_STORAGE_ERROR
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Reader preferences could not be saved or loaded"
+  </source>
+  <dest>
+    *: "Reader preferences could not be saved or loaded"
+  </dest>
+  <voice>
+    *: "Reader preferences could not be saved or loaded"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_OPERATION_FAILED
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Text operation failed; position unchanged"
+  </source>
+  <dest>
+    *: "Text operation failed; position unchanged"
+  </dest>
+  <voice>
+    *: "Text operation failed; position unchanged"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_READER_BUSY
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "The text reader is already open"
+  </source>
+  <dest>
+    *: "The text reader is already open"
+  </dest>
+  <voice>
+    *: "The text reader is already open"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_READER_TEMP_ERROR
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Temporary reader preferences could not be removed"
+  </source>
+  <dest>
+    *: "Temporary reader preferences could not be removed"
+  </dest>
+  <voice>
+    *: "Temporary reader preferences could not be removed"
+  </voice>
+</phrase>

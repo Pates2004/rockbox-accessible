@@ -54,3 +54,24 @@ Zmiana układu zachowuje klucze i wartości zapisanej konfiguracji, prywatne
 profile wejścia i układ ustawień wtyczek. Etykiety menu mają wersję wyświetlaną
 i mówioną po polsku i angielsku. Mowa, PCM i rzeczywista nawigacja klawiaturą
 nadal wymagają walidacji nowo zbudowanego programu.
+
+## Polecenia czytnika tekstu
+
+Wspólny czytnik udostępnia **Znajdź**, **Znajdź następne**,
+**Znajdź poprzednie**, **Przejdź do linii**, **Przejdź do strony** i
+**Przejdź do procentu** w swoim menu kontekstowym **Opcje tekstu**.
+Zakres nawigacji i Wiersze na stronie pozostają w Ustawieniach czytania tekstu.
+
+Dwie osobne opcje w Opcjach tekstu są zapisywane między uruchomieniami:
+**Wielkość liter przy wyszukiwaniu** oferuje domyślne **Ignoruj wielkość liter**
+oraz **Uwzględniaj wielkość liter**; **Wyszukiwanie na granicy tekstu** oferuje
+domyślne **Zatrzymaj i ogłoś**, **Pytaj o zawinięcie** oraz
+**Zawijaj automatycznie**. Wyszukiwanie uwzględnia polskie pary małych i wielkich
+liter; znaki diakrytyczne pozostają rozróżniane. Ostatnie skuteczne zapytanie
+jest pamiętane tylko podczas bieżącego otwarcia czytnika. Skuteczne wyszukanie
+i przejście do wpisanej pozycji pozostawiają pauzę; czytanie można potem wznowić.
+
+[Opis czytania i zakładek](ESPEAK-BOOKMARKS-PL.md) podaje limity wpisywania,
+numerację logicznych linii i stron, procenty liczone w bajtach oraz zachowanie
+po anulowaniu. Dostępność zależy od paczki; datowane opisy wydań zachowują
+pierwotny zakres.

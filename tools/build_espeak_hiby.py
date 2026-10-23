@@ -689,7 +689,7 @@ def validate_package_entry(name, content):
     if (shared.diagnostic_card_state(relative) or lower in shared.STATE_NAMES or lower.startswith(('accessibility.cfg.', 'accessibility-typing.cfg.', 'accessibility-screen.cfg.',
                                                        'accessibility-shortcut.cfg.', 'connectivity.cfg.',
                                                        'accessibility-typing-echo.cfg.', 'accessibility-lock.cfg.', 'touch-sensitivity.cfg.',
-                                                       'empty-feedback.cfg.')) or
+                                                       'empty-feedback.cfg.', 'tts-reader.cfg.', 'bluetooth.cfg.')) or
             '.bmark.' in lower or '.bookmark.' in lower or
             lower.endswith(('.voice', '.talk', '.gc', '.upt')) or
             any(part.lower() in {'database', 'playlists', 'recordings', 'bookmarks'} for part in relative.parts) or

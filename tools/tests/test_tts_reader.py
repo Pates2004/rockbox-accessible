@@ -32,6 +32,51 @@ def empty_feedback_policy():
                 "bool accessibility_empty_speech_enabled(")))
 
 
+
+def reader_support_glue():
+    """Only preferences/UI endpoints are scripted; decoder/matcher are actual C."""
+    header = (ROOT / "apps/tts_reader_settings.h").read_text(encoding="utf-8")
+    header = re.sub(r'^#include[^\n]*\n', '', header, flags=re.MULTILINE)
+    return header + r"""
+typedef uint16_t ucschar_t;
+enum yesno_res { YESNO_YES, YESNO_NO, YESNO_USB, YESNO_TMO };
+struct text_message { const char **message_lines; int nb_lines; };
+static struct tts_reader_preferences fixture_preferences;
+static int fixture_preferences_error, fixture_preferences_writes;
+static int keyboard_result, confirmation_result = YESNO_NO;
+static bool keyboard_usb;
+static char keyboard_text[129];
+static int kbd_input_ex(char *text, int capacity, ucschar_t *layout, bool *usb)
+{
+    (void)layout;
+    fixture_observe_reader(false);
+    *usb = keyboard_usb;
+    if (capacity > 0) snprintf(text, capacity, "%.*s", capacity - 1, keyboard_text);
+    return keyboard_result;
+}
+static enum yesno_res gui_syncyesno_run(const struct text_message *question,
+    const struct text_message *yes, const struct text_message *no)
+{
+    (void)question; (void)yes; (void)no;
+    return (enum yesno_res)confirmation_result;
+}
+int tts_reader_preferences_get(struct tts_reader_preferences *out)
+{
+    *out = fixture_preferences;
+    return fixture_preferences_error;
+}
+int tts_reader_preferences_set(enum tts_reader_preference preference, int value)
+{
+    if (fixture_preferences_error) return fixture_preferences_error;
+    ++fixture_preferences_writes;
+    if (preference == TTS_READER_PREF_MATCH_CASE)
+        fixture_preferences.match_case = value != 0;
+    else fixture_preferences.wrap = (enum tts_reader_wrap)value;
+    return 0;
+}
+"""
+
+
 HARNESS_PREFIX = r"""
 #include <stdbool.h>
 #include <stdint.h>
@@ -85,6 +130,30 @@ enum { LANG_TTS_READING, LANG_TTS_PAUSED, LANG_TTS_FINISHED,
        LANG_PROPERTIES_SIZE, LANG_TTS_BYTES, LANG_TTS_POSITION,
        LANG_TTS_READER_UNIT, LANG_TTS_READER_MENU, LANG_TTS_RESUME,
        LANG_PROPERTIES, LANG_TTS_BEGINNING, LANG_TTS_END,
+       LANG_TTS_FIND,
+       LANG_TTS_FIND_NEXT,
+       LANG_TTS_FIND_PREVIOUS,
+       LANG_TTS_GOTO_LINE,
+       LANG_TTS_GOTO_PAGE,
+       LANG_TTS_GOTO_PERCENT,
+       LANG_TTS_SEARCH_CASE,
+       LANG_TTS_IGNORE_CASE,
+       LANG_TTS_MATCH_CASE,
+       LANG_TTS_SEARCH_WRAP,
+       LANG_TTS_WRAP_STOP,
+       LANG_TTS_WRAP_ASK,
+       LANG_TTS_WRAP_AUTO,
+       LANG_TTS_WRAP_QUESTION,
+       LANG_TTS_FOUND,
+       LANG_TTS_FOUND_WRAPPED,
+       LANG_TTS_NO_MORE_MATCHES,
+       LANG_TTS_QUERY_REQUIRED,
+       LANG_TTS_QUERY_INVALID,
+       LANG_TTS_DESTINATION_INVALID,
+       LANG_TTS_READER_STORAGE_ERROR,
+       LANG_TTS_OPERATION_FAILED,
+       LANG_TTS_READER_BUSY,
+       LANG_TTS_READER_TEMP_ERROR,
        LANG_TTS_READER_SETTINGS, LANG_TTS, LANG_ACCESSIBILITY_EMPTY };
 static const char *labels[] = { "Reading", "Paused", "End of text",
     "Speech error", "Invalid text", "Failed reading %s", "Character", "Word",
@@ -93,6 +162,30 @@ static const char *labels[] = { "Reading", "Paused", "End of text",
     "Bookmark saved, but recent bookmarks could not be updated", "Text changed",
     "Filename", "Path", "Size", "bytes", "Position", "Unit", "Text options",
     "Resume reading", "Properties", "Go to beginning", "Go to end",
+    "Find",
+    "Find next",
+    "Find previous",
+    "Go to line",
+    "Go to page",
+    "Go to percent",
+    "Search case sensitivity",
+    "Ignore case",
+    "Match case",
+    "Search at document boundary",
+    "Stop and announce",
+    "Ask to wrap",
+    "Wrap automatically",
+    "No further match. Search from the other end?",
+    "Text found",
+    "Text found after wrapping",
+    "No further matches",
+    "Enter a search first",
+    "Enter valid text, up to 128 UTF-8 bytes",
+    "Invalid destination",
+    "Reader preferences could not be saved or loaded",
+    "Text operation failed; position unchanged",
+    "The text reader is already open",
+    "Temporary reader preferences could not be removed",
     "Reading settings", "eSpeak", "No item" };
 #define str(identifier) labels[identifier]
 struct viewport { int x; int y; int width; int height; };
@@ -130,6 +223,12 @@ static long fail_after;
 static bool seek_failure;
 static bool speech_failure;
 static bool busy;
+/* Model tts_stop returning while an earlier synthesis is still in flight. */
+static bool initial_synthesis_busy;
+static bool query_observed_initialized, close_observed_initialized;
+static off_t query_observed_first, query_observed_cursor;
+static off_t close_observed_first, close_observed_cursor;
+static void fixture_observe_reader(bool closing);
 static bool paused;
 static bool unavailable;
 static bool open_failure;
@@ -166,7 +265,7 @@ struct text_bookmark { off_t offset; off_t size; uint32_t signature; int unit; }
 struct menu_item_ex { int unused; };
 const struct menu_item_ex tts_reader_settings_menu = {0};
 const struct menu_item_ex tts_settings_menu = {0};
-#define ID2P(identifier) ((char *)0x10000 + identifier)
+#define ID2P(identifier) ((char *)0x10000 + (identifier))
 #define MENUITEM_STRINGLIST(name, ...) struct menu_item_ex name = {0}
 static int menu_choices[32];
 static int menu_count;
@@ -259,7 +358,12 @@ static int mock_open(const char *path, int flags)
     (void)flags;
     return open_failure ? -1 : 3;
 }
-static int mock_close(int descriptor) { (void)descriptor; return ++closed; }
+static int mock_close(int descriptor)
+{
+    (void)descriptor;
+    fixture_observe_reader(true);
+    return ++closed;
+}
 static off_t ffilesize(int descriptor)
 {
     (void)descriptor;
@@ -271,7 +375,7 @@ static off_t ffilesize(int descriptor)
 #define close mock_close
 
 static bool tts_is_available(void) { return !unavailable; }
-static bool tts_is_busy(void) { return busy; }
+static bool tts_is_busy(void) { return busy || initial_synthesis_busy; }
 static size_t tts_read_position(void)
 { return read_interrupted_flag ? interrupted_position : audible_position; }
 static bool tts_read_interrupted(void) { return read_interrupted_flag; }
@@ -382,6 +486,8 @@ static void viewportmanager_theme_undo(int screen, bool redraw)
 }
 """
 
+HARNESS_PREFIX += reader_support_glue()
+
 HARNESS_SUFFIX = r"""
 static struct text_reader reader;
 
@@ -396,6 +502,10 @@ void test_reset(const unsigned char *data, size_t length)
     read_limit = largest_read = 0;
     fail_after = -1;
     seek_failure = speech_failure = busy = paused = false;
+    initial_synthesis_busy = false;
+    query_observed_initialized = close_observed_initialized = false;
+    query_observed_first = query_observed_cursor = -1;
+    close_observed_first = close_observed_cursor = -1;
     unavailable = open_failure = size_failure = false;
     audible_position = 0;
     channel = stops = speech_count = tracked_count = pause_calls = pcm_remaining = 0;
@@ -411,6 +521,14 @@ void test_reset(const unsigned char *data, size_t length)
     last_error[0] = '\0';
     memset(rows, 0, sizeof(rows));
     memset(&reader, 0, sizeof(reader));
+    memset(&reader_job, 0, sizeof(reader_job));
+    reader.job = &reader_job;
+    memset(&fixture_preferences, 0, sizeof(fixture_preferences));
+    fixture_preferences_error = fixture_preferences_writes = 0;
+    keyboard_result = 0;
+    keyboard_usb = false;
+    keyboard_text[0] = '\0';
+    confirmation_result = YESNO_NO;
     reader.descriptor = 3;
     reader.name = "example.txt";
     reader.path = "/example.txt";
@@ -526,6 +644,8 @@ int test_pending(void) { return reader.pending_action; }
 void test_draw(void) { reader_draw(&reader); }
 const char *test_row(int row) { return rows[row]; }
 void test_action(int action) { actions[action_count++] = action; }
+/* Defined after test_action and the fixture action enum. */
+void test_context_action(void) { test_action(ACTION_STD_CONTEXT); }
 int test_run(void) { return tts_read_file("/example.txt"); }
 int test_closed(void) { return closed; }
 int test_theme_undos(void) { return theme_undos; }
@@ -557,6 +677,115 @@ const char *test_property(int index)
     static char buffer[1024];
     return reader_property(index, &reader, buffer, sizeof(buffer));
 }
+
+static void fixture_observe_reader(bool closing)
+{
+    const struct text_reader *active = reader_job.owner;
+    if (!active)
+        return;
+    if (closing)
+    {
+        close_observed_initialized = active->initialized;
+        close_observed_first = active->first;
+        close_observed_cursor = active->cursor;
+    }
+    else
+    {
+        query_observed_initialized = active->initialized;
+        query_observed_first = active->first;
+        query_observed_cursor = active->cursor;
+    }
+}
+
+void test_initial_speech_busy(void) { initial_synthesis_busy = true; }
+int64_t test_initial_snapshot(int field)
+{
+    switch (field)
+    {
+        case 0: return query_observed_initialized;
+        case 1: return query_observed_first;
+        case 2: return query_observed_cursor;
+        case 3: return close_observed_initialized;
+        case 4: return close_observed_first;
+        default: return close_observed_cursor;
+    }
+}
+
+void test_edit(const char *text, int result, bool usb)
+{
+    snprintf(keyboard_text, sizeof(keyboard_text), "%s", text);
+    menu_count = menu_index = 0;
+    keyboard_result = result;
+    keyboard_usb = usb;
+}
+void test_search_preferences(bool match_case, int wrap, int answer)
+{
+    fixture_preferences.match_case = match_case;
+    fixture_preferences.wrap = (enum tts_reader_wrap)wrap;
+    confirmation_result = answer;
+}
+const char *test_accepted_query(void) { return reader.job->accepted_query; }
+void test_cursor64(int64_t cursor)
+{
+    reader_prepare(&reader);
+    reader.cursor = (off_t)cursor;
+}
+int64_t test_position64(void) { return reader.cursor; }
+int test_match_range(const char *query, int64_t low, int64_t high, bool previous,
+                     bool match_case, int64_t *target)
+{
+    reader_prepare(&reader);
+    reader.job->preferences.match_case = match_case;
+    int status = reader_compile_query(reader.job, query);
+    off_t result = -1;
+    reader.scanning = true;
+    reader.scan_work = 0;
+    if (status >= 0)
+        status = reader_search_range(&reader, low, high, previous, &result);
+    reader.scanning = false;
+    *target = result;
+    return status;
+}
+int test_ordinal64(uint64_t ordinal, bool page, int64_t *target)
+{
+    reader_prepare(&reader);
+    off_t result = -1;
+    reader.scanning = true;
+    reader.scan_work = 0;
+    int status = reader_ordinal(&reader, ordinal, page, &result);
+    reader.scanning = false;
+    *target = result;
+    return status;
+}
+int test_percent64(int64_t cursor, int64_t size)
+{
+    reader.cursor = cursor;
+    reader.size = size;
+    return reader_percent(&reader);
+}
+int64_t test_percent_target64(int64_t size, unsigned int percent)
+{
+    return reader_percent_offset(size, percent, false);
+}
+int test_decimal64(const char *text, uint64_t *value)
+{
+    return reader_decimal(text, value);
+}
+int test_offset_bits(void) { return 8 * sizeof(off_t); }
+void test_menu_script_reset(void) { menu_count = menu_index = 0; }
+int test_job_size(void) { return sizeof(reader_job); }
+int test_nested_owner(void)
+{
+    if (!reader_job_acquire(&reader)) return 0;
+    reader_job.accepted_query[0] = 'x';
+    bool usb = tts_read_file("/nested.txt");
+    bool intact = !usb && reader_job.owner == &reader &&
+        reader_job.accepted_query[0] == 'x';
+    reader_job_release(&reader);
+    return intact;
+}
+int test_preference_writes(void) { return fixture_preferences_writes; }
+
 int test_mapping(int context, int button)
 {
     const struct button_mapping *mapping = reader_context(context);
@@ -626,6 +855,214 @@ class TextReaderTests(unittest.TestCase):
         cls.library.test_largest_read.restype = ctypes.c_size_t
         for name in ("test_label", "test_speech", "test_text", "test_row"):
             getattr(cls.library, name).restype = ctypes.c_char_p
+
+
+    def configure_extended_reader(self):
+        lib = self.library
+        lib.test_edit.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.c_bool]
+        lib.test_search_preferences.argtypes = [ctypes.c_bool, ctypes.c_int, ctypes.c_int]
+        lib.test_accepted_query.restype = ctypes.c_char_p
+        lib.test_cursor64.argtypes = [ctypes.c_int64]
+        lib.test_position64.restype = ctypes.c_int64
+        lib.test_context_action.argtypes = []
+        lib.test_context_action.restype = None
+        lib.test_initial_snapshot.argtypes = [ctypes.c_int]
+        lib.test_initial_snapshot.restype = ctypes.c_int64
+        lib.test_match_range.argtypes = [ctypes.c_char_p, ctypes.c_int64, ctypes.c_int64,
+                                       ctypes.c_bool, ctypes.c_bool,
+                                       ctypes.POINTER(ctypes.c_int64)]
+        lib.test_ordinal64.argtypes = [ctypes.c_uint64, ctypes.c_bool,
+                                     ctypes.POINTER(ctypes.c_int64)]
+        lib.test_percent64.argtypes = [ctypes.c_int64, ctypes.c_int64]
+        lib.test_percent_target64.argtypes = [ctypes.c_int64, ctypes.c_uint]
+        lib.test_percent_target64.restype = ctypes.c_int64
+        lib.test_decimal64.argtypes = [ctypes.c_char_p, ctypes.POINTER(ctypes.c_uint64)]
+
+    def find_range(self, query, low=0, high=None, previous=False, match_case=False):
+        self.configure_extended_reader()
+        target = ctypes.c_int64(-1)
+        status = self.library.test_match_range(query.encode("utf-8"), low,
+            len(self.data) if high is None else high, previous, match_case,
+            ctypes.byref(target))
+        return status, target.value
+
+    def reader_operation(self, row, text="", result=0, usb=False):
+        self.configure_extended_reader()
+        self.library.test_edit(text.encode("utf-8"), result, usb)
+        self.library.test_menu_choice(row)
+        self.library.test_menu_choice(-1)
+        return self.library.test_menu()
+
+    def test_search_real_polish_pairs_and_diacritic_distinction(self):
+        for upper, lower in zip("ĄĆĘŁŃÓŚŹŻ", "ąćęłńóśźż"):
+            with self.subTest(upper=upper):
+                self.reset(("x" + lower + " z").encode())
+                self.assertEqual(self.find_range(upper), (1, 1))
+                self.assertEqual(self.find_range(upper, match_case=True), (0, -1))
+        self.reset("żółć z Żółć".encode())
+        self.assertEqual(self.find_range("ŻÓŁĆ"), (1, 0))
+        self.assertEqual(self.find_range("zolc"), (0, -1))
+        self.assertEqual(self.find_range("ZÓŁĆ"), (0, -1))
+        self.assertEqual(self.find_range("Żółć", match_case=True), (1, len("żółć z ".encode())))
+
+    def test_search_source_offsets_width_changes_and_overlap_ranges(self):
+        self.reset("xȺxyⱥz".encode())
+        # U+023A (two bytes) lowercases to U+2C65 (three bytes).
+        self.assertEqual(self.find_range("ⱥ"), (1, 1))
+        self.reset(b"ababa")
+        self.assertEqual(self.find_range("aba", high=2, previous=True), (1, 0))
+        self.assertEqual(self.find_range("aba", low=1), (1, 2))
+        self.assertEqual(self.find_range("aba", high=1), (1, 0))
+        self.assertEqual(self.find_range("aba", low=3), (0, -1))
+
+    def test_search_cache_bom_invalid_and_bounds(self):
+        self.reset(b"\xef\xbb\xbf" + b"x" * 763 + "żółć".encode() + b" tail")
+        self.assertEqual(self.find_range("ŻÓŁĆ", low=3), (1, 766))
+        self.assertEqual(self.find_range("\ufeff", low=3), (0, -1))
+        self.reset(b"a\xef\xbb\xbfb")
+        self.assertEqual(self.find_range("\ufeff"), (1, 1))
+        self.reset(b"a" * 800 + b"\xf0\x9f")
+        self.assertEqual(self.find_range("missing")[0], -2)
+        self.reset(b"abc")
+        self.assertEqual(self.find_range(""), (-2, -1))
+        self.assertEqual(self.find_range("a" * 129), (-2, -1))
+
+    def test_menu_search_commit_pause_repeat_wrap_and_query_rollback(self):
+        self.reset(b"ababa")
+        self.reader_operation(7, "aba")
+        self.assertEqual(self.library.test_accepted_query(), b"aba")
+        self.assertEqual(self.library.test_position64(), 0)
+        self.assertEqual(self.library.test_state(), 1)
+        self.assertIn(b"Text found", self.library.test_speech(self.library.test_speech_count() - 1))
+        self.reader_operation(8)
+        self.assertEqual(self.library.test_position64(), 2)
+        self.reader_operation(8)  # default Stop
+        self.assertEqual(self.library.test_position64(), 2)
+        self.library.test_search_preferences(False, 2, 1)
+        self.reader_operation(8)
+        self.assertEqual(self.library.test_position64(), 0)
+        self.assertIn(b"after wrapping", self.library.test_speech(self.library.test_speech_count() - 1))
+        for text, result in [("not present", 0), ("edited", -1), ("", 0)]:
+            self.reader_operation(7, text, result)
+            self.assertEqual(self.library.test_accepted_query(), b"aba")
+            self.assertEqual(self.library.test_position64(), 0)
+
+    def test_menu_search_enqueue_failure_and_final_cancel_preserve_query(self):
+        self.reset(b"one two")
+        self.reader_operation(7, "one")
+        self.library.test_cursor64(0)
+        self.library.test_speech_failure()
+        self.reader_operation(7, "two")
+        self.assertEqual(self.library.test_position64(), 0)
+        self.assertEqual(self.library.test_accepted_query(), b"one")
+        self.reset(b"one two")
+        self.library.test_scan_action(1, 1)
+        self.reader_operation(7, "two")
+        self.assertEqual(self.library.test_pending(), 1)
+        self.assertEqual(self.library.test_position64(), 0)
+        self.assertEqual(self.library.test_accepted_query(), b"")
+
+    def test_menu_usb_edit_confirmation_and_preferences_do_not_commit(self):
+        self.reset(b"abc abc")
+        self.assertTrue(self.reader_operation(7, "abc", -1, True))
+        self.assertEqual(self.library.test_accepted_query(), b"")
+        self.reader_operation(7, "abc")
+        self.library.test_cursor64(4)
+        self.library.test_search_preferences(False, 1, 2)  # Ask / YESNO_USB
+        self.assertTrue(self.reader_operation(8))
+        self.assertEqual(self.library.test_position64(), 4)
+        self.library.test_menu_script_reset()
+        self.library.test_menu_choice(13)
+        self.library.test_menu_choice(-10)
+        self.assertTrue(self.library.test_menu())
+        self.assertEqual(self.library.test_preference_writes(), 0)
+
+    def test_content_ordinals_all_separators_and_no_phantom_final_line(self):
+        self.configure_extended_reader()
+        for separator in ["\r\n", "\r", "\n", "\x85", "\u2028", "\u2029"]:
+            data = ("a" + separator + separator + "b" + separator).encode()
+            self.reset(data)
+            self.library.test_page_lines(1)
+            starts = [0, len(("a" + separator).encode()),
+                      len(("a" + separator + separator).encode())]
+            for page in (False, True):
+                for ordinal, expected in enumerate(starts, 1):
+                    target = ctypes.c_int64()
+                    self.assertEqual(self.library.test_ordinal64(ordinal, page, ctypes.byref(target)), 1)
+                    self.assertEqual(target.value, expected)
+                self.assertEqual(self.library.test_ordinal64(4, page, ctypes.byref(target)), 0)
+        for data in [b"", b"\xef\xbb\xbf"]:
+            self.reset(data)
+            target = ctypes.c_int64()
+            self.assertEqual(self.library.test_ordinal64(1, False, ctypes.byref(target)), 0)
+
+    def test_typed_destinations_invalid_input_percent_alignment_and_pause(self):
+        self.reset("a\r\nżb".encode())
+        self.reader_operation(10, "2")
+        self.assertEqual(self.library.test_position64(), 3)
+        for text in ["0", "-1", "+2", "2x", "", "18446744073709551616", "9"]:
+            self.reader_operation(10, text)
+            self.assertEqual(self.library.test_position64(), 3)
+        self.reader_operation(12, "40")  # byte 2 is LF in CRLF; align before CR.
+        self.assertEqual(self.library.test_position64(), 1)
+        self.reader_operation(12, "70")  # byte 4 is a UTF-8 continuation.
+        self.assertEqual(self.library.test_position64(), 3)
+        self.reader_operation(12, "100")
+        self.assertEqual(self.library.test_position64(), len(self.data))
+        self.assertEqual(self.library.test_state(), 2)
+        self.reader_operation(12, "0")
+        self.assertEqual(self.library.test_position64(), 0)
+        self.assertEqual(self.library.test_state(), 1)
+
+    def test_checked_large_percentages_and_numeric_overflow(self):
+        self.configure_extended_reader()
+        size = (1 << (self.library.test_offset_bits() - 1)) - 1
+        for percent in range(101):
+            target = self.library.test_percent_target64(size, percent)
+            self.assertEqual(target, size * percent // 100)
+            self.assertEqual(self.library.test_percent64(target, size), target * 100 // size)
+        value = ctypes.c_uint64()
+        self.assertTrue(self.library.test_decimal64(b"18446744073709551615", ctypes.byref(value)))
+        self.assertEqual(value.value, (1 << 64) - 1)
+        self.assertFalse(self.library.test_decimal64(b"18446744073709551616", ctypes.byref(value)))
+
+    def test_reader_job_is_bounded_and_rejects_nested_owner(self):
+        self.reset(b"abc")
+        self.assertLessEqual(self.library.test_job_size(), 2304)
+        self.assertTrue(self.library.test_nested_owner())
+        self.assertEqual(self.library.test_closed(), 0)
+
+
+    def test_initial_busy_bom_context_failure_keeps_initialized_origin(self):
+        self.configure_extended_reader()
+        for failure in ("no_match", "cancel_edit", "invalid_query", "enqueue", "final_cancel"):
+            with self.subTest(failure=failure):
+                self.reset(b"\xef\xbb\xbfone two")
+                self.library.test_initial_speech_busy()
+                query = "missing" if failure == "no_match" else (
+                    "" if failure == "invalid_query" else "two")
+                self.library.test_edit(query.encode("utf-8"),
+                    -1 if failure == "cancel_edit" else 0, False)
+                self.library.test_menu_choice(7)
+                self.library.test_menu_choice(-1)
+                self.library.test_context_action()  # actual fixture ACTION_STD_CONTEXT
+                self.library.test_action(1)   # then ACTION_STD_CANCEL
+                if failure == "enqueue":
+                    self.library.test_speech_failure()
+                elif failure == "final_cancel":
+                    self.library.test_scan_action(1, 1)
+                self.assertEqual(self.library.test_run(), 0)
+                # Captured inside kbd_input_ex, before search's reader_prepare.
+                self.assertEqual([self.library.test_initial_snapshot(i) for i in range(3)],
+                                 [1, 3, 3])
+                # Captured at document close while the job still owns this reader.
+                self.assertEqual([self.library.test_initial_snapshot(i) for i in range(3, 6)],
+                                 [1, 3, 3])
+                self.assertEqual(self.library.test_accepted_query(), b"")
+                self.assertEqual(self.library.test_tracked_count(), 0)
+                self.assertEqual(self.library.test_closed(), 1)
+                self.assertEqual(self.library.test_theme_undos(), 1)
+
 
     def reset(self, data):
         self.data = data

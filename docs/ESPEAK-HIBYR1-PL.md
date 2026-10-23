@@ -43,6 +43,14 @@ tekstu i integracji zakładek tekstowych oraz dźwiękowych. Nie piszemy czytnik
 od nowa ani nie zastępujemy syntezy programem systemowym. Wydanie R1 jest
 aplikacją linuksową, a nie firmware działającym bez systemu operacyjnego.
 
+Wspólny czytnik udostępnia Znajdź, Znajdź następne,
+Znajdź poprzednie oraz wpisywanie linii, strony i procentu w Opcjach tekstu.
+Menu otwiera przytrzymanie Next; dalej obowiązuje dotychczasowe sterowanie menu
+i pisaniem. Osobne zapisywane opcje wyszukiwania mają domyślne wartości
+Ignoruj wielkość liter oraz Zatrzymaj i ogłoś. Wszystkie opcje wielkości liter
+i zawijania opisują [ustawienia Talkbox](ESPEAK-ROCKBOX-PL.md), a szczegóły
+działania — [czytanie i zakładki](ESPEAK-BOOKMARKS-PL.md).
+
 Projekt nie zmierzył baterii ani dostępnego RAM-u na fizycznym R1.
 Nowy etap dodaje blokadę i odczyt Wi-Fi przy starcie, ograniczone czasowo
 wyłączenie całego urządzenia, opisy domyślnych przycisków z przewodnikiem oraz

@@ -440,6 +440,22 @@ class TypingEchoTests(legacy.AccessibilityTypingTests):
         self.assertEqual(self.words(), [])
         self.assertEqual(self.characters(), [("ż", 0)])
 
+    def test_actual_echo_explicit_usb_aborts_without_flushing_word(self):
+        self.configure(2)
+        self.action("ACTION_KBD_SELECT")
+        self.library.probe_action(0x40000001)
+        self.library.echo_probe_run_ex.argtypes = [
+            ctypes.c_char_p, ctypes.c_int, ctypes.c_void_p, ctypes.POINTER(ctypes.c_bool)]
+        text = ctypes.create_string_buffer(256)
+        layout = (ctypes.c_uint16 * 3)(1, ord("ż"), 0xfeff)
+        usb = ctypes.c_bool(False)
+        self.assertEqual(self.library.echo_probe_run_ex(
+            text, 256, layout, ctypes.byref(usb)), -1)
+        self.assertTrue(usb.value)
+        self.assertEqual(text.value.decode("utf-8"), "ż")
+        self.assertEqual(self.words(), [])
+        self.assertFalse(self.library.accessibility_typing_active())
+
     def test_actual_echo_usb_aborts_without_flushing_word_or_leaking_next_session(self):
         self.configure(2)
         self.action("ACTION_KBD_SELECT")

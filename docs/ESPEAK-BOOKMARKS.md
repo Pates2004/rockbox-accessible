@@ -47,3 +47,38 @@ The reader, TTS and bookmark logic are shared core code. New targets still need
 their own build, input/audio/memory adaptation and real-device tests. Spoken
 new screens do not prove all plugins accessible or provide native NVDA/UIA
 controls in the SDL simulator. Hardware validation remains separate.
+
+## Search and typed destinations
+
+Text options adds Find, Find next and Find previous. Search keeps the last
+successful query only for this open reader session (up to 128 UTF-8 bytes).
+Cancel, USB, no match, invalid text or a rejected speech enqueue preserves the
+previous query and the paused audible position. Repeated Next excludes the
+current character start; Previous selects the last earlier start, including
+overlapping matches.
+
+Search case sensitivity is a separate saved choice, default Ignore case.
+It uses Unicode simple lowercase, including all Polish case pairs; accents
+remain distinct. It does not normalize composed/decomposed text or expand
+multi-character folds such as SS/ß. Search at document boundary offers Stop and
+announce (default), Ask to wrap and Wrap automatically. A wrap scans the other
+range once and is announced with the result; it never joins the end to the start.
+
+Go to line and Go to page use one-based logical content positions. CRLF counts
+as one separator; CR, LF, NEL, U+2028 and U+2029 also separate lines. Blank lines
+count, while a final separator does not create a phantom line/page. An empty or
+BOM-only document has no content line/page. Pages use the current lines-per-page
+setting. Invalid, zero, overflowing or beyond-end line/page numbers are rejected.
+
+Go to percent accepts decimal 0 through 100. It uses byte offsets, aligns inside
+a UTF-8 character backwards to its start, and aligns the LF of CRLF before CR.
+0 selects the first content byte after an initial BOM; 100 selects EOF. Successful
+Find and Go to announce the result and stay paused. Synchronous queue acceptance
+does not prove that later synthesis/output succeeded or that a listener heard it.
+
+The private saved choices live in /.rockbox/tts-reader.cfg. Fresh packages include
+neither that file nor its exclusive temporary sibling. Storage failures are
+announced; unknown/future files and existing temporaries are preserved. A write
+flushes, closes once and renames before changing the effective choices. This
+does not promise arbitrary power-loss durability. Documents remain UTF-8 only;
+bookmark formats, background playlists and the plugin settings ABI are unchanged.

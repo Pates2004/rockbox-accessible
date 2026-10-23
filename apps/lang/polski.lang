@@ -22732,3 +22732,340 @@
     *: "Ponowne łączenie"
   </voice>
 </phrase>
+
+<phrase>
+  id: LANG_TTS_FIND
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Find"
+  </source>
+  <dest>
+    *: "Znajdź"
+  </dest>
+  <voice>
+    *: "Znajdź"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_FIND_NEXT
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Find next"
+  </source>
+  <dest>
+    *: "Znajdź następne"
+  </dest>
+  <voice>
+    *: "Znajdź następne"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_FIND_PREVIOUS
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Find previous"
+  </source>
+  <dest>
+    *: "Znajdź poprzednie"
+  </dest>
+  <voice>
+    *: "Znajdź poprzednie"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_GOTO_LINE
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Go to line"
+  </source>
+  <dest>
+    *: "Przejdź do linii"
+  </dest>
+  <voice>
+    *: "Przejdź do linii"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_GOTO_PAGE
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Go to page"
+  </source>
+  <dest>
+    *: "Przejdź do strony"
+  </dest>
+  <voice>
+    *: "Przejdź do strony"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_GOTO_PERCENT
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Go to percent"
+  </source>
+  <dest>
+    *: "Przejdź do procentu"
+  </dest>
+  <voice>
+    *: "Przejdź do procentu"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_SEARCH_CASE
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Search case sensitivity"
+  </source>
+  <dest>
+    *: "Wielkość liter przy wyszukiwaniu"
+  </dest>
+  <voice>
+    *: "Wielkość liter przy wyszukiwaniu"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_IGNORE_CASE
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Ignore case"
+  </source>
+  <dest>
+    *: "Ignoruj wielkość liter"
+  </dest>
+  <voice>
+    *: "Ignoruj wielkość liter"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_MATCH_CASE
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Match case"
+  </source>
+  <dest>
+    *: "Uwzględniaj wielkość liter"
+  </dest>
+  <voice>
+    *: "Uwzględniaj wielkość liter"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_SEARCH_WRAP
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Search at document boundary"
+  </source>
+  <dest>
+    *: "Wyszukiwanie na granicy tekstu"
+  </dest>
+  <voice>
+    *: "Wyszukiwanie na granicy tekstu"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_WRAP_STOP
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Stop and announce"
+  </source>
+  <dest>
+    *: "Zatrzymaj i ogłoś"
+  </dest>
+  <voice>
+    *: "Zatrzymaj i ogłoś"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_WRAP_ASK
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Ask to wrap"
+  </source>
+  <dest>
+    *: "Pytaj o zawinięcie"
+  </dest>
+  <voice>
+    *: "Pytaj o zawinięcie"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_WRAP_AUTO
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Wrap automatically"
+  </source>
+  <dest>
+    *: "Zawijaj automatycznie"
+  </dest>
+  <voice>
+    *: "Zawijaj automatycznie"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_WRAP_QUESTION
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "No further match. Search from the other end?"
+  </source>
+  <dest>
+    *: "Brak kolejnego wyniku. Szukać od drugiego końca?"
+  </dest>
+  <voice>
+    *: "Brak kolejnego wyniku. Szukać od drugiego końca?"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_FOUND
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Text found"
+  </source>
+  <dest>
+    *: "Znaleziono tekst"
+  </dest>
+  <voice>
+    *: "Znaleziono tekst"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_FOUND_WRAPPED
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Text found after wrapping"
+  </source>
+  <dest>
+    *: "Znaleziono tekst po zawinięciu"
+  </dest>
+  <voice>
+    *: "Znaleziono tekst po zawinięciu"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_NO_MORE_MATCHES
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "No further matches"
+  </source>
+  <dest>
+    *: "Brak kolejnych wyników"
+  </dest>
+  <voice>
+    *: "Brak kolejnych wyników"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_QUERY_REQUIRED
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Enter a search first"
+  </source>
+  <dest>
+    *: "Najpierw wpisz szukany tekst"
+  </dest>
+  <voice>
+    *: "Najpierw wpisz szukany tekst"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_QUERY_INVALID
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Enter valid text, up to 128 UTF-8 bytes"
+  </source>
+  <dest>
+    *: "Wpisz poprawny tekst, do 128 bajtów UTF-8"
+  </dest>
+  <voice>
+    *: "Wpisz poprawny tekst, do 128 bajtów UTF-8"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_DESTINATION_INVALID
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Invalid destination"
+  </source>
+  <dest>
+    *: "Nieprawidłowa pozycja"
+  </dest>
+  <voice>
+    *: "Nieprawidłowa pozycja"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_READER_STORAGE_ERROR
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Reader preferences could not be saved or loaded"
+  </source>
+  <dest>
+    *: "Nie udało się zapisać lub odczytać ustawień czytnika"
+  </dest>
+  <voice>
+    *: "Nie udało się zapisać lub odczytać ustawień czytnika"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_OPERATION_FAILED
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Text operation failed; position unchanged"
+  </source>
+  <dest>
+    *: "Operacja na tekście nie powiodła się; pozycja bez zmian"
+  </dest>
+  <voice>
+    *: "Operacja na tekście nie powiodła się; pozycja bez zmian"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_READER_BUSY
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "The text reader is already open"
+  </source>
+  <dest>
+    *: "Czytnik tekstu jest już otwarty"
+  </dest>
+  <voice>
+    *: "Czytnik tekstu jest już otwarty"
+  </voice>
+</phrase>
+<phrase>
+  id: LANG_TTS_READER_TEMP_ERROR
+  desc: text reader search and typed destinations
+  user: core
+  <source>
+    *: "Temporary reader preferences could not be removed"
+  </source>
+  <dest>
+    *: "Nie udało się usunąć tymczasowych ustawień czytnika"
+  </dest>
+  <voice>
+    *: "Nie udało się usunąć tymczasowych ustawień czytnika"
+  </voice>
+</phrase>

@@ -61,3 +61,41 @@ Rdzeń jest wspólny dla odtwarzaczy. Mapa przycisków, sterowniki i zasoby
 sprzętowe nadal wymagają osobnego buildu i testów dla każdego nowego targetu.
 Udźwiękowienie nowych ekranów nie oznacza pełnej dostępności wszystkich
 zewnętrznych wtyczek ani natywnego interfejsu UIA dla NVDA w symulatorze SDL.
+
+## Wyszukiwanie i wpisywanie pozycji
+
+Opcje tekstu dodają „Znajdź”, „Znajdź następne” i „Znajdź poprzednie”.
+Ostatnie skuteczne zapytanie, do 128 bajtów UTF-8, jest pamiętane wyłącznie
+podczas bieżącego otwarcia czytnika. Anulowanie, USB, brak wyniku, błędny tekst
+lub odrzucone dodanie komunikatu do kolejki zachowuje poprzednie zapytanie
+i wstrzymaną pozycję słyszalnego tekstu. Następne wyszukiwanie pomija początek
+bieżącego znaku. Poprzednie wybiera ostatni wcześniejszy początek; wyniki mogą
+na siebie nachodzić.
+
+Osobna zapisywana opcja „Wielkość liter przy wyszukiwaniu” domyślnie ignoruje
+wielkość liter. Używa prostego mapowania Unicode na małe litery, w tym polskich
+par, bez usuwania znaków diakrytycznych. Nie normalizuje złożonych i rozłożonych
+znaków ani nie rozwija wieloznakowych odpowiedników takich jak SS/ß.
+„Wyszukiwanie na granicy tekstu” oferuje domyślne „Zatrzymaj i ogłoś”,
+„Pytaj o zawinięcie” i „Zawijaj automatycznie”. Zawinięcie przeszukuje drugi
+zakres tylko raz i zostaje ogłoszone przy wyniku; koniec nie łączy się z początkiem.
+
+„Przejdź do linii” i „Przejdź do strony” numerują istniejące pozycje od jedynki.
+CRLF to jeden separator; osobne CR, LF, NEL, U+2028 i U+2029 także kończą linię.
+Puste linie liczą się, lecz końcowy separator nie dodaje fikcyjnej linii/strony.
+Pusty dokument i sam BOM nie mają linii/stron treści. Strona używa bieżącej
+liczby linii na stronę. Zero, błędny zapis, przepełnienie i pozycje poza tekstem
+są odrzucane.
+
+„Przejdź do procentu” przyjmuje dziesiętne 0–100 i liczy pozycję w bajtach.
+Pozycja wewnątrz znaku UTF-8 cofa się do jego początku, a LF pary CRLF przed CR.
+0 wybiera pierwszy bajt treści po początkowym BOM, 100 koniec pliku. Skuteczne
+wyszukanie i przejście ogłasza wynik i pozostawia pauzę. Przyjęcie komunikatu
+przez kolejkę nie dowodzi późniejszej poprawnej syntezy, wyjścia ani usłyszenia.
+
+Dwie prywatne opcje zapisują się w /.rockbox/tts-reader.cfg. Nowe paczki nie
+zawierają tego pliku ani jego tymczasowego rodzeństwa. Błędy zapisu/odczytu są
+ogłaszane; nieznane/przyszłe pliki i istniejący plik tymczasowy pozostają zachowane.
+Zapis opróżnia bufor, zamyka plik jeden raz i przemianowuje przed zmianą ustawień
+w pamięci. Nie gwarantuje to odporności na każdy zanik zasilania. Czytnik nadal
+przyjmuje UTF-8; format zakładek, lista muzyki i ABI ustawień pluginów nie zmieniają się.

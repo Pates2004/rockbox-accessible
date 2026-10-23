@@ -52,8 +52,8 @@ from project_materials import confined_path, ensure_ignored_directories, project
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SCOPE = "publication-position-20261021/services-gui"
-EXPECTED_VERSION = "0ed3734e5e-espeak-r34-hibyr1-win-alpha17-20261021"
+SCOPE = "reader-tr01-tr05-20261023/services-gui"
+EXPECTED_VERSION = "0ed3734e5e-espeak-r34-hibyr1-win-alpha18-20261023"
 LANGUAGES = ("polski", "english")
 SOURCE_PATHS = (
     "apps/accessibility.c", "apps/accessibility.h", "apps/accessibility_buttons.c",
@@ -65,6 +65,8 @@ SOURCE_PATHS = (
     "apps/accessibility_shortcut.c", "apps/accessibility_shortcut.h",
     "apps/accessibility_services.c", "apps/accessibility_services.h",
     "apps/tts.c", "apps/tts.h", "apps/talk.c", "apps/voice_thread.c", "apps/settings.c", "apps/gui/option_select.c",
+    "apps/tts_reader.c", "apps/tts_reader_settings.c", "apps/tts_reader_settings.h",
+    "apps/keyboard.h", "apps/recorder/keyboard.c", "apps/bookmark.c", "apps/bookmark.h",
     "apps/action.c", "apps/action.h", "apps/gui/list.c", "apps/gui/list.h", "apps/menu.c", "apps/menus/display_menu.c",
     "apps/settings.h", "apps/settings_list.c", "apps/plugin.h", "apps/hiby_connectivity.c",
     "apps/hiby_connectivity.h", "apps/hiby_bluetooth.c", "apps/main.c", "apps/SOURCES",
@@ -80,6 +82,7 @@ SOURCE_PATHS = (
     "apps/keymaps/keymap-hibyr1.c", "apps/lang/english.lang", "apps/lang/polski.lang",
     "uisimulator/buttonmap/hiby-r1.c", "firmware/target/hosted/sdl/button-sdl.c",
     "firmware/target/hosted/sdl/system-sdl.c", "firmware/target/hosted/sdl/pcm-sdl.c",
+    "uisimulator/common/sim_tasks.c",
     "firmware/target/hosted/hiby/r1/button-target.h", "firmware/drivers/button.c",
     "firmware/drivers/touchscreen.c", "firmware/export/touchscreen.h",
     "firmware/target/hosted/button-devinput.c", "firmware/target/hosted/hiby/r1/button-r1.c",
@@ -97,14 +100,15 @@ SOURCE_PATHS = (
     "tools/tests/test_tts_recorder_gui.py", "tools/tests/test_tts_bookmarks_gui.py",
     "tools/tests/test_hiby_accessibility_gui.py",
     "tools/tests/test_accessibility_services_gui.py",
+    "tools/tests/test_tts_reader_services_gui.py",
     "tools/tests/test_context_controls_gui.py",
     "tools/tests/test_touch_wake.py", "tools/tests/test_accessibility_gesture_profiles.py",
     "tools/tests/test_keyclick_gui.py", "apps/misc.c", "apps/misc.h", "apps/beep.c", "firmware/asm/beep.c",
     "tools/tests/test_sdl_audio_debug.py", "tools/tests/fixtures/sdl_audio_debug_fixture.c",
 )
 TRACE_SOURCES = {
-    "firmware/target/hosted/sdl/pcm-sdl.c": "90483d7b1855a01c3ef50fb183fedc8160f8d705cb66a3d576448deb34b8ada7",
-    "firmware/target/hosted/sdl/system-sdl.c": "3edbef03262a2ffaf8c316b2e5f0e993a98b9cae24dbeb9d59fdeaba23088a0e",
+    "firmware/target/hosted/sdl/pcm-sdl.c": "2977ebe8aae26b6e2264da4dca4cb21b967be6a3597a00d38b2f566c9adfa370",
+    "firmware/target/hosted/sdl/system-sdl.c": "f312b2c68e90d638e31dac5e21eabe0f3fee72b50b4ee06a9c0a7c8c61d75ff7",
 }
 TRACE_FEATURES = (b"--debugaudio", b"audiodebug.raw", b"wbN\0", b"abN\0",
                   b"Audio debug file open", b"Audio debug file closed",
@@ -377,7 +381,7 @@ def validate_freeze_shape(freeze, exe_sha256):
     require(freeze.get("scope") == SCOPE, "Freeze belongs to another stage")
     require(sha256_value(exe_sha256) and freeze.get("exe_sha256") == exe_sha256,
             "Explicit EXE hash must match the parent's freeze")
-    require(freeze.get("version") == EXPECTED_VERSION, "The newly frozen alpha17-20261021 version is required")
+    require(freeze.get("version") == EXPECTED_VERSION, "The newly frozen current release version is required")
     require(freeze.get("with_music") is True, "Parent's final plan requires with_music=true and eight sessions")
     for field in ("sources", "build_files"):
         require(isinstance(freeze.get(field), dict) and freeze[field], "Missing frozen " + field)
@@ -4810,8 +4814,8 @@ class HarnessTests(unittest.TestCase):
         self.assertEqual([name for name in SOURCE_PATHS if not (ROOT / name).is_file()], [])
 
     def test_input_refinements_scope_binds_current_gui_dependencies(self):
-        self.assertEqual(SCOPE, "publication-position-20261021/services-gui")
-        self.assertEqual(EXPECTED_VERSION, "0ed3734e5e-espeak-r34-hibyr1-win-alpha17-20261021")
+        self.assertEqual(SCOPE, "reader-tr01-tr05-20261023/services-gui")
+        self.assertEqual(EXPECTED_VERSION, "0ed3734e5e-espeak-r34-hibyr1-win-alpha18-20261023")
         self.assertEqual(len(SOURCE_PATHS), len(set(SOURCE_PATHS)))
         self.assertTrue({
             "apps/accessibility_typing.c", "apps/accessibility_typing.h",
@@ -4819,6 +4823,9 @@ class HarnessTests(unittest.TestCase):
             "apps/accessibility_screen.c", "apps/accessibility_screen.h",
             "apps/menus/settings_menu.c", "apps/menus/display_menu.c", "apps/menus/exported_menus.h",
             "docs/ACCESSIBILITY-BUTTONS.md", "docs/ACCESSIBILITY-BUTTONS-PL.md",
+            "apps/tts_reader.c", "apps/tts_reader_settings.c", "apps/tts_reader_settings.h",
+            "apps/keyboard.h", "apps/recorder/keyboard.c", "apps/bookmark.c", "apps/bookmark.h",
+            "uisimulator/common/sim_tasks.c", "tools/tests/test_tts_reader_services_gui.py",
         } <= set(SOURCE_PATHS))
 
     def test_connectivity_preferences_are_not_rf_evidence(self):

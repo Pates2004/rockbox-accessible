@@ -290,7 +290,8 @@ class EmptyCallerIntegrationTests(unittest.TestCase):
         cls.area.mkdir(parents=True, exist_ok=False)
         paths = ("apps/accessibility.c", "apps/accessibility.h", "apps/accessibility_typing.h",
                  "apps/gui/bitmap/list.c", "apps/gui/skin_engine/skin_touchsupport.c",
-                 "apps/recorder/keyboard.c", "apps/tts_reader.c", "firmware/export/touchscreen.h",
+                 "apps/recorder/keyboard.c", "apps/tts_reader.c", "apps/tts_reader_settings.h",
+                 "firmware/export/touchscreen.h",
                  "tools/tests/test_tts_reader.py", "tools/tests/test_keyclick_exploration.py",
                  "tools/tests/test_accessibility_empty_integration.py", "lib/utf8proc/utf8proc.c",
                  "lib/utf8proc/utf8proc.h", "lib/utf8proc/utf8proc_data.c")

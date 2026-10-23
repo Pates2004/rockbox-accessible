@@ -54,10 +54,12 @@ def validate_clean_profile(directory, manifest):
         if ((card_relative is not None and diagnostic_card_state(card_relative)) or
                 name in runtime_names or name in ('accessibility.cfg', 'accessibility-typing.cfg', 'accessibility-screen.cfg',
                                              'accessibility-shortcut.cfg', 'connectivity.cfg', 'accessibility-typing-echo.cfg',
-                                             'accessibility-lock.cfg', 'touch-sensitivity.cfg', 'empty-feedback.cfg') or
+                                             'accessibility-lock.cfg', 'touch-sensitivity.cfg', 'empty-feedback.cfg',
+                                             'tts-reader.cfg', 'bluetooth.cfg') or
                 name.startswith(('accessibility.cfg.', 'accessibility-typing.cfg.', 'accessibility-screen.cfg.',
                                  'accessibility-shortcut.cfg.', 'connectivity.cfg.', 'accessibility-typing-echo.cfg.',
-                                 'accessibility-lock.cfg.', 'touch-sensitivity.cfg.', 'empty-feedback.cfg.')) or path.suffix.lower() == '.gc' or
+                                 'accessibility-lock.cfg.', 'touch-sensitivity.cfg.', 'empty-feedback.cfg.',
+                                 'tts-reader.cfg.', 'bluetooth.cfg.')) or path.suffix.lower() == '.gc' or
                 name.endswith(('.bmark', '.bookmark')) or
                 '.bmark.' in name or '.bookmark.' in name):
             raise AssertionError(f'Package contains saved runtime state: {path.name}')
