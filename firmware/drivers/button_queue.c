@@ -167,6 +167,10 @@ bool button_queue_try_post(long button, int data)
             }
             else
 #endif
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+            /* Physical click edges must survive a temporarily busy UI consumer. */
+            if ((button & (BUTTON_TOUCHSCREEN | BUTTON_REPEAT)) || IS_SYSEVENT(button))
+#endif
             queue_remove_from_head(&button_queue, button);
         }
         else

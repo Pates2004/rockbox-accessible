@@ -29,6 +29,13 @@ INPUTS = (
     "tools/tests/test_power_shutdown_requests.py", FIXTURE,
 )
 LEGACY_BUTTON_FUNCTION_SHA256 = "a12e8adba8156d195ae3e9fd38e33b2b150ab6c45cabfd3406855ce1db47c594"
+COALESCED_PHYSICAL_BUTTON_FUNCTION_SHA256 = "6a9334e427d2d442dfc5cc90a5379231d7f8ff0193d74413a5be1d91a69c26ee"
+PHYSICAL_EDGE_GUARD = (
+    "#if defined(HIBY_R1) && defined(HAVE_ESPEAK)\n"
+    "            /* Physical click edges must survive a temporarily busy UI consumer. */\n"
+    "            if ((button & (BUTTON_TOUCHSCREEN | BUTTON_REPEAT)) || IS_SYSEVENT(button))\n"
+    "#endif\n"
+)
 CONFIGURATIONS = {
     "hosted": (),
     "hosted-recording": ("HAVE_RECORDING",),
@@ -39,6 +46,10 @@ CONFIGURATIONS = {
     "native-cowon": ("FIXTURE_NATIVE", "COWON_D2"),
     "non-touch": ("FIXTURE_NO_TOUCH",),
     "bootloader": ("FIXTURE_NATIVE", "BOOTLOADER", "IAUDIO_X5"),
+    "r1-hosted": ("HIBY_R1", "HAVE_ESPEAK"),
+    "r1-native-dual": ("HIBY_R1", "HAVE_ESPEAK", "FIXTURE_NATIVE", "FIXTURE_DUALCORE"),
+    "r1-no-espeak": ("HIBY_R1",),
+    "touch-espeak": ("HAVE_ESPEAK",),
 }
 
 
@@ -97,9 +108,18 @@ class PowerShutdownRequestsTests(unittest.TestCase):
         cls.extractions["legacy_button_queue_try_post"] = LEGACY_BUTTON_FUNCTION_SHA256
         legacy_path = cls.evidence / "shutdown-legacy-button-function.c"
         legacy_path.write_text(harness.replace(button_body, legacy_body), encoding="utf-8")
+        if button_body.count(PHYSICAL_EDGE_GUARD) != 1:
+            raise AssertionError("Expected the exact R1 physical-edge guard")
+        coalesced_body = button_body.replace(PHYSICAL_EDGE_GUARD, "")
+        if hashlib.sha256(coalesced_body.encode()).hexdigest() != COALESCED_PHYSICAL_BUTTON_FUNCTION_SHA256:
+            raise AssertionError("Physical-edge control must reconstruct the exact before-fix function")
+        cls.extractions["coalesced_physical_button_queue_try_post"] = COALESCED_PHYSICAL_BUTTON_FUNCTION_SHA256
+        coalesced_path = cls.evidence / "shutdown-coalesced-physical-edges.c"
+        coalesced_path.write_text(harness.replace(button_body, coalesced_body), encoding="utf-8")
         builds = [(name, harness_path, definitions) for name, definitions in CONFIGURATIONS.items()]
         builds += [("mutant", mutant_path, ()), ("legacy-button", legacy_path, ()),
-                   ("legacy-button-native", legacy_path, ("FIXTURE_NATIVE", "FIXTURE_DUALCORE"))]
+                   ("legacy-button-native", legacy_path, ("FIXTURE_NATIVE", "FIXTURE_DUALCORE")),
+                   ("coalesced-physical", coalesced_path, ("HIBY_R1", "HAVE_ESPEAK"))]
         for mode in ("strict", "ubsan"):
             for name, source_path, definitions in builds:
                 binary = cls.evidence / (name + "-" + mode)
@@ -351,6 +371,33 @@ class PowerShutdownRequestsTests(unittest.TestCase):
     def test_press_release_and_system_event_order_and_data_survive(self):
         self.run_case("repeat-edges", configurations=["hosted", "native-dual"])
 
+    def test_r1_physical_click_edges_survive_a_paused_consumer(self):
+        self.run_case("physical-clicks", configurations=["r1-hosted", "r1-native-dual"])
+
+    def test_physical_edge_policy_remains_target_and_espeak_specific(self):
+        self.run_case("physical-post-policy", configurations=[
+            "r1-hosted", "r1-native-dual", "r1-no-espeak", "touch-espeak", "hosted", "native-dual"])
+
+    def test_before_fix_coalescing_loses_physical_clicks_without_a_system_head(self):
+        for (name, mode), binary in self.binaries.items():
+            if name != "coalesced-physical":
+                continue
+            with self.subTest(mode=mode):
+                result = self.command([str(binary), "physical-clicks"])
+                self.runs.append({"configuration": name, "mode": mode, "scenario": "physical-clicks",
+                                  "expected_returncode": 87, "returncode": result.returncode})
+                self.assertEqual(result.returncode, 87, result.stdout + result.stderr)
+                self.assertIn("Physical click edge loss: expected=4 actual=2", result.stderr)
+                self.assertNotIn("runtime error:", result.stderr)
+
+    def test_r1_physical_edge_fix_keeps_repeat_touch_and_system_rules(self):
+        for scenario in ("mixed-raw", "raw-only", "mixed-drained", "exact-repeat-ids",
+                         "many-matching-repeats", "repeat-edges", "system-repeat-bit",
+                         "touch-coordinates", "full-matching-repeat", "repeat-wakeup", "repeat-senders"):
+            with self.subTest(scenario=scenario):
+                self.run_case(scenario, configurations=["r1-hosted", "r1-native-dual"])
+        self.run_case("full-nonmatching-repeat", configurations=["r1-hosted", "r1-native-dual"], expected=86)
+
     def test_system_ids_with_repeat_bit_are_not_coalesced(self):
         self.run_case("system-repeat-bit", configurations=["hosted", "native-dual"])
 
@@ -390,12 +437,14 @@ class PowerShutdownRequestsTests(unittest.TestCase):
             "toolchains/hiby-r1-20261010/prefix/bin/mipsel-rockbox-linux-gnu-gcc")
         if not compiler.is_file():
             self.skipTest("Pinned R1 compiler unavailable; full native build remains parent-owned")
-        output = self.evidence / "shutdown-hosted-mips.o"
-        result = self.command([str(compiler), "-std=gnu11", "-O2", "-Wall", "-Wextra", "-Werror",
-                               "-pthread", "-DHAVE_RECORDING", "-c",
-                               str(self.evidence / "shutdown-actual-extracted.c"), "-o", str(output)])
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.check_imports(output)
+        for name, definitions in (("hosted", ()), ("r1", ("HIBY_R1", "HAVE_ESPEAK"))):
+            with self.subTest(variant=name):
+                output = self.evidence / ("shutdown-" + name + "-mips.o")
+                result = self.command([str(compiler), "-std=gnu11", "-O2", "-Wall", "-Wextra", "-Werror",
+                                       "-pthread", "-DHAVE_RECORDING", *("-D" + value for value in definitions),
+                                       "-c", str(self.evidence / "shutdown-actual-extracted.c"), "-o", str(output)])
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.check_imports(output)
 
 
 if __name__ == "__main__":

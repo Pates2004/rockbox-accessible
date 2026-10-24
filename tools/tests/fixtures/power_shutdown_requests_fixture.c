@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <limits.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -763,6 +764,62 @@ int main(int argument_count, char **arguments)
                (first == (BUTTON_VOL_UP | BUTTON_REPEAT) && second == (BUTTON_POWER | BUTTON_REPEAT)));
         assert(button_queue.events[(button_queue.read + 1) & QUEUE_LENGTH_MASK].data == 127);
         assert(button_queue.events[(button_queue.read + 2) & QUEUE_LENGTH_MASK].data == 127);
+    }
+    else if (strcmp(scenario, "physical-clicks") == 0)
+    {
+        const unsigned int starts[] = {0, QUEUE_LENGTH - 1, UINT_MAX - 17, UINT_MAX};
+        const long buttons[] = {BUTTON_POWER, BUTTON_VOL_UP, BUTTON_VOL_DOWN,
+                                BUTTON_POWER | BUTTON_VOL_UP};
+        for (unsigned int start = 0; start < sizeof(starts) / sizeof(*starts); ++start)
+            for (unsigned int key = 0; key < sizeof(buttons) / sizeof(*buttons); ++key)
+                for (unsigned int clicks = 1; clicks <= 3; ++clicks)
+                    for (unsigned int prefix = 0; prefix <= 1; ++prefix)
+                    {
+                        reset_fixture();
+                        button_queue.read = button_queue.write = starts[start];
+                        if (prefix)
+                            queue_post(&button_queue, SYS_BATTERY_UPDATE, 777);
+                        for (unsigned int click = 0; click < clicks; ++click)
+                        {
+                            assert(button_queue_try_post(buttons[key], 100 + click * 2));
+                            assert(button_queue_try_post(buttons[key] | BUTTON_REL, 101 + click * 2));
+                        }
+                        unsigned int expected = prefix + 2 * clicks;
+                        if (queue_count(&button_queue) != (int)expected)
+                        {
+                            fprintf(stderr, "Physical click edge loss: expected=%u actual=%d\n",
+                                    expected, queue_count(&button_queue));
+                            return 87;
+                        }
+                        if (prefix)
+                        {
+                            check_event(0, SYS_BATTERY_UPDATE);
+                            assert(button_queue.events[button_queue.read & QUEUE_LENGTH_MASK].data == 777);
+                        }
+                        for (unsigned int index = 0; index < 2 * clicks; ++index)
+                        {
+                            unsigned int slot = (button_queue.read + prefix + index) & QUEUE_LENGTH_MASK;
+                            check_event(prefix + index, buttons[key] | (index % 2 ? BUTTON_REL : 0));
+                            assert(button_queue.events[slot].data == (intptr_t)(100 + index));
+                        }
+                    }
+    }
+    else if (strcmp(scenario, "physical-post-policy") == 0)
+    {
+        for (unsigned int click = 0; click < 3; ++click)
+        {
+            assert(button_queue_try_post(BUTTON_POWER, 100 + click * 2));
+            assert(button_queue_try_post(BUTTON_POWER | BUTTON_REL, 101 + click * 2));
+        }
+#if defined(HIBY_R1) && defined(HAVE_ESPEAK)
+        assert(queue_count(&button_queue) == 6);
+#else
+        assert(queue_count(&button_queue) == 2);
+        check_event(0, BUTTON_POWER);
+        check_event(1, BUTTON_POWER | BUTTON_REL);
+        assert(button_queue.events[button_queue.read & QUEUE_LENGTH_MASK].data == 104);
+        assert(button_queue.events[(button_queue.read + 1) & QUEUE_LENGTH_MASK].data == 105);
+#endif
     }
     else if (strcmp(scenario, "queue-capacity") == 0 || strcmp(scenario, "queue-overflow") == 0)
     {
