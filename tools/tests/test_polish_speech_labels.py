@@ -28,6 +28,8 @@ LABELS = {
     "LANG_FLIP_DISPLAY": ("*", "Odwróć ekran"),
 }
 DISPLAY_MARKERS = {"LANG_REPLAYGAIN": "~", "LANG_CROSSFEED": "~"}
+# Keep the historical all_102/all_101 test IDs stable for coverage comparison.
+# Current data comprises 71 core and 55 plugin phrases, 126 distinct entries.
 INTEGRATED_TRANSLATIONS = {
     **catalog_support.TTS_TRANSLATIONS, **plugin_support.TRANSLATIONS,
 }
@@ -185,9 +187,9 @@ class PolishSpeechLabelTests(unittest.TestCase):
                             self.assertEqual(original, value)
 
     def test_all_102_integrated_speech_phrases_are_preserved(self):
-        self.assertEqual(47, len(catalog_support.TTS_TRANSLATIONS))
+        self.assertEqual(71, len(catalog_support.TTS_TRANSLATIONS))
         self.assertEqual(55, len(plugin_support.TRANSLATIONS))
-        self.assertEqual(102, len(INTEGRATED_TRANSLATIONS))
+        self.assertEqual(126, len(INTEGRATED_TRANSLATIONS))
         for identifier, (source, translation) in INTEGRATED_TRANSLATIONS.items():
             voice = catalog_support.TTS_VOICE_OVERRIDES.get(
                 identifier, (source, translation),

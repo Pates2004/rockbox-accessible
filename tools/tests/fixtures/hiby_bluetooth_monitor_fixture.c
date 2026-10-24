@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/prctl.h>
+#include <sys/ioctl.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -297,6 +298,22 @@ static void send_bytes(int input, const char *bytes, size_t length)
             CHECK(seconds(CLOCK_MONOTONIC) < deadline);
             delay_ms(1);
         }
+    }
+}
+
+static void await_monitor_bytes(size_t expected)
+{
+    CHECK(expected > 0 && expected < MONITOR_READ_BUDGET);
+    double deadline = seconds(CLOCK_MONOTONIC) + 2;
+    for (;;)
+    {
+        int available = 0;
+        CHECK(ioctl(monitor_output, FIONREAD, &available) == 0);
+        CHECK(available >= 0 && (size_t)available <= expected);
+        if ((size_t)available == expected)
+            return;
+        CHECK(seconds(CLOCK_MONOTONIC) < deadline);
+        delay_ms(2);
     }
 }
 
@@ -635,7 +652,7 @@ int main(int count, char **arguments)
         {
             for (unsigned int repeat = 0; repeat < 10; repeat++)
                 send_bytes(input, header, sizeof(header) - 1);
-            delay_ms(40);
+            await_monitor_bytes(10 * (sizeof(header) - 1));
             CHECK(hiby_bt_monitor_wait(0) == HIBY_BT_MONITOR_CHANGED);
             CHECK(hiby_bt_monitor_wait(0) == HIBY_BT_MONITOR_IDLE);
         }
