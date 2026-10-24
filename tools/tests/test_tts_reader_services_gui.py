@@ -806,7 +806,9 @@ class ReaderUI:
                 "USB persisted a moved or edited choice")
         sidecar(self.p.base.runtime, pair)
         self.in_menu = False
-        self.in_browser = True
+        # USB can unwind the reader to the root menu; re-enter Files before
+        # searching for the document instead of treating root rows as files.
+        self.in_browser = False
         self.open_document(CASE_NAME)
         self.new_session_query_required()
         self.p.report.setdefault("usb_reader_cases", []).append({
@@ -1012,7 +1014,7 @@ def worker(arguments):
 def execute(arguments):
     require(sys.platform == "win32", "Run with native Windows Python only")
     require(10 <= arguments.timeout <= 60 and 60 <= arguments.session_budget <= 10800 and
-            120 <= arguments.overall_timeout <= 28800, "Invalid explicit timeout bounds")
+            120 <= arguments.overall_timeout <= 31200, "Invalid explicit timeout bounds")
     freeze, build = validate_authorization(arguments)
     native = services.PrivateDesktop()
     labels = compiled_labels(build)
@@ -1324,6 +1326,139 @@ class ReaderDriverContracts(unittest.TestCase):
         self.assertTrue(all(check.get("reader_music_continuity_required")
                             for check in probe.report["checks"][1:]))
 
+    def test_usb_reopens_browser_from_root_in_all_dialogs(self):
+        from tempfile import TemporaryDirectory
+        from types import SimpleNamespace
+
+        class NavigationProbe(services.ServicesProbe):
+            # Reuse the real row/seek/enter methods and ReaderUI navigation.
+            # Only device I/O and unrelated dialog preparation are modeled.
+            def __init__(self, runtime, labels):
+                self.base = SimpleNamespace(runtime=runtime)
+                self.labels, self.report, self.timeout = labels, {}, 1
+                self.surface, self.index, self.dialog = "reader", 0, ""
+                self.trace, self.moves, self.transitions = [], 0, []
+                self.latest = self.render()
+
+            def render(self):
+                if self.surface == "root":
+                    rows = ("Recent bookmarks", self.labels["LANG_DIR_BROWSER"],
+                            "Database", "Resume playback", "Settings", "Playlists",
+                            "Plugins", "System", "Shortcuts")
+                elif self.surface == "browser":
+                    rows = (".rockbox", CASE_NAME, LINE_NAME, EMPTY_NAME,
+                            BOM_NAME, CACHE_NAME, MUSIC_NAME)
+                else:
+                    value = (self.labels["LANG_TTS_RESUME"] if self.surface == "reader-menu"
+                             else self.labels["LANG_TTS_WRAP_QUESTION"] if self.surface == "ask"
+                             else self.labels.get(self.dialog, "Paused"))
+                    return f"TTS: {value}\nTTS utterance: {value}\n"
+                suffix = f"{self.index + 1} {self.labels['VOICE_OF']} {len(rows)}"
+                value = f"{rows[self.index]} {suffix}"
+                return f"TTS: {rows[self.index]}\nTTS: {suffix}\nTTS utterance: {value}\n"
+
+            def emit(self):
+                self.moves += 1
+                self.latest = self.render()
+                self.trace.append(self.latest)
+
+            def press(self, key):
+                if self.surface in ("root", "browser"):
+                    end = 8 if self.surface == "root" else 6
+                    if key in ("Up", "Down"):
+                        selected = max(0, min(end, self.index + (1 if key == "Down" else -1)))
+                        if selected == self.index:
+                            return
+                        self.index = selected
+                    elif key == "Right" and self.surface == "root" and self.index == 1:
+                        self.transitions.append("root-to-browser")
+                        self.surface, self.index = "browser", 0
+                    elif key == "Right" and self.surface == "browser" and self.index == 1:
+                        self.transitions.append("browser-to-reader")
+                        self.surface, self.index = "reader", 0
+                        self.trace.append("TTS reader state: paused offset=3\n")
+                    else:
+                        raise AssertionError("Unexpected navigation from " + self.surface)
+                elif self.surface == "reader" and key == "Right":
+                    self.surface, self.index = "dialog", 1
+                elif self.surface == "dialog" and key in ("Up", "Down"):
+                    self.index += 1 if key == "Down" else -1
+                elif self.surface == "reader-menu" and key == "Left":
+                    self.surface = "reader"
+                else:
+                    raise AssertionError("Unexpected dialog input")
+                self.emit()
+
+            def capture(self, name, action=None, expected=(), optional=False, **unused):
+                before = self.moves
+                if action:
+                    action()
+                if action and self.moves == before and not optional:
+                    raise AssertionError("Unchanged selection at root boundary")
+                require(not expected or services.speech_contains(self.latest, expected),
+                        "Missing modeled navigation speech")
+                return self.latest
+
+            def mark(self):
+                return len(self.trace)
+
+            def text(self, marker=0):
+                return "".join(self.trace[marker:])
+
+            def hold_context(self):
+                require(self.surface == "reader", "Context requires the reopened reader")
+                self.surface = "reader-menu"
+                self.emit()
+
+            def keyboard_chord(self, first, second):
+                require((first, second) == ("Insert", "Right"), "Unexpected confirmation input")
+                self.surface = "ask"
+                self.emit()
+
+            def usb_toggle(self, inserted):
+                if inserted:
+                    self.trace.append("USB inserted. Waiting for removal\n")
+                    self.surface = "usb"
+                else:
+                    # The closed real failure observed Files, row 2 of root9.
+                    self.surface, self.index = "root", 1
+                self.emit()
+
+        central = project_materials_root(ROOT).resolve()
+        for connector, files in (("z", "Pliki"), ("of", "Files")):
+            for location in ("query", "numeric", "case", "wrap", "ask"):
+                with self.subTest(connector=connector, location=location), \
+                        TemporaryDirectory(prefix="reader-usb-navigation-", dir=central) as temporary:
+                    runtime = Path(temporary) / "fixture"
+                    resources = runtime / "simdisk/.rockbox"
+                    resources.mkdir(parents=True)
+                    primary = resources / "tts-reader.cfg"
+                    primary.write_bytes(canonical(1, 1))
+                    labels = {identifier: identifier for identifier in READER_IDS}
+                    labels.update(VOICE_OF=connector, LANG_DIR_BROWSER=files,
+                                  LANG_TTS_RESUME="Resume reading")
+                    probe = NavigationProbe(runtime, labels)
+                    ui = ReaderUI(probe)
+                    ui.in_browser = True
+                    ui.go = mock.Mock()
+                    ui.open_menu = mock.Mock(side_effect=lambda: setattr(ui, "in_menu", True))
+                    ui.row = mock.Mock(side_effect=lambda identifier: setattr(probe, "dialog", identifier))
+                    ui.edit = mock.Mock()
+                    ui.new_session_query_required = mock.Mock(
+                        side_effect=lambda: self.assertEqual(probe.surface, "reader"))
+                    ui.usb_case(location, (1, 1))
+                    self.assertEqual(probe.transitions, ["root-to-browser", "browser-to-reader"])
+                    self.assertEqual(ui.document, CASE_NAME)
+                    self.assertEqual(ui.accepted_query, "")
+                    self.assertFalse(ui.in_menu)
+                    ui.new_session_query_required.assert_called_once_with()
+                    self.assertEqual(primary.read_bytes(), canonical(1, 1))
+                    case, = probe.report["usb_reader_cases"]
+                    self.assertEqual(case["site"], location)
+                    self.assertTrue(case["browser_return_and_new_reader_observed"])
+                    self.assertTrue(case["query_reset_after_new_reader"])
+
+
     def test_four_launches_cover_real_restart_choices(self):
         self.assertEqual([(row[1], row[2]) for row in STAGES], [(0, 0), (1, 1), (0, 2), (1, 0)])
         self.assertEqual([row[0] for row in STAGES], list("ABCD"))
@@ -1508,7 +1643,7 @@ def parser():
     result.add_argument("--exe-sha256")
     result.add_argument("--timeout", type=float, default=45)
     result.add_argument("--session-budget", type=float, default=10800)
-    result.add_argument("--overall-timeout", type=float, default=28800)
+    result.add_argument("--overall-timeout", type=float, default=31200)
     result.add_argument("--desktop", help=argparse.SUPPRESS)
     result.add_argument("--gate", type=int, help=argparse.SUPPRESS)
     result.add_argument("--descriptor", type=Path, help=argparse.SUPPRESS)
