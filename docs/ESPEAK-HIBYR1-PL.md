@@ -34,9 +34,11 @@ Dotychczasowe sterowanie radiami pozostaje w
 Ustawienia → Łączność, przywraca wcześniejsze preferencje po trybie samolotowym
 i dodaje osobno przypisywane przełączanie eSpeaka/plików głosowych z syntetycznym
 komunikatem. Zobacz [łączność](HIBY-R1-CONNECTIVITY-PL.md) i
-[przełączanie usług](ACCESSIBILITY-SHORTCUT-PL.md). Test zachowuje polski interfejs
-i włączoną mowę; angielski, wyłączona mowa i domyślny potrójny Power są dopiero
-na przyszłe wydanie publiczne. Progi i użyteczność dotyku wymagają prób na sprzęcie.
+[przełączanie usług](ACCESSIBILITY-SHORTCUT-PL.md). Test domyślnie używa polskiego
+interfejsu i włączonej mowy. Domyślny angielski interfejs i początkowo wyłączona mowa
+są przewidziane dla późniejszego wydania publicznego. Nowe profile R1 przypisują
+potrójny Power do skrótu dostępności w interfejsie i na ekranie odtwarzania. Zapisane
+wcześniej przypisania są zachowywane. Progi i użyteczność dotyku wymagają prób na sprzęcie.
 
 Ten target korzysta ze wspólnego eSpeaka 1.44.05 r34, kolejki mowy, czytnika
 tekstu i integracji zakładek tekstowych oraz dźwiękowych. Nie piszemy czytnika
@@ -201,8 +203,9 @@ Ogólne Ustawienia ekranu dotykowego oraz Ustawienia przycisków fizycznych są
 teraz w Systemie. Pierwsze zawierają czułość gestów, odblokowanie dowolnym
 przyciskiem i przyciski przy zablokowanym dotyku. Obie opcje blokady domyślnie są
 wyłączone. Ustawienia pisania dodają echo znaków/słów, wielkich liter i usuwania.
-Nie ma osobnego podmenu skrótu dostępności; bezpośrednie przełączniki usług
-przypisuje się przyciskom albo gestom.
+Osobne podmenu Skrót dostępności zawiera przełącznik używania skrótu i wybór
+usług. Bezpośrednie przełączniki usług nadal można przypisywać przyciskom
+i gestom. Zobacz [przełączanie usług](ACCESSIBILITY-SHORTCUT-PL.md).
 
 Jeśli karta nadal ma diagnostyczny launcher audio alpha8, przed wymianą programu
 przywróć zwykły program dopasowanym narzędziem alpha8. Nie używaj nowego manifestu

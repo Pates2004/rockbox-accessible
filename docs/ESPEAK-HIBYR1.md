@@ -33,9 +33,11 @@ The existing radio controls remain under
 Settings → Connectivity and restore prior radio preferences after airplane mode,
 and adds separately assignable eSpeak/voice-file toggles with synthesized status.
 See [connectivity](HIBY-R1-CONNECTIVITY.md) and
-[service controls](ACCESSIBILITY-SHORTCUT.md). This test edition retains Polish
-and speech on; English/speech-off and default triple Power are for a later public
-release. Physical touchscreen timing and usability still require device tests.
+[service controls](ACCESSIBILITY-SHORTCUT.md). This test edition defaults to Polish
+and enabled speech. English and disabled speech defaults are reserved for a later
+public edition. New R1 profiles assign triple Power to the accessibility shortcut
+in both interface and playback profiles. Existing saved assignments are preserved.
+Physical touchscreen timing and usability still require device tests.
 
 This target reuses our shared eSpeak 1.44.05 r34, speech queue, text reader and
 text/audio bookmark integration. It is not a rewritten reader or a substitute
@@ -191,8 +193,9 @@ General Touchscreen settings and Physical button settings are now System
 children. The former adds gesture sensitivity, any-button unlocking and physical
 controls while touch is locked. The two lock policies default Off. Typing
 settings adds character/word echo, capital announcements and deletion echo.
-There is no separate accessibility-shortcut submenu; map the direct speech
-toggle actions in button or gesture assignments.
+The separate Accessibility shortcut submenu contains its enable switch and
+service selection. Direct speech toggle actions can also be assigned to buttons
+and gestures. See [service controls](ACCESSIBILITY-SHORTCUT.md).
 
 If the card still has the alpha8 audio diagnostic launcher, restore that launcher
 with its matching alpha8 tool before replacing the application. Do not use a
