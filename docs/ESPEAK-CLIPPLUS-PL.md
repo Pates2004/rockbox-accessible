@@ -1,5 +1,8 @@
 # Eksperymentalny firmware eSpeak dla Sansa Clip+
 
+Zachowane wydanie poniżej ma nadal polski i włączoną mowę. Nowe buildy używają
+[angielskiego profilu z wyłączoną mową](RELEASE-PROFILES-PL.md).
+
 ## Wydanie: r29-alpha7-20261011
 
 Pliki native w `D:\Rockbox\rockbox\installfiles\clipplus`:

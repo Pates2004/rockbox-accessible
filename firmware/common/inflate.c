@@ -40,6 +40,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+/* Modified for Rockbox Accessible; change notice dated 2026-10-25.
+ * Decode a final short Huffman code without requiring bytes past raw EOF. */
 #include "inflate.h"
 #include <stdbool.h>
 #include <string.h>
@@ -103,6 +105,7 @@ struct inflate {
         rv = (E);                             \
         goto bail;                            \
     }                                         \
+    total_out += _size;                       \
     flushed = true;                           \
     if (st == INFLATE_ZLIB)                   \
         chksum = adler_32(os, _size, chksum); \
@@ -137,6 +140,23 @@ struct inflate {
 #define INFLATE_CONSUME_BITS(N) do { \
     sreg >>= (N);                    \
     nbits -= (N);                    \
+} while (0)
+
+/* Huffman tables use lookahead up to max_bits, but the final symbol may need
+ * fewer bits. EOF is permitted here only when DECODE can consume an actual
+ * complete code; required block fields still use strict FILL_BITS. */
+#define INFLATE_FILL_CODE(H) do {                         \
+    while ((H)->max_bits > nbits) {                      \
+        if (ip == ie) {                                 \
+            uint32_t _size = read(is, sizeof(it->in), rctx); \
+            ip = is;                                    \
+            ie = is + _size;                            \
+            if (!_size)                                 \
+                break;                                  \
+        }                                               \
+        sreg |= ((uint32_t)*ip++ << nbits);              \
+        nbits += 8;                                     \
+    }                                                   \
 } while (0)
 
 #define INFLATE_EXTRACT_BITS(N,B) do { \
@@ -177,6 +197,10 @@ struct inflate {
     }                                                     \
     _code = (_c >> 8);                                    \
 _found:                                                   \
+    if (_b > nbits) {                                    \
+        rv = (E);                                        \
+        goto bail;                                       \
+    }                                                    \
     INFLATE_CONSUME_BITS(_b);                             \
     _code;                                                \
 })
@@ -191,6 +215,7 @@ static int inflate_blocks(struct inflate* it, int st, inflate_reader read, void*
     uint8_t* oe = os + sizeof(it->out);
     bool flushed = false;
     uint32_t chksum;
+    uint32_t total_out = 0;
     uint32_t nbits = 0;
     uint32_t sreg = 0;
     uint32_t i;
@@ -586,7 +611,7 @@ static int inflate_blocks(struct inflate* it, int st, inflate_reader read, void*
                         uint32_t len;
                         uint8_t byte;
 
-                        INFLATE_FILL_BITS(-28, h->max_bits);
+                        INFLATE_FILL_CODE(h);
 
                         c = INFLATE_DECODE(-29, h);
 
@@ -649,7 +674,7 @@ static int inflate_blocks(struct inflate* it, int st, inflate_reader read, void*
                 uint32_t off;
                 uint8_t* cp;
 
-                INFLATE_FILL_BITS(-33, tab_huffs[0]->max_bits);
+                INFLATE_FILL_CODE(tab_huffs[0]);
                 c = INFLATE_DECODE(-34, tab_huffs[0]);
 
                 if (c < 256) {
@@ -670,7 +695,7 @@ static int inflate_blocks(struct inflate* it, int st, inflate_reader read, void*
                 INFLATE_EXTRACT_BITS(lenextra[c], len);
                 len += lenbase[c];
 
-                INFLATE_FILL_BITS(-38, tab_huffs[1]->max_bits);
+                INFLATE_FILL_CODE(tab_huffs[1]);
                 c = INFLATE_DECODE(-39, tab_huffs[1]);
 
                 if (c > 29) {
@@ -728,17 +753,32 @@ static int inflate_blocks(struct inflate* it, int st, inflate_reader read, void*
         }
 
         if (st == INFLATE_ZLIB) {
-            chksum2 = ((header[0] << 24) | (header[1] << 16) | (header[2] << 8) | (header[3] << 0));
+            chksum2 = (((uint32_t)header[0] << 24) | ((uint32_t)header[1] << 16) |
+                       ((uint32_t)header[2] << 8) | (uint32_t)header[3]);
 
             if (chksum != chksum2) {
                 rv = -46;
                 goto bail;
             }
         } else if (st == INFLATE_GZIP) {
-            chksum2 = ((header[3] << 24) | (header[2] << 16) | (header[1] << 8) | (header[0] << 0));
+            chksum2 = (((uint32_t)header[3] << 24) | ((uint32_t)header[2] << 16) |
+                       ((uint32_t)header[1] << 8) | (uint32_t)header[0]);
 
             if (~chksum != chksum2) {
                 rv = -47;
+                goto bail;
+            }
+            /* Gzip also requires ISIZE, modulo 2^32, after its CRC. */
+            for (i = 0; i < 4; i++) {
+                if (nbits != 0)
+                    INFLATE_EXTRACT_BITS(8, header[i]);
+                else
+                    INFLATE_GET_BYTE(-49, header[i]);
+            }
+            uint32_t expected_size = ((uint32_t)header[3] << 24) |
+                ((uint32_t)header[2] << 16) | ((uint32_t)header[1] << 8) | header[0];
+            if (expected_size != total_out) {
+                rv = -50;
                 goto bail;
             }
         }

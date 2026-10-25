@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import shutil
 import struct
 import subprocess
 import sys
@@ -40,6 +41,8 @@ def inventory(directory):
 
 
 def validate_clean_profile(directory, manifest):
+    if manifest.get('default_profile') not in (None, 'standard-en'):
+        raise AssertionError('Unknown release default profile')
     files = inventory(directory)
     if set(files) != set(manifest['files']) | {'manifest.json'}:
         raise AssertionError('Package contains unmanifested files or is incomplete')
@@ -72,6 +75,13 @@ def validate_clean_profile(directory, manifest):
         'tts ducking': 'on', 'tts ducking level': '25', 'tts pitch': '50',
         'tts volume': '100', 'tts range': '50', 'tts wordgap': '0', 'volume': '-25',
     }
+    if manifest.get('default_profile') == 'standard-en':
+        expected.update({
+            'lang': '/.rockbox/langs/english.lng', 'talk menu': 'off', 'tts enabled': 'off',
+            'accessibility shortcut enabled': 'on', 'accessibility shortcut tts': 'on',
+            'accessibility shortcut voice files': 'off', 'accessibility shortcut touch': 'on',
+            'accessibility shortcut curtain': 'off',
+        })
     settings = {}
     for line in (disk / '.rockbox/config.cfg').read_text(encoding='utf-8').splitlines():
         key, separator, value = line.partition(':')
@@ -165,10 +175,23 @@ def main():
                 raise AssertionError(f'Package integrity failure: {relative}')
         return manifest
 
-    def smoke(directory, label, real_audio):
+    def smoke(directory, label, real_audio, factory=False):
         executable = directory / 'rockboxui.exe'
         native.ensure_unused(executable)
         before = inventory(directory)
+        standard = manifest.get('default_profile') == 'standard-en'
+        import_profile = standard and (arguments.target != 'hibyr1' or not real_audio)
+        config_path = directory / 'simdisk/.rockbox/config.cfg'
+        clean_config = config_path.read_bytes()
+        if factory:
+            destination = results / label / 'packaged-config.cfg'
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            if destination.exists():
+                raise RuntimeError('Factory profile evidence already exists')
+            config_path.rename(destination)
+        if import_profile:
+            # Owned temporary input, moved to evidence after this run.
+            shutil.copy2(directory / 'Accessible-Polish.cfg', directory / 'simdisk/Accessible-Polish.cfg')
         environment = dict(os.environ, SDL_VIDEODRIVER='windows')
         environment.pop('SDL_AUDIODRIVER', None)
         environment.pop('SDL_DISKAUDIOFILE', None)
@@ -185,16 +208,46 @@ def main():
         log = directory / 'simulator.log'
         try:
             window = find_window(process.pid, environment)
+            language = 'pl'
+            if standard:
+                time.sleep(1.5)
+                initial = log.read_text(encoding='utf-8', errors='replace') if log.exists() else ''
+                if re.search(r'^TTS:', initial, re.MULTILINE):
+                    raise AssertionError('Fresh standard profile unexpectedly speaks before activation')
+                run['default_speech_disabled'] = True
+
+                def press(key, settle=0.12):
+                    send_key(process.pid, window, key, True, environment)
+                    time.sleep(0.1)
+                    send_key(process.pid, window, key, False, environment)
+                    time.sleep(settle)
+
+                if arguments.target == 'hibyr1':
+                    for _ in range(3):
+                        press('Escape')
+                    time.sleep(1)
+                    language = 'en'
+                    run['triple_power_sent'] = True
+                if import_profile:
+                    # Fresh root selection is Files; the private test disk has
+                    # exactly one visible file, the optional profile.
+                    press('Return', 0.8)
+                    press('Return', 1.0)
+                    press('Escape', 0.8)
+                    language = 'pl'
+                    run['polish_profile_imported'] = True
+                else:
+                    run['english_shortcut_profile'] = True
             deadline = time.monotonic() + 25
             while time.monotonic() < deadline:
                 text = log.read_text(encoding='utf-8', errors='replace') if log.exists() else ''
-                if 'TTS parameters: language=pl variant= rate=175' in text:
+                if f'TTS parameters: language={language} variant= rate=175' in text:
                     break
                 if process.poll() is not None:
                     raise AssertionError(f'Early package exit: {process.returncode}')
                 time.sleep(0.1)
             else:
-                raise AssertionError('No default Polish TTS startup in packaged executable')
+                raise AssertionError(f'No expected {language} speech after profile activation')
             native.set_hidden(process.pid, window, True)
             time.sleep(1)
             for key in ('Down', 'Up'):
@@ -204,7 +257,7 @@ def main():
                 time.sleep(0.8)
             shutdown(process, window, environment)
             text = log.read_text(encoding='utf-8', errors='replace')
-            parameters = ('TTS parameters: language=pl variant= rate=175 pitch=50 '
+            parameters = (f'TTS parameters: language={language} variant= rate=175 pitch=50 '
                           'volume=100 range=50 wordgap=0 punctuation=0')
             if parameters not in text:
                 raise AssertionError('Clean default parameters did not reach the synthesizer')
@@ -214,8 +267,20 @@ def main():
                 raise AssertionError(f'No active native Windows output: {drivers}')
             if 'Unable to open audio' in text or 'TTS error' in text:
                 raise AssertionError('Packaged simulator reports an audio/TTS error')
-            if 'TTS: Biblioteka' not in text or len(re.findall(r'^TTS:', text, re.MULTILINE)) < 4:
+            label_text = 'TTS: Biblioteka' if language == 'pl' else 'TTS: Database'
+            if label_text not in text or len(re.findall(r'^TTS:', text, re.MULTILINE)) < 4:
                 raise AssertionError('Missing actual package menu-navigation speech')
+            if standard:
+                saved = config_path.read_text(encoding='utf-8')
+                if 'tts enabled: on' not in saved or 'accessibility touch enabled:' in saved:
+                    raise AssertionError('Activation not saved, or import-only touch alias leaked into config.cfg')
+                if import_profile and 'polski' not in saved:
+                    raise AssertionError('Polish CFG import did not persist its language')
+                if arguments.target == 'hibyr1':
+                    touch = directory / 'simdisk/.rockbox/accessibility.cfg'
+                    if '\nenabled:1\n' not in touch.read_text(encoding='utf-8'):
+                        raise AssertionError('Requested touch exploration was not enabled and saved')
+                    run['touch_enabled_and_saved'] = True
             run['exit_code'] = process.returncode
             run['passed'] = True
         finally:
@@ -223,6 +288,15 @@ def main():
                 process.terminate()
                 process.wait(timeout=10)
             native.ensure_unused(executable)
+            if standard and (not config_path.exists() or config_path.read_bytes() != clean_config):
+                destination = results / label / 'activated-config.cfg'
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                if destination.exists():
+                    raise RuntimeError('Activation evidence destination already exists')
+                if config_path.exists():
+                    config_path.rename(destination)
+                config_path.write_bytes(clean_config)
+                run['clean_config_restored'] = True
             after = inventory(directory)
             modified = [path for path, expected in before.items() if after.get(path) != expected]
             run['modified_package_files'] = modified
@@ -384,6 +458,9 @@ def main():
             raise RuntimeError('Unsafe package restoration')
         current.rename(release)
         current = release
+        if manifest.get('default_profile') == 'standard-en':
+            smoke(release, 'factory-defaults', False, factory=True)
+            report['checks'].append('compiled factory defaults without config.cfg: silent English; R1 triple Power and optional Polish import')
         locked_log_error(release)
         report['checks'].append('locked local log produces bilingual native error and exits, without fallback')
         validate_manifest(release)

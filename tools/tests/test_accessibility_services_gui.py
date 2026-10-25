@@ -4691,7 +4691,7 @@ class HarnessTests(unittest.TestCase):
 
     def test_saved_defaults_omitted_by_changed_only_writer_are_resolved(self):
         settings = effective_settings("talk menu: off\ntalk mixer level: 0\n")
-        self.assertEqual(settings, {"tts enabled": "on", "talk menu": "off",
+        self.assertEqual(settings, {"tts enabled": "off", "talk menu": "off",
                                    "talk mixer level": "0", "tts volume": "100"})
 
     def generated_settings(self, language="polski", extra=""):
@@ -4715,14 +4715,15 @@ class HarnessTests(unittest.TestCase):
             settings = saved_settings_snapshot(resources, language, expected, report)
         return settings, report["settings_snapshot"]
 
-    def test_pending_snapshot_replaces_seed_and_resolves_omitted_default_on_flags(self):
+    def test_pending_snapshot_replaces_seed_and_resolves_omitted_default_off_flags(self):
         for language in LANGUAGES:
             for ending in ("\n", "\r\n"):
                 text = self.generated_settings(language).replace("\n", ending)
                 with self.subTest(language=language, ending=repr(ending)):
-                    settings, receipt = self.settings_snapshot_fixture(text, language=language)
-                    self.assertEqual(settings["talk menu"], "on")
-                    self.assertEqual(settings["tts enabled"], "on")
+                    expected = {"tts enabled": "off", "talk menu": "off", "talk mixer level": "0", "tts volume": "100"}
+                    settings, receipt = self.settings_snapshot_fixture(text, expected, language=language)
+                    self.assertEqual(settings["talk menu"], "off")
+                    self.assertEqual(settings["tts enabled"], "off")
                     self.assertEqual(settings["tts volume"], "100")
                     self.assertEqual(receipt["path"], str(Path("synthetic-settings/config.cfg.new")))
                     self.assertEqual(receipt["sha256"], hashlib.sha256(text.encode("utf-8")).hexdigest())
@@ -4775,9 +4776,10 @@ class HarnessTests(unittest.TestCase):
         self.assertEqual(settings["tts enabled"], "off")
         self.assertTrue(receipt["pending_promotion"])
 
-    def test_omitted_default_cannot_inherit_old_seed_off_value(self):
+    def test_omitted_default_cannot_inherit_old_seed_on_value(self):
         with self.assertRaisesRegex(AssertionError, "Actual saved flags/volume"):
-            self.settings_snapshot_fixture(self.generated_settings(), {"talk menu": "off"})
+            self.settings_snapshot_fixture(self.generated_settings(), {"talk menu": "on"},
+                                           seed=synthetic_config("polski", True))
 
     def test_unexpected_fixed_config_cannot_override_either_selected_snapshot(self):
         for pending in (None, self.generated_settings()):

@@ -98,7 +98,8 @@ synthetic large publications, an independent navigation oracle and a Python
 `struct`/`zlib` record oracle. Evidence is retained in the central project
 workspace. These are core tests, not format conformance or physical tests.
 
-Next come bounded container/XML access, format adapters, reading-order/text
+The [container stage](BOOK-CONTAINERS.md) supplies classic ZIP/DEFLATE access.
+Next come bounded XML access, format adapters, reading-order/text
 delivery, audio clip scheduling, links/return and skip/escape semantics, then
 spoken book menus and global/per-book preferences. Full DAISY includes audio,
 text and synchronized profiles; a TOC and MP3 playlist alone do not complete it.

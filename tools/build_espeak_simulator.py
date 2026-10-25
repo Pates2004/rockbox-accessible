@@ -221,7 +221,7 @@ def main():
     if arguments.target == "sansaclipzip":
         version = "0ed3734e5e-espeak-r29-clipzip-" + ("win-" if windows else "") + "alpha8-20261011"
     elif arguments.target == "hibyr1":
-        version = "0ed3734e5e-espeak-r34-hibyr1-" + ("win-alpha19-20261025" if windows else "alpha15-20261023")
+        version = "0ed3734e5e-espeak-r34-hibyr1-" + ("win-alpha20-20261025" if windows else "alpha15-20261023")
     environment = dict(os.environ, OMP_NUM_THREADS=str(arguments.jobs), VERSION=version)
     sdk = arguments.sdl_sdk.resolve()
     if windows:
@@ -276,6 +276,7 @@ def main():
         shutil.copy2(ROOT / "docs" / english_guide, release / "README.md")
         shutil.copy2(sdk.parent / "LICENSE.txt", release / "SDL2-LICENSE.txt")
         for name in ("ESPEAK.md", "ESPEAK-PL.md", "ESPEAK-TARGETS.md", "ESPEAK-TARGETS-PL.md",
+                     "RELEASE-PROFILES.md", "RELEASE-PROFILES-PL.md",
                      "ESPEAK-PLUGINS.md", "ESPEAK-PLUGINS-PL.md",
                      "ESPEAK-BOOKMARKS.md", "ESPEAK-BOOKMARKS-PL.md",
                      f"ESPEAK-{target_slug.upper()}.md", f"ESPEAK-{target_slug.upper()}-PL.md"):
@@ -298,16 +299,20 @@ def main():
                          "ESPEAK-BLUETOOTH.md", "ESPEAK-BLUETOOTH-PL.md",
                          "ESPEAK-HIBY-USB.md", "ESPEAK-HIBY-USB-PL.md",
                          "RADIO-DYNAMIC.md", "RADIO-DYNAMIC-PL.md",
-                         "BOOK-READER-FOUNDATION.md", "BOOK-READER-FOUNDATION-PL.md"):
+                         "BOOK-READER-FOUNDATION.md", "BOOK-READER-FOUNDATION-PL.md",
+                         "BOOK-CONTAINERS.md", "BOOK-CONTAINERS-PL.md"):
                 shutil.copy2(ROOT / "docs" / name, release / name)
     configuration = disk / ".rockbox" / "config.cfg"
-    configuration.write_text("lang: /.rockbox/langs/polski.lng\ntalk menu: on\ntalk dir: spell\n"
+    configuration.write_text("lang: /.rockbox/langs/english.lng\ntalk menu: off\ntalk dir: spell\n"
                              "talk file: spell\ntalk dir clip: off\ntalk file clip: off\n"
-                             "tts enabled: on\ntts language: system\ntts variant: \ntts rate: 175\n"
+                             "tts enabled: off\ntts language: system\ntts variant: \ntts rate: 175\n"
                              "tts rate scale: percent\ntts punctuation: none\n"
                              "tts ducking: on\ntts ducking level: 25\n"
                              "tts pitch: 50\ntts volume: 100\ntts range: 50\ntts wordgap: 0\n"
-                             "volume: -25\n", encoding="utf-8")
+                             "accessibility shortcut enabled: on\naccessibility shortcut tts: on\n"
+                             "accessibility shortcut voice files: off\naccessibility shortcut touch: on\n"
+                             "accessibility shortcut curtain: off\nvolume: -25\n", encoding="utf-8")
+    shutil.copy2(ROOT / "docs/profiles/Accessible-Polish.cfg", release / "Accessible-Polish.cfg")
     imports = []
     if windows:
         headers = subprocess.check_output(['x86_64-w64-mingw32-objdump', '-p', str(executable)], text=True)
@@ -333,7 +338,7 @@ def main():
         "version": environment["VERSION"], "plugin_abi": 0xe006,
         "rockbox_revision": subprocess.check_output(
             ["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip(),
-        "target": arguments.target,
+        "target": arguments.target, "default_profile": "standard-en",
         "kind": f"Native Windows x64 {target_name} simulator; not device firmware" if windows else f"Linux/WSL {target_name} simulator; not device firmware",
         "windows_system_imports": imports, "files": files,
         **({"espeak_data_provenance": provenance} if provenance is not None else {})},

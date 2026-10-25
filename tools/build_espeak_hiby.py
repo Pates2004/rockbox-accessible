@@ -748,8 +748,8 @@ def verify_firmware_zip(path, expected_data=None, expected_catalogs=None):
         required.update(DATA_PREFIX + name for name in shared.REQUIRED_DATA)
         if not required <= entries.keys():
             raise RuntimeError(f'Missing runtime assets: {sorted(required - entries.keys())}')
-        if archive.read('.rockbox/config.cfg') != DEFAULT_CONFIG:
-            raise RuntimeError('Package does not use the clean Polish default profile')
+        if archive.read('.rockbox/config.cfg') != shared.manifest_default_config(manifest, native_hiby=True):
+            raise RuntimeError('Package does not use its declared clean default profile')
         validate_build_info(archive.read('.rockbox/rockbox-info.txt').decode('utf-8'), manifest['version'])
         if validate_elf(archive.read(FIRMWARE)) != manifest['application']:
             raise RuntimeError('Application ELF metadata mismatch')
@@ -842,7 +842,8 @@ def write_firmware_zip(base_zip, output, additions, metadata):
                            'copyrightText': 'NOASSERTION'} for index, (name, digest) in enumerate(sorted(files.items()))]}
         contents[TARGET.document_prefix + 'SPDX.json'] = json_bytes(spdx)
         files[TARGET.document_prefix + 'SPDX.json'] = sha256(json_bytes(spdx))
-        manifest = dict(metadata, files=files)
+        manifest = dict({'default_profile': 'standard-en'}, **metadata)
+        manifest.update(files=files)
         with zipfile.ZipFile(output, 'x', zipfile.ZIP_DEFLATED) as archive:
             for name, content in sorted(contents.items()):
                 archive.writestr(name, content)
@@ -1008,12 +1009,15 @@ def package_application(arguments, source, environment, toolchain, build):
     additions.update(runtime_additions)
     additions[AUTOSTART_FILE] = AUTOSTART_SEED
     additions['.rockbox/config.cfg'] = DEFAULT_CONFIG
+    additions['.rockbox/Accessible-Polish.cfg'] = (ROOT / 'docs/profiles/Accessible-Polish.cfg').read_bytes()
+    for name in ('RELEASE-PROFILES.md', 'RELEASE-PROFILES-PL.md'):
+        additions[TARGET.document_prefix + name] = (ROOT / 'docs' / name).read_bytes()
     staging = build / 'release-staging'
     staging.mkdir(exist_ok=False)
     source_archive = staging / f'rockbox-hibyr1-espeak-{arguments.version}-source.tar.gz'
     hardware_test = arguments.publish_hardware_test or arguments.stage_hardware_test
     metadata = {'version': arguments.version, 'target': 'hibyr1', 'engine_revision': ENGINE_REVISION,
-                'plugin_abi': PLUGIN_ABI, 'channel': 'hardware-test' if hardware_test else
+                'plugin_abi': PLUGIN_ABI, 'default_profile': 'standard-en', 'channel': 'hardware-test' if hardware_test else
                     ('experimental' if arguments.publish else 'diagnostic'),
                 'kind': 'Experimental hosted Linux HiBy R1 application',
                 'warning': HARDWARE_TEST_WARNING if hardware_test else

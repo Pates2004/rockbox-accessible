@@ -63,7 +63,8 @@ Examples, rounded to one decimal when needed: `0% = 175 WPM`, `-54.3% = 80 WPM`,
 with a 1 WPM step in either scale. Switching scales changes only the
 presentation, not the saved rate or audio: `tts rate: 450` means 450 WPM and
 displays as `+157.1%`, without replacing WPM storage with a rounded percentage.
-New releases ship clean defaults (175 WPM / 0%, Polish UI, System voice), not
+New releases ship clean defaults (English UI, Talkbox/touch exploration off,
+accessibility shortcut on, 175 WPM / 0%, System voice), not
 the user's previous profile. Archive the old installation and its data in
 `snapshots` for recovery; do not restore them into the new package automatically.
 Punctuation uses eSpeak's native symbol reading: None, Some, Most or All;

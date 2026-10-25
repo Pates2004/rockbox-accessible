@@ -849,7 +849,7 @@ class HibyPackageTests(unittest.TestCase):
 
     def test_clean_polish_profile_enforced(self):
         self.additions['.rockbox/config.cfg'] += b'resume index: 42\n'
-        with self.assertRaisesRegex(RuntimeError, 'clean Polish'):
+        with self.assertRaisesRegex(RuntimeError, 'clean default profile'):
             package.verify_firmware_zip(self.create())
 
     def test_dirty_base_profile_not_silently_replaced(self):

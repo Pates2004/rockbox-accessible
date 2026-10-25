@@ -40,7 +40,8 @@ are not universally accessible. See [target boundaries](docs/ESPEAK-TARGETS.md) 
 
 ## Development status
 
-Structured-book work has started with a shared position/navigation core.
+Structured-book work includes a shared position/navigation core and a bounded
+ZIP member reader for stored and DEFLATE-compressed content.
 See the [book-reader foundation](docs/BOOK-READER-FOUNDATION.md)
 ([Polski](docs/BOOK-READER-FOUNDATION-PL.md)) for its implemented scope and
 remaining adapters. DAISY/EPUB/PDF opening is not available yet. PDF OCR is
@@ -53,9 +54,12 @@ mock test is not physical Bluetooth, RF power, battery-life, touchscreen or NVDA
 acceptance. Wi-Fi streaming/NAS, podcast services and accessible GBA/Lua support
 are not implemented by this fork.
 
-The current test-build defaults remain Polish with speech enabled. Publishing
-source does not change those defaults to the planned future public-release
-profile. Do not install a Windows EXE on a player. Do not flash firmware from
+New builds default to English with Talkbox and touch exploration disabled.
+The accessibility shortcut remains enabled; fresh R1 mappings use triple Power.
+The optional [Polish profile](docs/profiles/Accessible-Polish.cfg) enables speech
+and supported touch exploration. See [release profiles](docs/RELEASE-PROFILES.md)
+([Polski](docs/RELEASE-PROFILES-PL.md)). Existing saved settings are preserved.
+Do not install a Windows EXE on a player. Do not flash firmware from
 another HiBy model or assume a newly compiled application replaces a bootloader.
 
 ## Build and contribute

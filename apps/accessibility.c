@@ -195,7 +195,7 @@ static void accessibility_defaults(struct accessibility_config *result)
     memset(result->buttons, ACCESSIBILITY_ACTION_SYSTEM, sizeof(result->buttons));
     memset(result->playback_buttons, ACCESSIBILITY_ACTION_SYSTEM, sizeof(result->playback_buttons));
 #ifdef HIBY_R1
-    result->enabled = true;
+    result->enabled = false;
     result->buttons[0][ACCESSIBILITY_BUTTON_TRIPLE] = ACCESSIBILITY_ACTION_SHORTCUT;
     result->playback_buttons[0][ACCESSIBILITY_BUTTON_TRIPLE] = ACCESSIBILITY_ACTION_SHORTCUT;
 #endif

@@ -90,7 +90,8 @@ w obu skalach wynosi 1 słowo/min. Zmiana skali zmienia tylko sposób prezentacj
 nie zapisaną prędkość ani dźwięk. W obrębie jednej instalacji
 `tts rate: 450` nadal oznacza 450 słów/min i jest pokazywane jako `+157.1%`.
 Zmiana skali nie zastępuje zapisu WPM zaokrąglonym procentem. Nowe wydania mają
-czyste ustawienia domyślne: 175 słów/min / 0%, polski interfejs, głos „System”.
+czyste ustawienia domyślne: angielski interfejs, Talkbox i przeglądanie dotykowe
+wyłączone, skrót dostępności włączony, 175 słów/min / 0%, głos „System”.
 Poprzedni profil i dane pozostają w `snapshots`, nie trafiają do nowego pakietu.
 Szczegóły opcji i pakowania opisuje `ESPEAK-WINDOWS-PL.md` w źródłach,
 czyli `CZYTAJ.md` w pakiecie Windows.

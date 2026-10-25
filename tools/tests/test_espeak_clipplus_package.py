@@ -328,7 +328,7 @@ class ClipplusPackageTests(unittest.TestCase):
 
     def test_clean_config_cannot_be_replaced_even_when_remanifested(self):
         output = self.rewrite(self.create(), {'.rockbox/config.cfg': b'tts rate: 450\n'}, True)
-        with self.assertRaisesRegex(RuntimeError, 'clean Polish defaults'):
+        with self.assertRaisesRegex(RuntimeError, 'clean default profile'):
             package.verify_firmware_zip(output)
 
     def test_preexisting_user_config_in_base_is_rejected(self):
@@ -367,7 +367,7 @@ class ClipplusPackageTests(unittest.TestCase):
                       if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
                       and node.func.attr == 'write_text' and node.args
                       and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str)
-                      and node.args[0].value.startswith('lang: /.rockbox/langs/polski.lng')]
+                      and node.args[0].value.startswith('lang: /.rockbox/langs/english.lng')]
         self.assertEqual(candidates, [package.DEFAULT_CONFIG.decode('utf-8')])
         self.assertFalse(any(line.startswith(b'keyclick:') for line in package.DEFAULT_CONFIG.splitlines()))
 

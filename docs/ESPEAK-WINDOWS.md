@@ -58,7 +58,10 @@ Use a reasonably short installation path: this eSpeak version limits the
 complete `espeak-data` path to 149 UTF-8 bytes. Unicode and spaces are supported,
 but some characters occupy more than one byte.
 
-The default UI is Polish and the voice language is Follow system language.
+The default UI is English, with Talkbox and touch exploration disabled.
+Triple Power on a fresh R1 activates the selected accessibility services.
+The optional [Polish CFG](RELEASE-PROFILES.md) enables Polish speech and touch
+exploration. The voice language is Follow system language.
 General Settings → Accessibility → Talkbox settings contains reader controls;
 its eSpeak settings child contains synthesis parameters only. The voice follows
 Rockbox's UI language, including runtime changes, and falls back to English
@@ -98,10 +101,11 @@ changes, so a small duration difference is possible; WPM is the engine's nominal
 rate, not an exact measurement for every phrase. This does not introduce SAPI,
 Vario or MBROLA. Sonic's license and provenance accompany this package.
 
-Each new release ships a clean profile: Polish UI, System voice and
+Each new release ships a clean profile: English UI, Talkbox/touch exploration off,
+accessibility shortcut on, System voice and
 175 WPM / 0%. Previous user settings, resume state and files are not included.
-A replaced installation of the same target is archived in `snapshots` for recovery
-only; adding Clip Zip leaves the existing Clip+ release in place.
+An obsolete installation goes to the central Trash unless a concrete recovery
+or regression use requires Snapshots; adding Clip Zip leaves Clip+ in place.
 Within an installation, `tts rate: 450` means 450 WPM and displays as `+157.1%`;
 switching scales does not replace the saved WPM with the rounded percentage.
 Speech covers connected menus, lists and messages, not arbitrary graphics or

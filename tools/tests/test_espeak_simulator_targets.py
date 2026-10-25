@@ -32,7 +32,7 @@ EXPECTED_VERSIONS = {
         'linux': '0ed3734e5e-espeak-r29-clipzip-alpha8-20261011',
     },
     'hibyr1': {
-        'windows': '0ed3734e5e-espeak-r34-hibyr1-win-alpha19-20261025',
+        'windows': '0ed3734e5e-espeak-r34-hibyr1-win-alpha20-20261025',
         'linux': '0ed3734e5e-espeak-r34-hibyr1-alpha15-20261023',
     },
 }
@@ -85,10 +85,13 @@ class SimulatorTargetTests(unittest.TestCase):
                      'ESPEAK-HIBY-USB.md', 'ESPEAK-HIBY-USB-PL.md',
                      'ESPEAK-BOOKMARKS.md', 'ESPEAK-BOOKMARKS-PL.md',
                      'ESPEAK-PLUGINS.md', 'ESPEAK-PLUGINS-PL.md',
-                     'BOOK-READER-FOUNDATION.md', 'BOOK-READER-FOUNDATION-PL.md'):
+                     'BOOK-READER-FOUNDATION.md', 'BOOK-READER-FOUNDATION-PL.md',
+                     'BOOK-CONTAINERS.md', 'BOOK-CONTAINERS-PL.md',
+                     'RELEASE-PROFILES.md', 'RELEASE-PROFILES-PL.md'):
             self.write(self.root / 'docs' / name, f'Synthetic documentation: {name}')
         for name in ('License.txt', 'sonic/LICENSE', 'sonic/README.md'):
             self.write(self.root / 'lib/espeak' / name, f'Synthetic notice: {name}')
+        self.write(self.root / 'docs/profiles/Accessible-Polish.cfg', 'tts enabled: on\n')
         for name in ('run-espeak-simulator.sh', 'run-espeak-simulator.cmd'):
             self.write(self.root / 'tools' / name, f'Synthetic launcher: {name}')
         self.patch(builder, 'ROOT', self.root)

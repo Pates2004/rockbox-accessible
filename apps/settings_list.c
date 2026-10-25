@@ -1,4 +1,4 @@
-/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
+/* Modified for Rockbox Accessible; change notice dated 2026-10-25. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -1730,7 +1730,11 @@ const struct settings_list settings[] = {
                   "peak meter clipcounter", NULL),
 #endif /* HAVE_RECORDING */
     /* voice */
+#ifdef HAVE_ESPEAK
+    OFFON_SETTING(F_TEMPVAR, talk_menu, LANG_VOICE_MENU, false, "talk menu", NULL),
+#else
     OFFON_SETTING(F_TEMPVAR, talk_menu, LANG_VOICE_MENU, true, "talk menu", NULL),
+#endif
     CHOICE_SETTING(0, talk_dir, LANG_VOICE_DIR, 0,
                    "talk dir", off_number_spell, NULL, 3,
                    ID2P(LANG_OFF), ID2P(LANG_VOICE_NUMBER),
@@ -1778,7 +1782,7 @@ const struct settings_list settings[] = {
                   "accessibility shortcut curtain", NULL),
 #endif
 #endif
-    OFFON_SETTING(F_TEMPVAR, tts_enabled, LANG_TTS_ENABLED, true,
+    OFFON_SETTING(F_TEMPVAR, tts_enabled, LANG_TTS_ENABLED, false,
                   "tts enabled", NULL),
     INT_SETTING(0, tts_rate, LANG_TTS_RATE, 175, "tts rate",
                 UNIT_INT, 80, 1350, 1, tts_format_rate, tts_rate_talk_id, NULL),

@@ -100,7 +100,8 @@ oraz niezależnych wzorców nawigacji i rekordu (`struct`/`zlib` Pythona).
 Dowody pozostają w centralnym obszarze roboczym projektu. To testy rdzenia,
 bez deklaracji zgodności formatów i działania na fizycznym sprzęcie.
 
-Dalej potrzebne są dostęp do kontenerów i XML z ograniczeniem pamięci,
+[Etap kontenerów](BOOK-CONTAINERS-PL.md) dostarcza klasyczny ZIP/DEFLATE.
+Dalej potrzebny jest XML z ograniczeniem pamięci,
 adaptery formatów, kolejność czytania i bloki tekstu, sterowanie klipami audio,
 odsyłacze z powrotem, pomijanie i wyjście ze struktury. Następnie mówiące menu
 oraz preferencje globalne i dla książki. Pełne DAISY obejmuje warianty audio,

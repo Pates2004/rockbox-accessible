@@ -23,7 +23,8 @@ enum book_result
     BOOK_CORRUPT = -3,
     BOOK_IO_ERROR = -4,
     BOOK_STALE = -5,
-    BOOK_CANCELLED = -6
+    BOOK_CANCELLED = -6,
+    BOOK_LIMIT = -7
 };
 
 /* A heading's level comes from the publication, not a fixed chapter taxonomy. */

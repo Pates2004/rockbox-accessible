@@ -85,6 +85,19 @@ IMAGE_SUFFIXES = {'.sansa', '.bin', '.mi4', '.ipod', '.iriver', '.sb', '.upd',
                   '.hex', '.rkw', '.fw', '.rom', '.elf', '.exe', '.dll', '.so',
                   '.apk', '.img'}
 DEFAULT_CONFIG = (
+    'lang: /.rockbox/langs/english.lng\ntalk menu: off\ntalk dir: spell\n'
+    'talk file: spell\ntalk dir clip: off\ntalk file clip: off\n'
+    'tts enabled: off\ntts language: system\ntts variant: \ntts rate: 175\n'
+    'tts rate scale: percent\ntts punctuation: none\n'
+    'tts ducking: on\ntts ducking level: 25\n'
+    'tts pitch: 50\ntts volume: 100\ntts range: 50\ntts wordgap: 0\n'
+    'accessibility shortcut enabled: on\naccessibility shortcut tts: on\n'
+    'accessibility shortcut voice files: off\naccessibility shortcut touch: on\n'
+    'accessibility shortcut curtain: off\nvolume: -25\n'
+).encode('utf-8')
+REQUIRED_DATA = {'phondata', 'phonindex', 'phontab', 'intonations',
+                 'pl_dict', 'en_dict', 'voices/pl', 'voices/en/en'}
+LEGACY_DEFAULT_CONFIG = (
     'lang: /.rockbox/langs/polski.lng\ntalk menu: on\ntalk dir: spell\n'
     'talk file: spell\ntalk dir clip: off\ntalk file clip: off\n'
     'tts enabled: on\ntts language: system\ntts variant: \ntts rate: 175\n'
@@ -93,8 +106,15 @@ DEFAULT_CONFIG = (
     'tts pitch: 50\ntts volume: 100\ntts range: 50\ntts wordgap: 0\n'
     'volume: -25\n'
 ).encode('utf-8')
-REQUIRED_DATA = {'phondata', 'phonindex', 'phontab', 'intonations',
-                 'pl_dict', 'en_dict', 'voices/pl', 'voices/en/en'}
+
+
+def manifest_default_config(manifest, native_hiby=False):
+    profile = manifest.get('default_profile')
+    if profile not in (None, 'standard-en'):
+        raise RuntimeError('Unknown release default profile')
+    data = DEFAULT_CONFIG if profile == 'standard-en' else LEGACY_DEFAULT_CONFIG
+    return data.replace(b'\nvolume: -25\n', b'\nvolume: -250\n') if native_hiby else data
+
 DOCUMENTS = {
     'ESPEAK-PLUGINS-PL.md': 'docs/ESPEAK-PLUGINS-PL.md',
     'ESPEAK-PLUGINS.md': 'docs/ESPEAK-PLUGINS.md',
@@ -468,8 +488,8 @@ def verify_firmware_zip(path, expected_data=None, expected_catalogs=None, payloa
         required.update(DATA_PREFIX + name for name in REQUIRED_DATA)
         if not required <= entries.keys():
             raise RuntimeError(f'Missing runtime assets: {sorted(required - entries.keys())}')
-        if archive.read('.rockbox/config.cfg') != DEFAULT_CONFIG:
-            raise RuntimeError('Package does not use clean Polish defaults')
+        if archive.read('.rockbox/config.cfg') != manifest_default_config(manifest):
+            raise RuntimeError('Package does not use its declared clean default profile')
         if not any(name.endswith('.rock') for name in entries) or not any(name.endswith('.codec') for name in entries):
             raise RuntimeError('Missing rebuilt plugins or codecs')
         data = {name[len(DATA_PREFIX):]: files[name] for name in files if name.startswith(DATA_PREFIX)}
@@ -512,7 +532,8 @@ def write_firmware_zip(base_zip, output, additions, metadata, target=CLIPPLUS):
             validate_package_entry(name, content, target)
             archive.writestr(name, content)
             files[name] = sha256(content)
-        manifest = dict(metadata, files=files, excluded_stock_voice_files=excluded,
+        manifest = dict({'default_profile': 'standard-en'}, **metadata)
+        manifest.update(files=files, excluded_stock_voice_files=excluded,
                         excluded_stock_talk_files=excluded_talk)
         archive.writestr(target.manifest, json_bytes(manifest))
     return manifest
@@ -746,11 +767,15 @@ def main(argv=None):
     additions.update({target.document_prefix + name: path.read_bytes()
                       for name, path in runtime_notices().items()})
     additions['.rockbox/config.cfg'] = DEFAULT_CONFIG
+    additions['.rockbox/Accessible-Polish.cfg'] = (ROOT / 'docs/profiles/Accessible-Polish.cfg').read_bytes()
+    for name in ('RELEASE-PROFILES.md', 'RELEASE-PROFILES-PL.md'):
+        additions[target.document_prefix + name] = (ROOT / 'docs' / name).read_bytes()
     staging = contained(build / 'release-staging')
     staging.mkdir(exist_ok=False)
     source_archive = staging / f'rockbox-{target.slug}-espeak-{arguments.version}-source.tar.gz'
     metadata = {
         'version': arguments.version, 'target': target.name, 'plugin_abi': PLUGIN_ABI,
+        'default_profile': 'standard-en',
         'engine_revision': revision, 'toolchain': toolchain, 'hardware_tested': False,
         'system_runtime': runtime, 'runtime_notice_hashes': hashes(runtime_notices()),
         'rockbox_revision': subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip(),

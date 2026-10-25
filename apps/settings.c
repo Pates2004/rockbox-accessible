@@ -1,4 +1,4 @@
-/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
+/* Modified for Rockbox Accessible; change notice dated 2026-10-25. */
 /***************************************************************************
  *             __________               __   ___.
  *   Open      \______   \ ____   ____ |  | _\_ |__   _______  ___
@@ -414,6 +414,11 @@ bool settings_load_config(const char* file, bool apply)
     char line[128];
     bool theme_changed = false;
     bool import_open_plugins = false;
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    bool import_touch = false;
+    bool touch_enabled = false;
+    bool touch_valid = true;
+#endif
     fd = open_utf8(file, O_RDONLY);
     if (fd < 0)
         return false;
@@ -423,6 +428,23 @@ bool settings_load_config(const char* file, bool apply)
         char *name, *value;
         if (!settings_parseline(line, &name, &value))
             continue;
+
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+        /* Import-only alias for the existing private accessibility preference.
+         * Keep it out of saved config.cfg so it cannot override later menu
+         * changes at every boot. No plugin-visible settings layout is added. */
+        if (!strcasecmp(name, "accessibility touch enabled"))
+        {
+            import_touch = true;
+            if (!strcasecmp(value, "on"))
+                touch_enabled = true;
+            else if (!strcasecmp(value, "off"))
+                touch_enabled = false;
+            else
+                touch_valid = false;
+            continue;
+        }
+#endif
 
         if (!string_to_cfg(name, value, &theme_changed))
         {
@@ -437,6 +459,11 @@ bool settings_load_config(const char* file, bool apply)
     } /* while(...) */
 
     close(fd);
+
+#if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK)
+    if (!touch_valid || (import_touch && !accessibility_set_enabled(touch_enabled)))
+        return false;
+#endif
 
 #ifndef __PCTOOL__
     if (import_open_plugins)

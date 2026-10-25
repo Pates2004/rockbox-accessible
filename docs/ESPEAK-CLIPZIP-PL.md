@@ -1,5 +1,8 @@
 # Eksperymentalny firmware eSpeak dla Sansa Clip Zip
 
+Zachowane wydanie poniżej ma nadal polski i włączoną mowę. Nowe buildy używają
+[angielskiego profilu z wyłączoną mową](RELEASE-PROFILES-PL.md).
+
 ## Wydanie: r29-alpha8-20261011
 
 Pliki native w `D:\Rockbox\rockbox\installfiles\clipzip`:

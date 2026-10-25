@@ -1003,8 +1003,8 @@ class AccessibilitySettingsTests(unittest.TestCase):
 
     def setUp(self):
         self.library.input_reset()
-        if os.environ.get("ACCESSIBILITY_SETTINGS_OTHER_TARGET"):
-            self.library.probe_enable(True)
+        # Gesture tests opt in explicitly; fresh releases keep exploration off.
+        self.library.probe_enable(True)
 
     def constant(self, name):
         return self.constants[name]
@@ -1040,7 +1040,7 @@ class AccessibilitySettingsTests(unittest.TestCase):
         self.library.probe_reset()
         self.assertFalse(self.library.accessibility_enabled())
         self.library.accessibility_init()
-        expected = not bool(os.environ.get("ACCESSIBILITY_SETTINGS_OTHER_TARGET"))
+        expected = False
         self.assertEqual(bool(self.library.accessibility_enabled()), expected)
         self.assertEqual(self.library.probe_mode(), 0 if expected else 1)
         self.assertEqual(self.library.probe_stat(2), 0)
@@ -1482,7 +1482,7 @@ class AccessibilitySettingsTests(unittest.TestCase):
                 self.library.probe_fault(fault)
                 self.library.accessibility_init()
                 self.assertEqual(self.library.probe_mapping(1), 1)
-                expected = not bool(os.environ.get("ACCESSIBILITY_SETTINGS_OTHER_TARGET"))
+                expected = False
                 self.assertEqual(bool(self.library.accessibility_enabled()), expected)
                 self.assertEqual(self.library.probe_stat(2), 0)
 
@@ -1830,7 +1830,7 @@ class AccessibilitySettingsTests(unittest.TestCase):
         self.assertEqual(self.library.probe_mapping(1), 1)
         self.script([0, -1])
         self.assertEqual(self.library.accessibility_menu(), 0)
-        expected = bool(os.environ.get("ACCESSIBILITY_SETTINGS_OTHER_TARGET"))
+        expected = True
         self.assertEqual(bool(self.library.accessibility_enabled()), expected)
         self.script([7, -1])
         self.assertEqual(self.library.accessibility_menu(), 0)
@@ -2338,7 +2338,7 @@ class AccessibilitySettingsTests(unittest.TestCase):
         self.library.probe_reload()
         self.script([7, -1])
         self.assertEqual(self.library.accessibility_touch_menu(), 0)
-        expected = default_config(enabled=0 if os.environ.get("ACCESSIBILITY_SETTINGS_OTHER_TARGET") else 1,
+        expected = default_config(enabled=0,
             replacements={13: 22, 16: 23}, hold=1700, clicks=1,
             buttons={(4, 3): 12}, button_refs={(4, 3): 4}, paths={0: path})
         self.assertEqual(self.library.probe_disk_content(), expected)
@@ -2368,8 +2368,7 @@ class AccessibilitySettingsTests(unittest.TestCase):
                     self.assertEqual(self.library.probe_stroke_repeat(), 0)
                     self.assertEqual(self.library.probe_mapping(19), 0)
                     self.assertEqual(self.library.probe_mapping(20), 8)
-                    self.assertEqual(bool(self.library.accessibility_enabled()),
-                                     not bool(os.environ.get("ACCESSIBILITY_SETTINGS_OTHER_TARGET")))
+                    self.assertFalse(self.library.accessibility_enabled())
                     self.assertEqual(self.library.probe_stat(2), 0)
                     self.assertEqual(self.library.probe_disk_length(), len(content))
 

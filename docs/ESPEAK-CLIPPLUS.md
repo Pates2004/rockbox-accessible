@@ -1,5 +1,8 @@
 # Experimental eSpeak firmware for Sansa Clip+
 
+The preserved release below retains Polish speech-enabled defaults. New builds
+use the [English, speech-disabled profile](RELEASE-PROFILES.md).
+
 ## Release: r29-alpha7-20261011
 
 Native files in `D:\Rockbox\rockbox\installfiles\clipplus`:

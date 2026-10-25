@@ -34,9 +34,9 @@ Dotychczasowe sterowanie radiami pozostaje w
 Ustawienia → Łączność, przywraca wcześniejsze preferencje po trybie samolotowym
 i dodaje osobno przypisywane przełączanie eSpeaka/plików głosowych z syntetycznym
 komunikatem. Zobacz [łączność](HIBY-R1-CONNECTIVITY-PL.md) i
-[przełączanie usług](ACCESSIBILITY-SHORTCUT-PL.md). Test domyślnie używa polskiego
-interfejsu i włączonej mowy. Domyślny angielski interfejs i początkowo wyłączona mowa
-są przewidziane dla późniejszego wydania publicznego. Nowe profile R1 przypisują
+[przełączanie usług](ACCESSIBILITY-SHORTCUT-PL.md). Nowe buildy mają angielski
+interfejs oraz wyłączone Talkbox i przeglądanie dotykowe. Opcjonalny
+[polski profil CFG](RELEASE-PROFILES-PL.md) włącza obie funkcje. Nowe profile R1 przypisują
 potrójny Power do skrótu dostępności w interfejsie i na ekranie odtwarzania. Zapisane
 wcześniej przypisania są zachowywane. Progi i użyteczność dotyku wymagają prób na sprzęcie.
 

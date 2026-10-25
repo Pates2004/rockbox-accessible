@@ -60,7 +60,10 @@ Wybierz stosunkowo krótki katalog instalacji: ta wersja eSpeaka ogranicza
 pełną ścieżkę do `espeak-data` do 149 bajtów UTF-8. Polskie znaki i spacje
 są obsługiwane, ale część znaków zajmuje więcej niż jeden bajt.
 
-Domyślne ustawienia to polski interfejs i język głosu „Zgodny z systemem”. Otwórz:
+Domyślne ustawienia to angielski interfejs oraz wyłączone Talkbox i przeglądanie
+dotykowe. Na czystym R1 trzy razy Power aktywuje wybrane usługi dostępności.
+Opcjonalny [polski CFG](RELEASE-PROFILES-PL.md) włącza polską mowę i przeglądanie
+dotykowe. Język głosu pozostaje „Zgodny z systemem”. Po włączeniu otwórz:
 Ustawienia → Ustawienia ogólne → Dostępność → Ustawienia Talkbox.
 Podmenu Ustawienia eSpeak zawiera parametry syntezy; czytanie tekstu i pozostałe
 funkcje czytnika są obok niego. „Zgodny z systemem” śledzi język Rockboksa, również po jego zmianie; brak pasującego
@@ -103,10 +106,11 @@ artykulacji, więc możliwa jest niewielka różnica długości wypowiedzi; WPM 
 nominalne tempo silnika, nie dokładny pomiar każdej frazy. Nie włącza to SAPI,
 Vario ani MBROLA. Licencja i pochodzenie Sonic są dołączone do pakietu.
 
-Każde nowe wydanie ma czysty profil: polski interfejs, głos „System” oraz
+Każde nowe wydanie ma czysty profil: angielski interfejs, Talkbox i przeglądanie
+dotykowe wyłączone, skrót dostępności włączony, głos „System” oraz
 175 słów/min / 0%. Nie zawiera poprzednich ustawień, stanu wznowienia ani plików
-użytkownika. Zastępowana instalacja tego samego modelu trafia do `snapshots`
-wyłącznie do odzyskiwania; dodanie Clip Zip pozostawia dotychczasowy Clip+ na miejscu.
+użytkownika. Zbędna stara instalacja trafia do centralnego Trash; Snapshots
+służy wyłącznie konkretnemu odzyskiwaniu lub regresji. Dodanie Clip Zip pozostawia Clip+ na miejscu.
 W obrębie jednej instalacji `tts rate: 450` oznacza 450 słów/min i wyświetla się
 jako `+157.1%`; zmiana skali nie zastępuje zapisanego WPM zaokrąglonym procentem.
 Udźwiękowienie obejmuje

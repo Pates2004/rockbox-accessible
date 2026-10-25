@@ -33,9 +33,9 @@ The existing radio controls remain under
 Settings → Connectivity and restore prior radio preferences after airplane mode,
 and adds separately assignable eSpeak/voice-file toggles with synthesized status.
 See [connectivity](HIBY-R1-CONNECTIVITY.md) and
-[service controls](ACCESSIBILITY-SHORTCUT.md). This test edition defaults to Polish
-and enabled speech. English and disabled speech defaults are reserved for a later
-public edition. New R1 profiles assign triple Power to the accessibility shortcut
+[service controls](ACCESSIBILITY-SHORTCUT.md). New builds default to English,
+with Talkbox and touch exploration disabled. The optional
+[Polish CFG profile](RELEASE-PROFILES.md) enables both. New R1 profiles assign triple Power to the accessibility shortcut
 in both interface and playback profiles. Existing saved assignments are preserved.
 Physical touchscreen timing and usability still require device tests.
 
