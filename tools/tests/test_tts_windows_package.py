@@ -15,6 +15,8 @@ import sys
 import time
 
 from test_tts_simulator import find_window, send_key, shutdown, windows_backend
+from test_accessibility_services_gui import PrivateDesktop, ServicesProbe, prepare_input_layout
+from test_tts_recorder_gui import RecorderMemoryProbe
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -38,6 +40,24 @@ def digest(path):
 def inventory(directory):
     return {path.relative_to(directory).as_posix(): digest(path)
             for path in directory.rglob('*') if path.is_file()}
+
+
+class PackageInputProbe(ServicesProbe):
+    """Use the qualified bounded/acknowledged input on the owned private window."""
+
+    def __init__(self, process, executable, window, layout, report):
+        self.native = PrivateDesktop()
+        self.desktop = self.native.current()
+        self.native.owns(process.pid, window, self.desktop)
+        self.process, self.window = process, window
+        self.started = time.perf_counter()
+        self.report = report
+        report.update(input_layout=layout, raw_input=[])
+        self.memory = RecorderMemoryProbe(process, executable, layout,
+                                          report.setdefault('input_memory', {}))
+
+    def close(self):
+        self.memory.close()
 
 
 def validate_clean_profile(directory, manifest):
@@ -180,6 +200,7 @@ def main():
         native.ensure_unused(executable)
         before = inventory(directory)
         standard = manifest.get('default_profile') == 'standard-en'
+        layout = prepare_input_layout(executable, digest(executable)) if standard and arguments.target == 'hibyr1' else None
         import_profile = standard and (arguments.target != 'hibyr1' or not real_audio)
         config_path = directory / 'simdisk/.rockbox/config.cfg'
         clean_config = config_path.read_bytes()
@@ -201,15 +222,32 @@ def main():
         run = {'label': label, 'directory': str(directory), 'real_audio': real_audio}
         report['runs'].append(run)
         command = [str(executable)]
+        if standard:
+            command.append('--debugbuttons')
         if not real_audio:
             command.extend(['--audiodev', environment['SDL_DISKAUDIOFILE']])
         process = subprocess.Popen(command, cwd=results, env=environment,
                                    creationflags=subprocess.CREATE_NO_WINDOW)
         log = directory / 'simulator.log'
+        inputs = None
         try:
             window = find_window(process.pid, environment)
+            if layout is not None:
+                inputs = PackageInputProbe(process, executable, window, layout, run)
             language = 'pl'
             if standard:
+                # SDL creates its HWND before Rockbox finishes booting. Wait
+                # for the actual root list before timing the shortcut input.
+                ready = time.monotonic() + 25
+                while time.monotonic() < ready:
+                    initial = log.read_text(encoding='utf-8', errors='replace') if log.exists() else ''
+                    if re.search(r'A11Y list geometry:.*count=8 selected=0', initial):
+                        break
+                    if process.poll() is not None:
+                        raise AssertionError('Simulator exited before the root menu was ready')
+                    time.sleep(0.05)
+                else:
+                    raise AssertionError('Root menu was not ready for shortcut input')
                 time.sleep(1.5)
                 initial = log.read_text(encoding='utf-8', errors='replace') if log.exists() else ''
                 if re.search(r'^TTS:', initial, re.MULTILINE):
@@ -217,14 +255,17 @@ def main():
                 run['default_speech_disabled'] = True
 
                 def press(key, settle=0.12):
+                    if inputs is not None:
+                        inputs.press('Right' if key == 'Return' else key)
+                        time.sleep(settle)
+                        return
                     send_key(process.pid, window, key, True, environment)
                     time.sleep(0.1)
                     send_key(process.pid, window, key, False, environment)
                     time.sleep(settle)
 
                 if arguments.target == 'hibyr1':
-                    for _ in range(3):
-                        press('Escape')
+                    inputs.press('Insert', clicks=3)
                     time.sleep(1)
                     language = 'en'
                     run['triple_power_sent'] = True
@@ -251,9 +292,12 @@ def main():
             native.set_hidden(process.pid, window, True)
             time.sleep(1)
             for key in ('Down', 'Up'):
-                send_key(process.pid, window, key, True, environment)
-                time.sleep(0.15)
-                send_key(process.pid, window, key, False, environment)
+                if inputs is not None:
+                    inputs.press(key)
+                else:
+                    send_key(process.pid, window, key, True, environment)
+                    time.sleep(0.15)
+                    send_key(process.pid, window, key, False, environment)
                 time.sleep(0.8)
             shutdown(process, window, environment)
             text = log.read_text(encoding='utf-8', errors='replace')
@@ -271,7 +315,12 @@ def main():
             if label_text not in text or len(re.findall(r'^TTS:', text, re.MULTILINE)) < 4:
                 raise AssertionError('Missing actual package menu-navigation speech')
             if standard:
-                saved = config_path.read_text(encoding='utf-8')
+                # Rockbox stages changed settings in config.cfg.new and promotes
+                # that file at the next boot; config.cfg still has the old values.
+                saved_path = config_path.with_name('config.cfg.new')
+                if not saved_path.is_file():
+                    raise AssertionError('Activated settings were not staged for the next boot')
+                saved = saved_path.read_text(encoding='utf-8')
                 if 'tts enabled: on' not in saved or 'accessibility touch enabled:' in saved:
                     raise AssertionError('Activation not saved, or import-only touch alias leaked into config.cfg')
                 if import_profile and 'polski' not in saved:
@@ -284,6 +333,8 @@ def main():
             run['exit_code'] = process.returncode
             run['passed'] = True
         finally:
+            if inputs is not None:
+                inputs.close()
             if process.poll() is None:
                 process.terminate()
                 process.wait(timeout=10)
