@@ -125,6 +125,35 @@ than one byte. Simulator Bluetooth does not operate the computer's radio.
 
 ## 5. Native player builds
 
+### Community experiments on other models
+
+Clip+, Clip Zip and HiBy R1 are the existing software-validation reference
+players. Their normal integrated configurations need `--integrated-espeak`.
+For any other existing Rockbox target, configure warns and stops until you also
+pass `--allow-experimental-espeak`. This explicit acknowledgement permits an
+attempt; compilation, startup, speech, audio, buttons or touch may still fail.
+Testing is at your own risk, and reference builds are not physical certification.
+
+With the actual device toolchain installed, run this in a separate build directory:
+
+```sh
+/absolute/path/rockbox/tools/configure --target=ipod6g --type=N \
+  --integrated-espeak --allow-experimental-espeak
+make -j4
+```
+
+Use `--target=shanlingq1` for a Shanling Q1 attempt with its own MIPS toolchain.
+Bootloaders and auxiliary tools are not enabled. Matching speech data, generated
+voice-string catalogs, rebuilt plugins/codecs and device-specific installation
+are still required; the reference packagers do not automatically package new models.
+For diagnostic SDL cores, pass `--targets ipod6g --allow-experimental-espeak`
+to `tools/tests/test_tts_targets.py`. See [target details](ESPEAK-TARGETS.md)
+and report both working and failing targets through an
+[issue](https://github.com/Pates2004/rockbox-accessible/issues), or contribute a
+[pull request](https://github.com/Pates2004/rockbox-accessible/pulls).
+
+### Existing reference build helpers
+
 The detailed English [native HiBy R1 guide](BUILD-ACCESSIBLE-NATIVE.md) covers
 SDK inputs, host preparation, application compilation, independent checks and
 the additional provenance/notices contract for complete packaging. Application

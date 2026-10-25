@@ -22,12 +22,20 @@ system speech, a cloud service or generated voice clips.
   physical-button mappings and grouped accessibility toggles.
 - HiBy R1-specific audio, power, connectivity and experimental Bluetooth work.
 
-The shared core is intended for reuse, but **not every Rockbox target is enabled
-or validated**. Integrated builds currently recognize Sansa Clip+, Clip Zip,
-HiBy R1 and their SDL simulators. Other players need an appropriate platform
-adapter, memory review, target build and testing; selecting an arbitrary model
-does not establish a working port. Raw custom plugin screens are not universally
-accessible. See [target boundaries](docs/ESPEAK-TARGETS.md) and
+The shared core is intended for reuse. **Every existing Rockbox player target
+may opt into an experimental Talkbox/eSpeak build.** Sansa Clip+, Clip Zip and
+HiBy R1 are the software-validation reference players; that does not certify
+physical hardware or every feature. Their regular integrated builds require
+only `--integrated-espeak`. Other targets, including their SDL simulators,
+also require **`--allow-experimental-espeak`** as explicit confirmation.
+Configure stops with a warning and confirmation instructions when it is missing;
+confirmed experimental builds retain a build-time warning. Compilation, speech,
+audio, buttons or touch may fail: test at your own risk. Bootloaders and auxiliary
+tools remain excluded. Please report both working targets and failures through
+an [issue](https://github.com/Pates2004/rockbox-accessible/issues), or contribute
+a [pull request](https://github.com/Pates2004/rockbox-accessible/pulls).
+Other players may still need platform and memory work. Raw custom plugin screens
+are not universally accessible. See [target boundaries](docs/ESPEAK-TARGETS.md) and
 [plugin coverage](docs/ESPEAK-PLUGINS.md).
 
 ## Development status

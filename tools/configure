@@ -1524,7 +1524,8 @@ help() {
     --thumb           Build with -mthumb (for ARM builds)
     --no-thumb        The opposite of --thumb (don't use thumb even for targets
                       where this is the default
-    --integrated-espeak  Enable in-process eSpeak (SDL, Clip+/Clip Zip or HiBy R1)
+    --integrated-espeak  Enable in-process Talkbox/eSpeak (other players experimental)
+    --allow-experimental-espeak  Acknowledge unvalidated Talkbox/eSpeak targets
     --sdl-threads     Force use of SDL threads. They have inferior performance,
                       but are better debuggable with GDB and valgrind
     --no-sdl-threads  Disallow use of SDL threads. This prevents the default
@@ -1565,6 +1566,7 @@ ARG_UBSAN=
 ARG_STACK_PROTECTOR=
 ARG_PLUGINS=
 ARG_ESPEAK=
+ARG_ESPEAK_EXPERIMENTAL=
 err=
 for arg in "$@"; do
 	case "$arg" in
@@ -1583,6 +1585,7 @@ for arg in "$@"; do
 		--voice=*)    ARG_VOICE=`echo "$arg" | cut -d = -f 2`;;
 		--plugins=*)  ARG_PLUGINS=`echo "$arg" | cut -d = -f 2`;;
         --integrated-espeak) ARG_ESPEAK=1;;
+        --allow-experimental-espeak) ARG_ESPEAK_EXPERIMENTAL=1;;
 		--thumb)      ARG_ARM_THUMB=1;;
 		--no-thumb)   ARG_ARM_THUMB=0;;
 		--32-bit)     ARG_32BIT=1;;
@@ -4786,15 +4789,40 @@ if [ "$apps" = "bootloader" -o "$app_type" = "checkwps" -o "$app_type" = "warble
 fi
 
 espeak_define=
+espeak_experimental=0
 if [ "$ARG_ESPEAK" = "1" ]; then
     if [ "$apps" = "bootloader" ] ||
-       { [ "$app_type" != "sdl-sim" ] &&
-         [ "$app_type:$modelname" != "hibyos:hibyr1" ] &&
-         { [ -n "$app_type" ] ||
-           { [ "$modelname" != "sansaclipplus" ] && [ "$modelname" != "sansaclipzip" ]; }; }; }; then
-        echo "Integrated eSpeak supports SDL simulators and experimental Clip+/Clip Zip and HiBy R1 builds only."
+       [ "$app_type" = "checkwps" ] || [ "$app_type" = "database-sdl" ] ||
+       [ "$app_type" = "warble" ]; then
+        echo "Integrated eSpeak requires a Rockbox application or simulator, not a bootloader or auxiliary tool."
         exit 1
     fi
+    case "$app_type:$modelname" in
+        :sansaclipplus|:sansaclipzip|hibyos:hibyr1|sdl-sim:sansaclipplus|sdl-sim:sansaclipzip|sdl-sim:hibyr1)
+            ;;
+        *)
+            espeak_experimental=1
+            cat >&2 <<EOF
+WARNING: Experimental Talkbox/eSpeak target: $modelname
+This target has not been validated. Compilation, speech, audio, buttons or touch may fail.
+Build and test at your own risk. Software-validation reference players only:
+Sansa Clip+, Sansa Clip Zip and HiBy R1. This is not physical-hardware certification.
+Please report working targets and failures in an issue, or contribute a pull request:
+https://github.com/Pates2004/rockbox-accessible/issues
+https://github.com/Pates2004/rockbox-accessible/pulls
+OSTRZEŻENIE: Eksperymentalny cel Talkbox/eSpeak: $modelname
+Ten cel nie został zweryfikowany. Kompilacja, mowa, dźwięk, przyciski lub dotyk mogą nie działać.
+Kompilujesz i testujesz na własną odpowiedzialność. Dotychczasowe wzorce testów oprogramowania:
+Sansa Clip+, Sansa Clip Zip i HiBy R1. Nie oznacza to potwierdzenia działania fizycznego sprzętu.
+Autor prosi o zgłaszanie działających celów i błędów przez issue albo poprawki w pull requeście.
+EOF
+            if [ "$ARG_ESPEAK_EXPERIMENTAL" != "1" ]; then
+                echo "Are you sure? Re-run configure with --integrated-espeak --allow-experimental-espeak to confirm." >&2
+                echo "Czy na pewno? Potwierdź próbę, dodając --allow-experimental-espeak do --integrated-espeak." >&2
+                exit 1
+            fi
+            ;;
+    esac
     espeak_define="#define HAVE_ESPEAK 1
 #define TARGET_EXTRA_THREADS 1"
     if [ "$winbuild" = "yes" ]; then
@@ -4970,6 +4998,7 @@ cat > Makefile <<EOF
 
 export SELECTED_PLUGINS_SRC=${selected_src}
 export ESPEAK=${ARG_ESPEAK}
+export ESPEAK_EXPERIMENTAL=${espeak_experimental}
 export CROSS_COMPILE=${CROSS_COMPILE}
 export SELECTED_PLUGINS_SUBDIRS=${selected_subdirs}
 

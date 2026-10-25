@@ -1,10 +1,61 @@
 from datetime import datetime, timezone
+import contextlib
+import io
 from pathlib import Path
+import sys
 import unittest
 from unittest import mock
 
 from materials_fixtures import materials_resolver
 import test_tts_targets as targets
+
+
+class ExperimentalTargetOptInTests(unittest.TestCase):
+    def test_configuration_command_forwards_only_explicit_confirmation(self):
+        for platform in ("windows", "linux"):
+            for target in ("sansaclipplus", "hibyr1", "ipod6g", "shanlingq1"):
+                for allowed in (False, True):
+                    with self.subTest(platform=platform, target=target, allowed=allowed):
+                        command = targets.configuration_command(target, platform, allowed)
+                        self.assertEqual("--allow-experimental-espeak" in command, allowed)
+                        self.assertIn("--target=" + target, command)
+                        self.assertIn("--integrated-espeak", command)
+                        self.assertEqual("--sdl-threads" in command, platform == "linux")
+
+    def test_unconfirmed_target_fails_before_build_or_dependency_changes(self):
+        for target in ("ipod6g", "shanlingq1"):
+            with self.subTest(target=target), \
+                    mock.patch.object(sys, "argv", ["test_tts_targets.py", "--targets", target]), \
+                    mock.patch.object(targets, "build_targets") as build, \
+                    contextlib.redirect_stderr(io.StringIO()) as error:
+                with self.assertRaises(SystemExit) as result:
+                    targets.main()
+                self.assertEqual(result.exception.code, 2)
+                self.assertIn("--allow-experimental-espeak", error.getvalue())
+                build.assert_not_called()
+
+    def test_explicit_confirmation_reaches_builder(self):
+        with mock.patch.object(sys, "argv", ["test_tts_targets.py", "--targets", "ipod6g",
+                                           "--allow-experimental-espeak"]), \
+                mock.patch.object(targets, "build_targets", return_value=True) as build:
+            self.assertEqual(targets.main(), 0)
+            arguments, = build.call_args.args
+            self.assertTrue(arguments.allow_experimental_espeak)
+            self.assertEqual(arguments.targets, ["ipod6g"])
+
+    def test_reference_target_requires_no_additional_confirmation(self):
+        with mock.patch.object(sys, "argv", ["test_tts_targets.py", "--targets", "sansaclipplus"]), \
+                mock.patch.object(targets, "build_targets", return_value=True) as build:
+            self.assertEqual(targets.main(), 0)
+            self.assertFalse(build.call_args.args[0].allow_experimental_espeak)
+
+    def test_listing_requires_no_confirmation_or_build(self):
+        with mock.patch.object(sys, "argv", ["test_tts_targets.py", "--list-targets"]), \
+                mock.patch.object(targets, "build_targets") as build, \
+                contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(targets.main(), 0)
+            self.assertIn("shanlingq1", output.getvalue())
+            build.assert_not_called()
 
 
 class TargetEvidencePathTests(unittest.TestCase):

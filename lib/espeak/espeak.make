@@ -1,5 +1,9 @@
 ifeq ($(ESPEAK),1)
 
+ifeq ($(ESPEAK_EXPERIMENTAL),1)
+$(warning Experimental Talkbox/eSpeak target $(MODELNAME), at your own risk / Cel eksperymentalny, na wlasna odpowiedzialnosc. Report results: https://github.com/Pates2004/rockbox-accessible/issues)
+endif
+
 ESPEAK_DIR := $(ROOTDIR)/lib/espeak
 ESPEAK_BUILD := $(BUILDDIR)/lib/espeak
 ESPEAK_ENGINE_NAMES := speak_lib compiledict dictionary intonation readclause \
@@ -33,7 +37,9 @@ ESPEAK_HOST_FLAGS := -std=c++11 -fno-exceptions -fno-rtti -fPIC \
     -DRB_ESPEAK_HAVE_SONIC=$(ESPEAK_SONIC)
 
 GLOBAL_LDOPTS += -lstdc++ -lm
-else ifeq ($(filter-out hibyos,$(APP_TYPE)),)
+else
+# Reuse the bounded Rockbox runtime for experimental bare-metal and hosted ports.
+# Admission is not a claim that this target's compiler, memory or devices work.
 CXX := $(patsubst %gcc,%g++,$(CC))
 ESPEAK_PLATFORM_FLAGS := $(filter-out -std=% -Wstrict-prototypes -Wmissing-prototypes -Wno-pointer-sign -Wno-override-init,$(GCCOPTS)) \
     -DRB_ESPEAK_NATIVE=1 -I$(ESPEAK_DIR)/native/include \
@@ -46,8 +52,6 @@ ESPEAK_HOST_FLAGS := $(ESPEAK_PLATFORM_FLAGS) -std=c++11 \
 ESPEAK_OBJECTS += $(ESPEAK_BUILD)/native/native_runtime.o $(ESPEAK_BUILD)/native/native_text.o
 CORE_LIBS += $(TLSFLIB)
 CORE_LDOPTS += -Wl,--start-group $(call a2lnk,$(CORE_LIBS)) -lm -lgcc -Wl,--end-group
-else
-$(error Unsupported integrated eSpeak platform $(APP_TYPE))
 endif
 
 CORE_LIBS += $(ESPEAK_LIB)

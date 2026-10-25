@@ -90,15 +90,16 @@ class EspeakAdmissionTests(unittest.TestCase):
         if not set(NATIVE_TARGETS).issubset(cls.models):
             raise AssertionError("Could not discover the native eSpeak targets")
 
-    def admission(self, model, app_type="", apps="apps", enabled=True, windows=False):
+    def admission(self, model, app_type="", apps="apps", enabled=True, windows=False,
+                  allow_experimental=False):
         script = (
-            'ARG_ESPEAK=$1; modelname=$2; app_type=$3; apps=$4; winbuild=$5\n'
+            'ARG_ESPEAK=$1; modelname=$2; app_type=$3; apps=$4; winbuild=$5; ARG_ESPEAK_EXPERIMENTAL=$6\n'
             'LDOPTS="-lm -mconsole"\n' + self.guard
-            + '\nprintf "%s\\n" "$espeak_define" "LDOPTS=$LDOPTS"\n'
+            + '\nprintf "%s\\n" "$espeak_define" "EXPERIMENTAL=$espeak_experimental" "LDOPTS=$LDOPTS"\n'
         )
         return subprocess.run(
             ["sh", "-c", script, "espeak-admission", "1" if enabled else "",
-             model, app_type, apps, "yes" if windows else ""],
+             model, app_type, apps, "yes" if windows else "", "1" if allow_experimental else ""],
             capture_output=True, text=True, timeout=10, check=False,
         )
 
@@ -109,45 +110,97 @@ class EspeakAdmissionTests(unittest.TestCase):
 
     def assert_rejected(self, result):
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-        self.assertIn("Integrated eSpeak supports", result.stdout)
+        self.assertIn("Integrated eSpeak requires a Rockbox application or simulator", result.stdout)
         self.assertNotIn("#define HAVE_ESPEAK", result.stdout)
         self.assertNotIn("#define TARGET_EXTRA_THREADS", result.stdout)
 
     def test_native_clipplus_and_clipzip_are_allowed(self):
         for model in NATIVE_TARGETS:
             with self.subTest(model=model):
-                self.assert_allowed(self.admission(model))
+                result = self.admission(model)
+                self.assert_allowed(result)
+                self.assertIn("EXPERIMENTAL=0", result.stdout)
+                self.assertFalse(result.stderr)
+
+    def assert_experimental(self, result, model):
+        self.assert_allowed(result)
+        self.assertIn("EXPERIMENTAL=1", result.stdout)
+        for message in (f"Experimental Talkbox/eSpeak target: {model}",
+                        f"Eksperymentalny cel Talkbox/eSpeak: {model}",
+                        "has not been validated", "at your own risk",
+                        "na własną odpowiedzialność", "Sansa Clip+", "Sansa Clip Zip",
+                        "HiBy R1", "not physical-hardware certification",
+                        "https://github.com/Pates2004/rockbox-accessible/issues",
+                        "https://github.com/Pates2004/rockbox-accessible/pulls"):
+            self.assertIn(message, result.stderr)
 
     def test_hosted_hiby_r1_is_allowed_only_in_application_builds(self):
         self.assert_allowed(self.admission("hibyr1", app_type="hibyos"))
         self.assert_rejected(self.admission("hibyr1", app_type="hibyos", apps="bootloader"))
-        self.assert_rejected(self.admission("hibyr3proii", app_type="hibyos"))
-        self.assert_rejected(self.admission("sansaclipplus", app_type="hibyos"))
+        self.assert_experimental(self.admission("hibyr3proii", app_type="hibyos", allow_experimental=True), "hibyr3proii")
+        self.assert_experimental(self.admission("sansaclipplus", app_type="hibyos", allow_experimental=True), "sansaclipplus")
 
     def test_simulator_bootloader_does_not_enable_synthesis(self):
         self.assert_rejected(self.admission("hibyr1", app_type="sdl-sim", apps="bootloader"))
 
-    def test_all_other_native_targets_are_rejected(self):
-        for model in [*self.models, "", "unknown", "sansaclipzip-extra"]:
+    def test_all_other_existing_native_targets_are_experimental(self):
+        for model in self.models:
             if model not in NATIVE_TARGETS:
                 with self.subTest(model=model):
-                    self.assert_rejected(self.admission(model))
+                    self.assert_experimental(self.admission(model, allow_experimental=True), model)
+
+    def test_unvalidated_targets_require_explicit_confirmation(self):
+        for model, app_type in (("ipod6g", ""), ("shanlingq1", ""),
+                                ("ipod6g", "sdl-sim"), ("sdlapp", "sdl-app")):
+            with self.subTest(model=model, app_type=app_type):
+                result = self.admission(model, app_type)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("Are you sure?", result.stderr)
+                self.assertIn("Czy na pewno?", result.stderr)
+                self.assertIn("--allow-experimental-espeak", result.stderr)
+                self.assertIn("has not been validated", result.stderr)
+                self.assertNotIn("#define HAVE_ESPEAK", result.stdout)
+
+    def test_confirmation_cannot_enable_bootloader_or_auxiliary_synthesis(self):
+        self.assert_rejected(self.admission("ipod6g", apps="bootloader", allow_experimental=True))
+        for app_type in ("checkwps", "database-sdl", "warble"):
+            self.assert_rejected(self.admission("ipod6g", app_type, allow_experimental=True))
+
+    def test_confirmation_alone_does_not_enable_speech(self):
+        result = self.admission("ipod6g", enabled=False, allow_experimental=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("#define", result.stdout)
+        self.assertIn("EXPERIMENTAL=0", result.stdout)
+        self.assertFalse(result.stderr)
 
     def test_bootloaders_are_rejected(self):
         for model in self.models:
             with self.subTest(model=model):
                 self.assert_rejected(self.admission(model, apps="bootloader"))
 
-    def test_applications_and_auxiliary_tools_are_rejected(self):
+    def test_auxiliary_tools_are_rejected(self):
         for model in (*NATIVE_TARGETS, "sdlapp", "unknown"):
-            for app_type in ("sdl-app", "checkwps", "database-sdl", "warble", "other-app"):
+            for app_type in ("checkwps", "database-sdl", "warble"):
                 with self.subTest(model=model, app_type=app_type):
                     self.assert_rejected(self.admission(model, app_type=app_type))
+
+    def test_other_hosted_applications_are_experimental(self):
+        for app_type in ("sdl-app", "hibyos", "fiio", "sonynwz", "ypr0",
+                         "android", "android_ndk", "3ds-homebrew"):
+            with self.subTest(app_type=app_type):
+                self.assert_experimental(self.admission("experimental-model", app_type, allow_experimental=True),
+                                         "experimental-model")
 
     def test_sdl_simulator_is_not_limited_to_native_allowlist(self):
         for model in self.models:
             with self.subTest(model=model):
-                self.assert_allowed(self.admission(model, app_type="sdl-sim"))
+                result = self.admission(model, app_type="sdl-sim", allow_experimental=True)
+                if model in (*NATIVE_TARGETS, "hibyr1"):
+                    self.assert_allowed(result)
+                    self.assertIn("EXPERIMENTAL=0", result.stdout)
+                    self.assertFalse(result.stderr)
+                else:
+                    self.assert_experimental(result, model)
 
     def test_without_opt_in_guard_does_not_enable_or_reject(self):
         for model in (*NATIVE_TARGETS, "sansafuzev2", "sdlapp"):
@@ -157,6 +210,8 @@ class EspeakAdmissionTests(unittest.TestCase):
                     result = self.admission(model, app_type, apps, enabled=False, windows=True)
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                     self.assertNotIn("#define", result.stdout)
+                    self.assertIn("EXPERIMENTAL=0", result.stdout)
+                    self.assertFalse(result.stderr)
                     self.assertIn("LDOPTS=-lm -mconsole", result.stdout)
 
     def test_windows_simulator_keeps_gui_subsystem(self):
@@ -193,15 +248,18 @@ class EspeakConfigureTests(unittest.TestCase):
         cls.results.mkdir(parents=True)
         print(f"Configure-only eSpeak regression evidence (not firmware): {cls.results}", flush=True)
 
-    def configure(self, target, build_type="N", enabled=True, thumb=None):
+    def configure(self, target, build_type="N", enabled=True, thumb=None,
+                  allow_experimental=False):
         mode = "" if thumb is None else "-thumb" if thumb else "-no-thumb"
-        directory = self.results / self._testMethodName / f"{target}-{build_type}-{enabled}{mode}"
+        directory = self.results / self._testMethodName / f"{target}-{build_type}-{enabled}{mode}-experimental{allow_experimental}"
         temporary = directory / "tmp"
         temporary.mkdir(parents=True)
         command = ["sh", str(CONFIGURE), f"--target={target}", f"--type={build_type}",
                    "--no-ccache", "--lcdwidth=320", "--lcdheight=240"]
         if enabled:
             command.append("--integrated-espeak")
+        if allow_experimental:
+            command.append("--allow-experimental-espeak")
         if target != "sdlapp" and build_type in ("N", "B", "ab"):
             command.append(f"--compiler-prefix={self.arm_prefix}")
         if thumb is not None:
@@ -216,8 +274,9 @@ class EspeakConfigureTests(unittest.TestCase):
         )
         return directory, result
 
-    def configured(self, target, build_type="N", enabled=True, thumb=None):
-        directory, result = self.configure(target, build_type, enabled, thumb)
+    def configured(self, target, build_type="N", enabled=True, thumb=None,
+                   allow_experimental=False):
+        directory, result = self.configure(target, build_type, enabled, thumb, allow_experimental)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         header = (directory / "autoconf.h").read_text(encoding="utf-8")
         makefile = (directory / "Makefile").read_text(encoding="utf-8")
@@ -254,7 +313,7 @@ class EspeakConfigureTests(unittest.TestCase):
     def rejected(self, target, build_type="N"):
         directory, result = self.configure(target, build_type)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-        self.assertIn("Integrated eSpeak supports", result.stdout)
+        self.assertIn("Integrated eSpeak requires a Rockbox application or simulator", result.stdout)
         for filename in ("autoconf.h", "autoconf.h.new", "Makefile"):
             self.assertFalse((directory / filename).exists(), filename)
 
@@ -322,10 +381,17 @@ class EspeakConfigureTests(unittest.TestCase):
                                 else:
                                     delegate.assert_not_called()
 
-    def test_other_native_firmware_is_rejected_even_with_shared_cpu_or_id(self):
-        for target in ("sansaclip", "sansaclipv2", "sansafuzev2", "ipodvideo"):
+    def test_other_native_firmware_configures_with_experimental_warning(self):
+        for target in ("sansaclip", "sansaclipv2", "sansafuzev2", "ipodvideo", "ipod6g"):
             with self.subTest(target=target):
-                self.rejected(target)
+                directory, result = self.configure(target, allow_experimental=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn(f"Experimental Talkbox/eSpeak target: {target}", result.stderr)
+                self.assertIn("#define HAVE_ESPEAK 1", (directory / "autoconf.h").read_text())
+                makefile = (directory / "Makefile").read_text()
+                self.assertRegex(makefile, r"(?m)^export ESPEAK_EXPERIMENTAL=1$")
+                configuration = self.engine_configuration(makefile)
+                self.assertIn("-DRB_ESPEAK_NATIVE=1", configuration["ESPEAK_HOST_FLAGS"])
 
     def test_native_bootloaders_are_rejected(self):
         for target in NATIVE_TARGETS:
@@ -333,8 +399,22 @@ class EspeakConfigureTests(unittest.TestCase):
                 with self.subTest(target=target, build_type=build_type):
                     self.rejected(target, build_type)
 
-    def test_sdl_application_is_rejected(self):
-        self.rejected("sdlapp")
+    def test_sdl_application_configures_as_experimental(self):
+        header, makefile = self.configured("sdlapp", allow_experimental=True)
+        self.assertIn("#define HAVE_ESPEAK 1", header)
+        self.assertRegex(makefile, r"(?m)^export ESPEAK_EXPERIMENTAL=1$")
+
+    def test_unknown_target_remains_invalid(self):
+        directory, result = self.configure("not-a-rockbox-target", allow_experimental=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((directory / "autoconf.h").exists())
+
+    def test_unconfirmed_experimental_target_writes_no_configuration(self):
+        directory, result = self.configure("ipod6g")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("--allow-experimental-espeak", result.stderr)
+        for name in ("autoconf.h", "autoconf.h.new", "Makefile"):
+            self.assertFalse((directory / name).exists(), name)
 
     def test_auxiliary_tools_are_rejected(self):
         for target in NATIVE_TARGETS:
@@ -345,7 +425,7 @@ class EspeakConfigureTests(unittest.TestCase):
     def test_sdl_simulators_still_configure(self):
         for target in (*NATIVE_TARGETS, "sansafuzev2", "iriverh300"):
             with self.subTest(target=target):
-                header, makefile = self.configured(target, "S")
+                header, makefile = self.configured(target, "S", allow_experimental=target not in NATIVE_TARGETS)
                 self.assertIn("#define ARCH arch_none", header)
                 self.assertRegex(makefile, r"(?m)^export APP_TYPE=sdl-sim$")
                 self.assertIn("-DSIMULATOR", makefile)
@@ -362,6 +442,54 @@ class EspeakConfigureTests(unittest.TestCase):
                 ("sansaclipzip", "S")):
             with self.subTest(target=target, build_type=build_type):
                 self.configured(target, build_type, enabled=False)
+
+
+@unittest.skipUnless(POSIX_SHELL and shutil.which("make"), "Run with POSIX make")
+class ExperimentalMakeTests(unittest.TestCase):
+    def make_policy(self, app_type, experimental=True):
+        source = (
+            f"ROOTDIR := {ROOT.as_posix()}\nBUILDDIR := /synthetic-unused-build\n"
+            "GCCOPTS := -Os -std=gnu11 -Wstrict-prototypes\n"
+            "include $(ROOTDIR)/lib/espeak/espeak.make\n"
+            "$(info HOST=$(ESPEAK_HOST_FLAGS))\n"
+            "$(info OBJECTS=$(ESPEAK_OBJECTS))\n"
+            "$(info GLOBAL=$(GLOBAL_LDOPTS))\n"
+            ".PHONY: policy-probe\npolicy-probe: ;\n"
+        )
+        return subprocess.run(
+            ["make", "--no-print-directory", "-f", "-", "policy-probe", "ESPEAK=1",
+             f"ESPEAK_EXPERIMENTAL={int(experimental)}", f"APP_TYPE={app_type}",
+             "MODELNAME=community-test", "CC=synthetic-target-gcc"],
+            input=source, capture_output=True, text=True, timeout=10, check=False,
+        )
+
+    def test_native_and_hosted_ports_select_bounded_runtime_without_platform_refusal(self):
+        for app_type in ("", "hibyos", "fiio", "sonynwz", "ypr0", "sdl-app",
+                         "android", "android_ndk", "3ds-homebrew"):
+            with self.subTest(app_type=app_type):
+                result = self.make_policy(app_type)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn("-DRB_ESPEAK_NATIVE=1", result.stdout)
+                self.assertIn("native/native_runtime.o", result.stdout)
+                self.assertIn("native/native_text.o", result.stdout)
+                self.assertNotIn("-lstdc++", result.stdout)
+                self.assertIn("Experimental Talkbox/eSpeak target community-test", result.stderr)
+                self.assertIn("https://github.com/Pates2004/rockbox-accessible/issues", result.stderr)
+
+    def test_sdl_keeps_hosted_runtime_and_experimental_warning(self):
+        result = self.make_policy("sdl-sim")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("GLOBAL=-lstdc++ -lm", result.stdout)
+        self.assertNotIn("-DRB_ESPEAK_NATIVE=1", result.stdout)
+        self.assertNotIn("native/native_runtime.o", result.stdout)
+        self.assertIn("Experimental Talkbox/eSpeak target", result.stderr)
+
+    def test_reference_build_does_not_emit_unvalidated_target_warning(self):
+        for app_type in ("", "hibyos", "sdl-sim"):
+            with self.subTest(app_type=app_type):
+                result = self.make_policy(app_type, experimental=False)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertNotIn("Experimental Talkbox/eSpeak target", result.stderr)
 
 
 class NativeDocumentationTests(unittest.TestCase):

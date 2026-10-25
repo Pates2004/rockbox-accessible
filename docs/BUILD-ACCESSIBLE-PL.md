@@ -113,6 +113,35 @@ bajtów. Bluetooth symulatora nie steruje radiem komputera.
 
 ## 5. Fizyczne odtwarzacze
 
+### Próby społeczności na innych modelach
+
+Clip+, Clip Zip i HiBy R1 są dotychczasowymi wzorcami testów oprogramowania.
+Ich zwykła konfiguracja wymaga `--integrated-espeak`. Dla każdego innego
+istniejącego celu Rockboxa konfigurator ostrzega i zatrzymuje się, dopóki nie
+dodasz `--allow-experimental-espeak`. To jawne potwierdzenie pozwala podjąć próbę;
+kompilacja, start, mowa, dźwięk, przyciski lub dotyk nadal mogą nie działać.
+Testujesz na własną odpowiedzialność; wzorcowe buildy nie są akceptacją sprzętu.
+
+Po przygotowaniu właściwego toolchainu urządzenia, w osobnym katalogu buildu:
+
+```sh
+/pelna/sciezka/rockbox/tools/configure --target=ipod6g --type=N \
+  --integrated-espeak --allow-experimental-espeak
+make -j4
+```
+
+Dla próby na Shanlingu Q1 wybierz `--target=shanlingq1` i jego właściwy toolchain
+MIPS. Bootloadery i narzędzia pomocnicze pozostają wyłączone. Nadal potrzebne są
+zgodne dane mowy, wygenerowane katalogi tekstów mówionych, przebudowane wtyczki/kodeki
+oraz instalacja odpowiednia dla urządzenia. Wzorcowe skrypty pakowania nie pakują
+automatycznie innych modeli. Diagnostyczny rdzeń SDL można przygotować przez
+`tools/tests/test_tts_targets.py --targets ipod6g --allow-experimental-espeak`.
+Zobacz [szczegóły celów](ESPEAK-TARGETS-PL.md). Autor prosi o zgłoszenia działających
+celów i błędów przez [issue](https://github.com/Pates2004/rockbox-accessible/issues)
+oraz poprawki w [pull requestach](https://github.com/Pates2004/rockbox-accessible/pulls).
+
+### Istniejące skrypty dla celów wzorcowych
+
 - Sansa: [Clip+](ESPEAK-CLIPPLUS-PL.md), [Clip Zip](ESPEAK-CLIPZIP-PL.md),
   `python3 -B tools/build_espeak_clipplus.py --help`.
 - HiBy R1: [port](ESPEAK-HIBYR1-PL.md),

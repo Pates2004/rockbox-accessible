@@ -28,6 +28,7 @@ TARGETS = (
     "erosqnative", "iriverh300",
 )
 DEFAULT_TARGETS = ("xduoox3", "shanlingq1")
+REFERENCE_TARGETS = ("sansaclipplus", "sansaclipzip", "hibyr1")
 SOURCE_FILES = (
     "tools/configure", "tools/root.make", "tools/genlang", "apps/tts.c", "apps/tts.h", "apps/tts_reader.c",
     "apps/bookmark.c", "apps/bookmark.h",
@@ -300,10 +301,8 @@ def build_targets(arguments):
         save_report(report_path, report)
         try:
             entry["sources_before"] = {name: digest(ROOT / name) for name in SOURCE_FILES}
-            configure = ["bash", str(ROOT / "tools/configure"), "--target=" + target,
-                         "--type=as6" if windows else "--type=s", "--integrated-espeak"]
-            if not windows:
-                configure.append("--sdl-threads")
+            configure = configuration_command(target, arguments.platform,
+                                               arguments.allow_experimental_espeak)
             entry["configure_seconds"] = run(configure, build, build / "configure.log", environment, 120)
             entry["build_seconds"] = run(["make", f"-j{arguments.jobs}", "bin"], build,
                                          build / "build.log", environment, arguments.timeout)
@@ -811,6 +810,16 @@ def refresh_locked_report(path, arguments):
         return False
 
 
+def configuration_command(target, platform, allow_experimental=False):
+    command = ["bash", str(ROOT / "tools/configure"), "--target=" + target,
+               "--type=as6" if platform == "windows" else "--type=s", "--integrated-espeak"]
+    if allow_experimental:
+        command.append("--allow-experimental-espeak")
+    if platform != "windows":
+        command.append("--sdl-threads")
+    return command
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Build selected integrated-eSpeak SDL simulator cores, not device firmware.")
@@ -819,6 +828,8 @@ def main():
                         help="Configure names to build (default: xduoox3 shanlingq1); report modes use their saved targets")
     parser.add_argument("--build-only", action="store_true",
                         help="Check the linked core without copying engine data or staging a smoke runtime")
+    parser.add_argument("--allow-experimental-espeak", action="store_true",
+                        help="Acknowledge unvalidated targets and forward this opt-in to configure")
     parser.add_argument("--jobs", type=int, default=4)
     parser.add_argument("--timeout", type=int, default=600)
     parser.add_argument("--espeak-source", type=Path, default=ROOT.parent / "espeak-1.44.05-source")
@@ -845,6 +856,12 @@ def main():
         return 0
     if arguments.targets is None:
         arguments.targets = list(DEFAULT_TARGETS)
+    if not arguments.refresh_report and not arguments.smoke_report and not arguments.allow_experimental_espeak:
+        experimental = [target for target in arguments.targets if target not in REFERENCE_TARGETS]
+        if experimental:
+            parser.error("Unvalidated Talkbox/eSpeak targets: " + ", ".join(experimental) +
+                         ". Confirm testing at your own risk with --allow-experimental-espeak; "
+                         "report results at https://github.com/Pates2004/rockbox-accessible/issues")
     if arguments.refresh_report:
         successful = refresh_abi(arguments)
     elif arguments.smoke_report:

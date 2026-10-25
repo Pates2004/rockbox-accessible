@@ -1,5 +1,48 @@
 # Zintegrowany eSpeak: lista celów i testy symulatorów
 
+## Eksperymentalne kompilacje społeczności, 2026-10-25
+
+[English version](ESPEAK-TARGETS.md)
+
+Każdy cel odtwarzacza rozpoznawany już przez Rockboxa może teraz spróbować
+kompilacji z Talkbox/eSpeak. Clip+, Clip Zip i HiBy R1 pozostają wzorcami testów
+oprogramowania, bez deklaracji pełnej akceptacji fizycznego sprzętu. Dla innych
+celów konfigurator najpierw ostrzega i zatrzymuje się. Dopisz
+`--allow-experimental-espeak` obok `--integrated-espeak`, aby świadomie potwierdzić
+próbę. Make również zachowuje ostrzeżenie. Potwierdzenie dotyczy także symulatorów
+SDL innych modeli. Bootloadery i narzędzia pomocnicze pozostają wyłączone;
+nieznana nazwa celu nadal jest błędem. Zwykła kompilacja bez eSpeaka nie zmienia się.
+
+Kompilacja, start, mowa, dźwięk, przyciski lub dotyk mogą nie działać. Testujesz
+na własną odpowiedzialność. Otwieramy możliwość prób, bez deklaracji gotowych
+portów, dodatkowej pamięci, uniwersalnych przypisań przycisków ani pakowania.
+Zapraszamy do testów np. iPodów (`ipod6g`) i Shanlinga Q1 (`shanlingq1`).
+Po przygotowaniu właściwego kompilatora urządzenia, w osobnym katalogu buildu:
+
+```sh
+/pelna/sciezka/rockbox/tools/configure --target=ipod6g --type=N \
+  --integrated-espeak --allow-experimental-espeak
+make -j4
+```
+
+To kompiluje kod aplikacji, bez automatycznego potwierdzenia instalacji.
+Przygotuj zgodne [dane mowy](BUILD-ACCESSIBLE-PL.md), dołącz
+`.rockbox/espeak-data` i wygenerowane katalogi `.vstrings` do instalacji testowej
+danego modelu oraz przebuduj wszystkie wtyczki/kodeki dla jego celu i ABI rdzenia.
+Istniejące skrypty pakowania nadal obsługują wyłącznie swoje nazwane cele wzorcowe.
+Nowa opcja nie instaluje ani nie flashuje urządzenia.
+
+Autor prosi o informacje o **działających celach i błędach** przez
+[issue](https://github.com/Pates2004/rockbox-accessible/issues) oraz poprawki w
+[pull requestach](https://github.com/Pates2004/rockbox-accessible/pulls).
+Podaj dokładny model/rewizję, commit, kompilator, opcje configure i to, co faktycznie
+działa: kompilacja, start, mowa menu, czytnik, muzyka, przyciski, dotyk i zapis.
+Odróżniaj fizyczny odtwarzacz od symulatora i wymień niewykonane próby.
+Szczegóły: [współtworzenie](CONTRIBUTING-ACCESSIBLE.md).
+
+Datowane wyniki poniżej zachowują pierwotny zakres dowodów; aktualizujemy politykę
+dopuszczania kompilacji i bieżące granice, bez zmiany oznaczeń dawnych buildów.
+
 ## Przenośny rdzeń Talkbox i tok pracy, 2026-10-20
 
 [English version](ESPEAK-TARGETS.md)
@@ -74,7 +117,7 @@ obsługi Talkbox. Najważniejsze istniejące granice:
 
 | Bramka | Znaczenie dla portu |
 | --- | --- |
-| `--integrated-espeak` / `HAVE_ESPEAK` | Configure dopuszcza obecnie symulatory SDL, natywne `sansaclipplus`/`sansaclipzip` i aplikację `hibyos:hibyr1`; odrzuca bootloadery oraz pozostałe porty urządzeń, w tym natywny `ipod6g`. |
+| `--integrated-espeak` / `HAVE_ESPEAK` | Włącza kompilacje aplikacji. Wzorcowe konfiguracje Clip+/Clip Zip/R1 działają zwyczajnie; każdy inny istniejący cel odtwarzacza/SDL wymaga dodatkowo `--allow-experimental-espeak` i otrzymuje ostrzeżenia. Bootloadery i narzędzia pomocnicze pozostają wyłączone. |
 | `HAVE_ESPEAK` bez `HAVE_TOUCHSCREEN` | Wspólna synteza, listy, czytnik, zakładki i mowa wtyczek pozostają ścieżką rdzenia. Wejście fizyczne nadal wymaga integracji akcji/mapy klawiszy danego celu. |
 | `HAVE_ESPEAK` z `HAVE_TOUCHSCREEN` | Włącza źródła/menu dostępności dotykowej. `accessibility_buttons.c` jest obecnie wewnątrz tej bramki źródeł mimo swojej nazwy; nie jest automatycznie ogólnym backendem wejścia Sans/iPoda. |
 | `HAS_BUTTON_HOLD`, `HAVE_SCREEN_CURTAIN` | Sprzętowa blokada, blokada programowa i kurtyna podlegają istniejącym warunkom. Sprawdź ich połączenie w menu zamiast udostępniać wszędzie kontrolki R1. Kółko iPoda nie jest ekranem dotykowym. |
@@ -92,7 +135,7 @@ nieobsługiwanych kontrolek.
 | Cel | Zapisany stan i następny warunek |
 | --- | --- |
 | `sansaclipplus`, `sansaclipzip` | Zachowane natywne wydania r29 i zgodne symulatory Windows opisują [Clip+](ESPEAK-CLIPPLUS-PL.md), [Clip Zip](ESPEAK-CLIPZIP-PL.md) i [Windows](ESPEAK-WINDOWS-PL.md). Nie walidują nowych wspólnych preferencji, źródeł r34 ani ABI `0xe006`; powrót do Sans wymaga osobno zleconego etapu kompilacji/testów. Nie deklarujemy odbioru sprzętowego. |
-| `ipod6g` | Poniżej istnieją historyczne dowody linkowania/startu rdzenia Windows. Natywny zintegrowany eSpeak pozostaje zablokowany w configure; nie ustalono tu istnienia bieżącej natywnej paczki Talkbox ani pełnego odbioru symulatora nowego etapu. |
+| `ipod6g` | Eksperymentalna konfiguracja native i SDL jest otwarta z jawnym potwierdzeniem. Historyczne wyniki Windows poniżej nie potwierdzają bieżącej paczki native ani działania fizycznego odtwarzacza. |
 | `hibyr1` | Zamknięte wyniki programowe native alpha13 / Windows alpha16 dotyczą wyłącznie zapisanych wejść. Odbiór fizycznego R1, dostępności dotyku, Bluetooth/RF, baterii i NVDA pozostaje otwarty. Zobacz [R1](ESPEAK-HIBYR1-PL.md). |
 | Inne cele dotykowe lub linuksowe | Makro możliwości pozwala wybrać właściwy kod; nie przenosi odbioru R1 ani zgodności z usługą producenta. Przygotuj osobny zapis kompilacji i testów danego celu. |
 
@@ -120,13 +163,14 @@ nieobsługiwanych kontrolek.
    pod Linuksem/WSL z właściwymi narzędziami urządzenia; skrośne Windows używają
    MinGW i sprawdzonego SDK SDL2 opisanego niżej. Nie uruchamiaj testów komputera
    na nagłówkach celu podczas ich wymiany przy przygotowaniu czystej kompilacji.
-5. Wybierz istniejący skrypt poniżej. Nowy cel natywny wymaga przeglądu obsługi
-   kompilacji, środowiska i pakowania oraz świadomej zmiany bramki configure;
-   samo usunięcie odmowy lub ręczne zdefiniowanie `HAVE_ESPEAK` nie wystarcza.
+5. Wybierz istniejący skrypt poniżej. Cele eksperymentalne używają
+   `--integrated-espeak --allow-experimental-espeak`, bez zmiany listy modeli.
+   Działający port nadal wymaga rzeczywistych prób kompilacji, uruchomienia
+   i pakowania. Zachowaj bramki możliwości celu i nie kopiuj założeń sprzętu HiBy.
 
 | Zastosowanie | Istniejący skrypt i ograniczenia |
 | --- | --- |
-| Wykaz / wybrany rdzeń symulatora | `tools/tests/test_tts_targets.py --list-targets` tylko odczytuje listę. Nowe przebiegi `--platform windows --targets ipod6g` lub wybranych Sans budują diagnostyczne rdzenie SDL, nie firmware urządzeń ani pełne wydanie wtyczek. `--build-only` pomija dane uruchomieniowe; pomiń tę opcję przy przygotowaniu nowego raportu testu startu. Pełne przykłady pozostają niżej. |
+| Wykaz / wybrany rdzeń symulatora | `tools/tests/test_tts_targets.py --list-targets` tylko odczytuje listę. Nowe przebiegi `--platform windows --targets ipod6g --allow-experimental-espeak` lub wybranych Sans budują diagnostyczne rdzenie SDL, nie firmware urządzeń ani pełne wydanie wtyczek. `--build-only` pomija dane uruchomieniowe; pomiń tę opcję przy przygotowaniu nowego raportu testu startu. Pełne przykłady pozostają niżej. |
 | Utrzymywany builder symulatora | `tools/build_espeak_simulator.py --platform windows --target ... --build-only` przyjmuje tylko `sansaclipplus`, `sansaclipzip`, `hibyr1`. `--package-only` pakuje istniejący zgodny build; pakowanie jest osobnym krokiem wydania, nie kolejnym testem. Ten builder nie przyjmuje `ipod6g`. |
 | Natywne Sansy | `tools/build_espeak_clipplus.py --target sansaclipplus` lub `--target sansaclipzip`, z `--source-frozen` i unikalnym `--version`, kompiluje i pakuje dla tego celu. Nie ma trybu przygotowania `--build-only`; nie traktuj go jako nieszkodliwej próby rdzenia na zachowanych wydaniach. |
 | Natywny R1 | `tools/build_espeak_hiby.py --build-only` tworzy diagnostykę. `--stage-hardware-test` wymaga `--source-frozen`, unikalnego `--version`, rzeczywistych `--toolchain-notices` i `--alsa-source`. Późniejsze `--staged ... --publish-hardware-test` jest jawnie eksperymentalne; `--publish` wymaga zamiast tego powiązanego z buildem `--runtime-evidence`. Żaden tryb nie dowodzi odbioru sprzętowego. |
@@ -623,6 +667,7 @@ cd /mnt/d/Rockbox/rockbox
 python3 -B tools/tests/test_tts_targets.py --platform windows \
   --targets sansaclipplus sansaclipzip xduoox3 xduoox3ii xduoox20 shanlingq1 \
     ipod6g fiiom3k aigoerosq erosqnative iriverh300 \
+  --allow-experimental-espeak \
   --espeak-source /mnt/d/Rockbox/espeak-1.44.05-source \
   --sdl-sdk /mnt/d/work/Workspace/rockbox/toolchains/SDL2-2.32.10/x86_64-w64-mingw32 \
   --jobs 4 --timeout 1800

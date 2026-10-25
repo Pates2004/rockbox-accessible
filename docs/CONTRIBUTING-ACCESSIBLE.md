@@ -70,6 +70,17 @@ tests. See the [Bluetooth contract and limitations](ESPEAK-BLUETOOTH.md).
 
 ## Report a problem
 
+Reports of **working experimental targets** are welcome too. Use the same issue
+details below and distinguish compile-only, simulator and physical results.
+Say which of menu speech, text reading, music, buttons, touch, storage and shutdown
+you actually tested, and what remains untested. Include the exact compiler and
+configure options, especially `--integrated-espeak --allow-experimental-espeak`.
+Sansa Clip+, Clip Zip and HiBy R1 are software-validation reference players;
+other existing targets can now opt into testing, without a working-port guarantee.
+Open an [issue](https://github.com/Pates2004/rockbox-accessible/issues) for results
+or a focused [pull request](https://github.com/Pates2004/rockbox-accessible/pulls)
+for a fix. See the [experimental build policy](ESPEAK-TARGETS.md).
+
 Open an issue in this fork with:
 
 1. The player model, hardware revision if known, firmware version and exact
