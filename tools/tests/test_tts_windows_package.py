@@ -232,8 +232,8 @@ def main():
                     # Fresh root selection is Files; the private test disk has
                     # exactly one visible file, the optional profile.
                     press('Return', 0.8)
-                    press('Return', 1.0)
-                    press('Escape', 0.8)
+                    press('Return', 2.0)
+                    press('Left', 0.8)
                     language = 'pl'
                     run['polish_profile_imported'] = True
                 else:
