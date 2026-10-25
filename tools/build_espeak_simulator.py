@@ -221,7 +221,7 @@ def main():
     if arguments.target == "sansaclipzip":
         version = "0ed3734e5e-espeak-r29-clipzip-" + ("win-" if windows else "") + "alpha8-20261011"
     elif arguments.target == "hibyr1":
-        version = "0ed3734e5e-espeak-r34-hibyr1-" + ("win-alpha18-20261023" if windows else "alpha15-20261023")
+        version = "0ed3734e5e-espeak-r34-hibyr1-" + ("win-alpha19-20261025" if windows else "alpha15-20261023")
     environment = dict(os.environ, OMP_NUM_THREADS=str(arguments.jobs), VERSION=version)
     sdk = arguments.sdl_sdk.resolve()
     if windows:
@@ -297,7 +297,8 @@ def main():
                          "HIBY-R1-NETWORK-EMULATION.md", "HIBY-R1-NETWORK-EMULATION-PL.md",
                          "ESPEAK-BLUETOOTH.md", "ESPEAK-BLUETOOTH-PL.md",
                          "ESPEAK-HIBY-USB.md", "ESPEAK-HIBY-USB-PL.md",
-                         "RADIO-DYNAMIC.md", "RADIO-DYNAMIC-PL.md"):
+                         "RADIO-DYNAMIC.md", "RADIO-DYNAMIC-PL.md",
+                         "BOOK-READER-FOUNDATION.md", "BOOK-READER-FOUNDATION-PL.md"):
                 shutil.copy2(ROOT / "docs" / name, release / name)
     configuration = disk / ".rockbox" / "config.cfg"
     configuration.write_text("lang: /.rockbox/langs/polski.lng\ntalk menu: on\ntalk dir: spell\n"

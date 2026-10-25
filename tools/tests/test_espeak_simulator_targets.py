@@ -32,7 +32,7 @@ EXPECTED_VERSIONS = {
         'linux': '0ed3734e5e-espeak-r29-clipzip-alpha8-20261011',
     },
     'hibyr1': {
-        'windows': '0ed3734e5e-espeak-r34-hibyr1-win-alpha18-20261023',
+        'windows': '0ed3734e5e-espeak-r34-hibyr1-win-alpha19-20261025',
         'linux': '0ed3734e5e-espeak-r34-hibyr1-alpha15-20261023',
     },
 }
@@ -84,7 +84,8 @@ class SimulatorTargetTests(unittest.TestCase):
                      'ESPEAK-BLUETOOTH.md', 'ESPEAK-BLUETOOTH-PL.md',
                      'ESPEAK-HIBY-USB.md', 'ESPEAK-HIBY-USB-PL.md',
                      'ESPEAK-BOOKMARKS.md', 'ESPEAK-BOOKMARKS-PL.md',
-                     'ESPEAK-PLUGINS.md', 'ESPEAK-PLUGINS-PL.md'):
+                     'ESPEAK-PLUGINS.md', 'ESPEAK-PLUGINS-PL.md',
+                     'BOOK-READER-FOUNDATION.md', 'BOOK-READER-FOUNDATION-PL.md'):
             self.write(self.root / 'docs' / name, f'Synthetic documentation: {name}')
         for name in ('License.txt', 'sonic/LICENSE', 'sonic/README.md'):
             self.write(self.root / 'lib/espeak' / name, f'Synthetic notice: {name}')

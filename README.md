@@ -40,6 +40,12 @@ are not universally accessible. See [target boundaries](docs/ESPEAK-TARGETS.md) 
 
 ## Development status
 
+Structured-book work has started with a shared position/navigation core.
+See the [book-reader foundation](docs/BOOK-READER-FOUNDATION.md)
+([Polski](docs/BOOK-READER-FOUNDATION-PL.md)) for its implemented scope and
+remaining adapters. DAISY/EPUB/PDF opening is not available yet. PDF OCR is
+deferred; visual page/image display is planned.
+
 This branch contains work in progress, not a new accepted binary release.
 Bluetooth monitor framing, connection-intent races, reconnect integration and
 full native/Windows regression gates are being reviewed. A successful build or

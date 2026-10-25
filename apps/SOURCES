@@ -1,4 +1,4 @@
-/* Modified for Rockbox Accessible; change notice dated 2026-10-21. */
+/* Modified for Rockbox Accessible; change notice dated 2026-10-25. */
 #ifdef ROCKBOX_HAS_LOGF
 logfdisp.c
 #endif
@@ -50,6 +50,7 @@ menus/eq_menu.c
 buffering.c
 voice_thread.c
 #ifdef HAVE_ESPEAK
+book_reader.c
 tts.c
 tts_reader.c
 tts_reader_settings.c
