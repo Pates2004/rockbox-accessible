@@ -232,6 +232,8 @@ static bool option_screen(const struct settings_list *setting, struct viewport *
     (void)parent; (void)temporary; (void)title;
     assert(setting->int_setting->formatter == set_option_formatter);
     assert(setting->int_setting->get_talk_id == set_option_get_talk_id);
+    assert(setting->int_setting->formatter(NULL, 0, 0, NULL) != NULL);
+    assert(setting->int_setting->get_talk_id(0, 0) >= 0);
     generic_constructed = fixture_construct_option(setting->flags);
     if (!generic_cancel)
         *(int *)setting->setting = 1;
