@@ -26,7 +26,10 @@ Position announcement offers five modes:
 Sliders are numeric ranges such as volume, bass, speech rate and timeout values.
 Rockbox presents these controls as native option lists, including numeric tables
 of range steps. Boolean and enum choices, voice language/variant selection and
-the bitmask editor retain positions by default. Menus of setting names,
+the bitmask editor retain positions by default. This also includes button/gesture
+action lists and core/plugin `set_option`/`set_bool` selectors: storing the
+selection as an integer does not make a categorical list a slider.
+Menus of setting names,
 properties, bookmarks, playlists, cue tracks and database navigation are
 interface lists; a displayed number or label/value pair does not make a row a
 slider. Known folder-selector plugins carry explicit file roles. Other bespoke

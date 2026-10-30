@@ -1391,7 +1391,7 @@ bool set_option(const char* string, const void* variable, enum optiontype type,
     memset(&item, 0, sizeof(struct settings_list));
     set_option_options = options;
     item.int_setting = &data;
-    item.flags = F_INT_SETTING|F_T_INT;
+    item.flags = F_INT_SETTING|F_T_INT|F_OPTION_LIST;
     item.lang_id = -1;
     item.setting = &temp;
     if (type == RB_BOOL)

@@ -796,6 +796,8 @@ static void construction_roles(void)
         fixture_construct_option(F_T_INT | F_TABLE_SETTING), fixture_construct_option(F_BOOL_SETTING),
         fixture_construct_option(F_T_INT | F_CHOICE_SETTING),
         fixture_construct_option(F_T_INT | F_CHOICE_SETTING | F_INT_SETTING),
+        fixture_construct_generic(false, false), fixture_construct_generic(false, true),
+        fixture_construct_generic(true, false), fixture_construct_generic(true, true),
         fixture_construct_tree(false), fixture_construct_tree(true),
         fixture_construct_folder(), fixture_construct_mask(), fixture_construct_plugin_folder(),
         fixture_construct_random_folder(), fixture_construct_puzzle()
@@ -803,6 +805,8 @@ static void construction_roles(void)
     static const enum list_position_source expected[] = {
         LIST_POSITION_SLIDER, LIST_POSITION_SLIDER, LIST_POSITION_SLIDER,
         LIST_POSITION_INTERFACE, LIST_POSITION_INTERFACE, LIST_POSITION_INTERFACE,
+        LIST_POSITION_INTERFACE, LIST_POSITION_INTERFACE,
+        LIST_POSITION_INTERFACE, LIST_POSITION_INTERFACE,
         LIST_POSITION_FILE, LIST_POSITION_INTERFACE,
         LIST_POSITION_FILE, LIST_POSITION_INTERFACE, LIST_POSITION_FILE,
         LIST_POSITION_FILE, LIST_POSITION_INTERFACE

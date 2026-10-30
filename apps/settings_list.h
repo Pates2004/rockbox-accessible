@@ -147,7 +147,8 @@ struct custom_setting {
 #define F_TIME_SETTING  0x10000 /* int,table format hh:mm:ss.mss auto ranged */
 #define F_HAS_CFGVALS   0x20000 /* uses setting union to carry cfg_vals */
 #define F_RESUMESETTING 0x40000 /* saved to a separate cfg file on shutdown */
-/*#define _AVAILABLE_   0x80000*/
+/* Categorical options whose values use int_setting storage. */
+#define F_OPTION_LIST   0x80000
 /* these use the _isfunc_type type for the function */
 /* typedef int (*_isfunc_type)(void); */
 #define F_MIN_ISFUNC    0x100000 /* min(above) is function pointer to above type */

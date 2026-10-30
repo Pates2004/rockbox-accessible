@@ -513,7 +513,7 @@ bool option_screen(const struct settings_list *setting,
     gui_synclist_init(&lists, value_setting_get_name_cb,
                       (void*)setting, false, 1, parent);
 #ifdef HAVE_ESPEAK
-    if (!(setting->flags & F_CHOICE_SETTING) &&
+    if (!(setting->flags & (F_CHOICE_SETTING | F_OPTION_LIST)) &&
         (setting->flags & (F_T_SOUND | F_INT_SETTING | F_TABLE_SETTING)))
         lists.position_source = LIST_POSITION_SLIDER;
 #endif

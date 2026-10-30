@@ -27,7 +27,10 @@ Ogłaszanie pozycji ma pięć trybów:
 Suwaki to zakresy liczbowe, np. głośność, basy, tempo mowy i czasy oczekiwania.
 Rockbox przedstawia je jako natywne listy opcji, w tym tabele liczbowych kroków
 zakresu. Przełączniki, listy enum, wybór języka i wariantu głosu oraz edytor maski
-bitowej domyślnie zachowują indeksy. Menu nazw ustawień, właściwości, zakładki,
+bitowej domyślnie zachowują indeksy. Dotyczy to także list akcji przycisków
+i gestów oraz selektorów `set_option`/`set_bool` w rdzeniu i wtyczkach:
+przechowywanie wyboru jako liczby nie czyni takiej listy suwakiem.
+Menu nazw ustawień, właściwości, zakładki,
 playlisty, utwory arkusza cue i nawigacja po bazie danych należą do interfejsu.
 Liczba lub para etykieta/wartość nie czyni wiersza suwakiem. Znane wtyczki wyboru
 katalogów mają jawnie określoną rolę plików. Pozostałe niestandardowe selektory

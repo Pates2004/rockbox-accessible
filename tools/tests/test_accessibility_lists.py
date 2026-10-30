@@ -21,7 +21,7 @@ INPUTS = ("apps/gui/list.c", "apps/gui/list.h", "apps/misc.c", "apps/misc.h", "a
           "apps/tts.c", "apps/tts.h",
           "apps/settings_list.c", "apps/settings_list.h", "apps/menus/settings_menu.c", "apps/plugin.h",
           "apps/lang/english.lang", "apps/lang/polski.lang",
-          "apps/gui/option_select.c", "apps/tree.c", "apps/gui/folder_select.c", "apps/gui/mask_select.c",
+          "apps/gui/option_select.c", "apps/settings.c", "apps/tree.c", "apps/gui/folder_select.c", "apps/gui/mask_select.c",
           "apps/plugins/db_folder_select.c", "apps/plugins/random_folder_advance_config.c",
           "apps/plugins/puzzles/rockbox.c",
           "tools/tests/fixtures/accessibility_lists_fixture.c", "tools/tests/test_accessibility_lists.py")
@@ -163,7 +163,18 @@ class AccessibilityListTests(unittest.TestCase):
 #define list_get_name_cb name_row
 #define config_choices_formatter name_row
 #define LANG_SELECT_FOLDER 1
-struct settings_list { unsigned int flags; };
+struct int_setting {
+    void (*option_callback)(int);
+    int unit, step, min, max;
+    const char *(*formatter)(char *, size_t, int, const char *);
+    int32_t (*get_talk_id)(int, int);
+};
+struct settings_list {
+    unsigned int flags;
+    int lang_id;
+    void *setting;
+    const struct int_setting *int_setting;
+};
 ACTUAL_OPTION_FLAGS
 static int count_items(void *root) { (void)root; return 1; }
 static const struct {
@@ -202,10 +213,63 @@ static const struct {
             pieces.append("static struct gui_synclist fixture_construct_" + name + "(" + parameters + ")\n{\n" +
                           declarations + "\n" + fragment + "    return " + result + ";\n}\n")
         pieces.append("#undef rb\n")
+        # Execute the actual public helpers, rather than inventing flags for
+        # categorical callers. They intentionally use int_setting storage.
+        pieces.append(r'''
+enum optiontype { RB_INT, RB_BOOL };
+struct opt_items { const unsigned char *string; int voice_id; };
+#define UNIT_INT 0
+static const struct opt_items *set_option_options;
+static const char *set_option_formatter(char *buf, size_t size, int item, const char *unit)
+{ (void)buf; (void)size; (void)unit; return (const char *)set_option_options[item].string; }
+static int32_t set_option_get_talk_id(int value, int unit)
+{ (void)unit; return set_option_options[value].voice_id; }
+static struct gui_synclist generic_constructed;
+static bool generic_cancel;
+static bool option_screen(const struct settings_list *setting, struct viewport *parent,
+                          bool temporary, const void *title)
+{
+    (void)parent; (void)temporary; (void)title;
+    assert(setting->int_setting->formatter == set_option_formatter);
+    assert(setting->int_setting->get_talk_id == set_option_get_talk_id);
+    generic_constructed = fixture_construct_option(setting->flags);
+    if (!generic_cancel)
+        *(int *)setting->setting = 1;
+    return generic_cancel;
+}
+''')
+        settings = cls.inputs['apps/settings.c'].decode('utf-8')
+        pieces.extend(extract_block(settings, signature) for signature in (
+            'bool set_option(', 'bool set_bool_options('))
+        pieces.append(r'''
+static struct gui_synclist fixture_construct_generic(bool boolean, bool cancel)
+{
+    static const struct opt_items options[] = {
+        {(const unsigned char *)"First", 1}, {(const unsigned char *)"Second", 2}
+    };
+    generic_cancel = cancel;
+    bool returned;
+    if (boolean)
+    {
+        bool value = false;
+        returned = set_bool_options("Boolean", &value, "Yes", 1, "No", 2, NULL);
+        assert(value == !cancel);
+    }
+    else
+    {
+        int value = 0;
+        returned = set_option("Actions", &value, RB_INT, options, 2, NULL);
+        assert(value == (cancel ? 0 : 1));
+    }
+    assert(returned == cancel);
+    return generic_constructed;
+}
+''')
         flags = cls.inputs["apps/settings_list.h"].decode("utf-8")
         flags = re.sub(r"/\*.*?\*/", "", flags, flags=re.S)
         definitions = "\n".join(re.search(r"^#define " + name + r"\s+[^\n]*", flags, re.M).group()
-            for name in ("F_T_INT", "F_T_BOOL", "F_CHOICE_SETTING", "F_T_SOUND", "F_INT_SETTING", "F_TABLE_SETTING", "F_BOOL_SETTING"))
+            for name in ("F_T_INT", "F_T_BOOL", "F_CHOICE_SETTING", "F_T_SOUND", "F_INT_SETTING", "F_TABLE_SETTING", "F_BOOL_SETTING", "F_OPTION_LIST")
+            if re.search(r"^#define " + name + r"\s+", flags, re.M))
         return "\n".join(pieces).replace("ACTUAL_OPTION_FLAGS", definitions)
 
     @classmethod
@@ -278,7 +342,8 @@ static const struct {
             ("simplelist-role-default", "info->position_source = LIST_POSITION_INTERFACE;", "", "construction-roles"),
             ("interface-includes-sliders", "return source != LIST_POSITION_FILE;", "return source == LIST_POSITION_INTERFACE;", "position-mode-matrix"),
             ("default-speaks-sliders", "return source != LIST_POSITION_SLIDER;", "return true;", "position-mode-matrix"),
-            ("enum-treated-as-slider", "!(setting->flags & F_CHOICE_SETTING) &&", "true &&", "construction-roles"),
+            ("enum-treated-as-slider", "!(setting->flags & (F_CHOICE_SETTING | F_OPTION_LIST)) &&", "true &&", "construction-roles"),
+            ("generic-option-treated-as-slider", "F_INT_SETTING|F_T_INT|F_OPTION_LIST", "F_INT_SETTING|F_T_INT", "construction-roles"),
         ):
             self.assertEqual(self.fixture.count(before), 1)
             with self.subTest(mutant=name):
