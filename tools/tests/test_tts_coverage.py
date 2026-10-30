@@ -140,6 +140,10 @@ static struct user_settings global_settings;
                       "void *current_plugin_handle = NULL;\n")
         pieces.append(extract_block(plugin_source, "if (current_plugin_handle == NULL)"))
         pieces.append("return 0;\n}\n")
+        returned_error = re.findall(r'    if \(rc == PLUGIN_ERROR\)\n        splash\([^\n]+;\n', plugin_source)
+        if len(returned_error) != 1:
+            raise AssertionError('Expected one actual plugin-return error splash')
+        pieces.append('static void coverage_plugin_return_error(int rc)\n{\n' + returned_error[0] + '}\n')
         (WORKSPACE / "coverage_functions.h").write_text("\n".join(pieces), encoding="utf-8")
 
     def run_harness(self, espeak, sanitize, tts_only=False):
@@ -211,6 +215,9 @@ int main(void)
     enable_tts_only();
     assert(coverage_plugin_open_error() == -1);
     assert(speech_count == 1 && strcmp(utterances[0], "Cannot open missing-plugin.rock") == 0);
+    enable_tts_only();
+    coverage_plugin_return_error(PLUGIN_ERROR);
+    assert(speech_count == 1 && strcmp(utterances[0], "Plugin returned error") == 0);
     puts("PASS TTS-only UI independent of legacy menu setting, with local opt-out and readiness gates");
     return 0;
 }

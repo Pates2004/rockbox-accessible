@@ -18,10 +18,12 @@
 #define TIME_BEFORE(left, right) ((int32_t)((uint32_t)(left) - (uint32_t)(right)) < 0)
 #define TIME_AFTER(left, right) TIME_BEFORE(right, left)
 #define ID2P(identifier) ((const char *)(uintptr_t)(4096 + (identifier)))
-#define P2ID(text) (((uintptr_t)(text) >= 4096 && (uintptr_t)(text) < 4112) ? (long)(uintptr_t)(text) - 4096 : -1)
+#define P2ID(text) (((uintptr_t)(text) >= 4096 && (uintptr_t)(text) < 4113) ? (long)(uintptr_t)(text) - 4096 : -1)
 #define P2STR(text) resolve_text((const char *)(text))
 #define str(identifier) coverage_language_text(identifier)
 #define cond_talk_ids_fq(identifier) do { if (global_settings.talk_menu) talk_id(identifier, false); } while (0)
+#define PLUGIN_ERROR -1
+#define splash(ticks, text) splashf(ticks, text)
 #define MENU_TYPE_MASK 15
 #define MENU_DYNAMIC_DESC 32
 #define TALK_ID(value, unit) (value)
@@ -33,6 +35,7 @@ enum { VOICE_EMPTY_LIST = 1, LANG_LOADING_PERCENT, UNIT_PERCENT,
 enum { MT_MENU, MT_RETURN_ID, MT_SETTING, MT_SETTING_W_TEXT, MT_FUNCTION_CALL };
 enum { LANG_PLAYLIST_INSERT_COUNT = 8, LANG_ALL, LANG_OFF_ABORT, LANG_PLUGIN_CANT_OPEN };
 enum { VOICE_OF = 12, LANG_TAGCACHE_INIT, LANG_BUILDING_DATABASE, LANG_PLAYLIST_SEARCH_MSG };
+enum { LANG_PLUGIN_ERROR = 16 };
 typedef const char *list_get_name(int, void *, char *, size_t);
 typedef int list_speak_item(int, void *);
 typedef int list_get_icon(int, void *);
@@ -95,6 +98,8 @@ static char drawn[MAXBUFFER];
 
 static const char *coverage_language_text(int identifier)
 {
+    if (identifier == LANG_PLUGIN_ERROR)
+        return "Plugin returned error";
     if (identifier == LANG_OFF_ABORT)
         return "Cancel";
     if (identifier == LANG_PLAYLIST_SEARCH_MSG)
@@ -105,6 +110,8 @@ static const char *coverage_language_text(int identifier)
 static const char *resolve_text(const char *text)
 {
     long identifier = P2ID(text);
+    if (identifier == LANG_PLUGIN_ERROR)
+        return "Plugin returned error";
     if (identifier == LANG_PLAYLIST_INSERT_COUNT)
         return "%d tracks %s";
     return identifier >= 0 ? "Localized label" : text;
@@ -677,6 +684,23 @@ static void test_playlist_and_splashes(void)
     puts("playlist/splash: natural count once, cadence, visual-only redraws, completion, legacy, gate");
 }
 
+static void test_plugin_return_error_splash(void)
+{
+    reset();
+    coverage_plugin_return_error(0);
+    assert(speech_count == 0);
+    coverage_plugin_return_error(PLUGIN_ERROR);
+    assert(speech_count == 1 && !strcmp(drawn, "Plugin returned error"));
+#ifdef HAVE_ESPEAK
+    assert(!strcmp(utterances[0], "Plugin returned error"));
+    reset();
+    available = false;
+    coverage_plugin_return_error(PLUGIN_ERROR);
+    assert(speech_count == 1 && !strcmp(drawn, "Plugin returned error"));
+#endif
+    assert(!strcmp(utterances[0], "id:16"));
+}
+
 static void test_plugin_errors(void)
 {
     reset();
@@ -822,6 +846,7 @@ int main(void)
     test_progress();
     test_menus();
     test_playlist_and_splashes();
+    test_plugin_return_error_splash();
     test_plugin_errors();
 #ifdef HAVE_ESPEAK
     test_dynamic_announcements();
