@@ -260,6 +260,8 @@ def main():
                         inputs.press('Right' if key == 'Return' else key)
                         time.sleep(settle)
                         return
+                    if key == 'Return' and arguments.target != 'hibyr1':
+                        key = 'space'  # Clip+/Zip Select; Return is not mapped.
                     send_key(process.pid, window, key, True, environment)
                     time.sleep(0.1)
                     send_key(process.pid, window, key, False, environment)
