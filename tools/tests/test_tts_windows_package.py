@@ -236,19 +236,21 @@ def main():
                 inputs = PackageInputProbe(process, executable, window, layout, run)
             language = 'pl'
             if standard:
-                # SDL creates its HWND before Rockbox finishes booting. Wait
-                # for the actual root list before timing the shortcut input.
-                ready = time.monotonic() + 25
-                while time.monotonic() < ready:
-                    initial = log.read_text(encoding='utf-8', errors='replace') if log.exists() else ''
-                    root_items = TARGETS[arguments.target]['root_items']
-                    if re.search(r'A11Y list geometry:.*count=' + str(root_items) + r' selected=0', initial):
-                        break
-                    if process.poll() is not None:
-                        raise AssertionError('Simulator exited before the root menu was ready')
-                    time.sleep(0.05)
-                else:
-                    raise AssertionError('Root menu was not ready for shortcut input')
+                # Only touchscreen builds emit list geometry. For button-only
+                # targets the single activation probe and spoken root journey
+                # below establish actual firmware readiness.
+                if arguments.target == 'hibyr1':
+                    ready = time.monotonic() + 25
+                    while time.monotonic() < ready:
+                        initial = log.read_text(encoding='utf-8', errors='replace') if log.exists() else ''
+                        root_items = TARGETS[arguments.target]['root_items']
+                        if re.search(r'A11Y list geometry:.*count=' + str(root_items) + r' selected=0', initial):
+                            break
+                        if process.poll() is not None:
+                            raise AssertionError('Simulator exited before the root menu was ready')
+                        time.sleep(0.05)
+                    else:
+                        raise AssertionError('Root menu was not ready for shortcut input')
                 time.sleep(1.5)
                 initial = log.read_text(encoding='utf-8', errors='replace') if log.exists() else ''
                 if re.search(r'^TTS:', initial, re.MULTILINE):
@@ -287,6 +289,24 @@ def main():
                     time.sleep(0.1)
                 else:
                     raise AssertionError('Triple Power did not activate English speech before CFG import')
+                if arguments.target != 'hibyr1':
+                    root_journey = []
+                    for key, expected in (('Down', 'Database'), ('Up', 'Files')):
+                        offset = len(log.read_text(encoding='utf-8', errors='replace'))
+                        press(key)
+                        deadline = time.monotonic() + 12
+                        while time.monotonic() < deadline:
+                            spoken = log.read_text(encoding='utf-8', errors='replace')[offset:]
+                            if (re.search(r'^TTS: ' + expected + r'\s*$', spoken, re.MULTILINE)
+                                    and re.search(r'TTS utterance:[^\r\n]*' + expected, spoken)):
+                                root_journey.append(dict(key=key, text=spoken))
+                                break
+                            if process.poll() is not None:
+                                raise AssertionError('Simulator exited during the English root journey')
+                            time.sleep(0.05)
+                        else:
+                            raise AssertionError('Missing actual English root speech: ' + expected)
+                    run['english_root_readiness'] = root_journey
                 if import_profile:
                     # Fresh root selection is Files; the private test disk has
                     # exactly one visible file, the optional profile.
