@@ -47,6 +47,11 @@
 #if defined(HAVE_ESPEAK) && !defined(BOOTLOADER)
 #include "accessibility_screen.h"
 #include "accessibility_touch_wake.h"
+#if defined(SANSA_CLIPPLUS) || defined(SANSA_CLIPZIP)
+#define HAVE_ACCESSIBILITY_POWER
+#include "accessibility_power.h"
+#include "accessibility_services.h"
+#endif
 #endif
 
 #ifdef HAVE_TOUCHSCREEN
@@ -81,6 +86,9 @@ typedef struct
     const struct button_mapping   *items;
     const struct button_mapping* (*get_context_map)(int);
     bool                           is_prebutton;
+#ifdef HAVE_ACCESSIBILITY_POWER
+    bool                           power_replay;
+#endif
 #if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
     bool                           physical_button;
     bool                           fresh_physical_button;
@@ -135,6 +143,12 @@ typedef struct
     struct gesture gesture;
 #endif
 } action_last_t;
+
+#ifdef HAVE_ACCESSIBILITY_POWER
+static struct accessibility_power accessibility_power;
+/* Replay both edges: some native maps act on press, others on release. */
+static bool accessibility_power_release_pending;
+#endif
 
 /* holds the action state between calls to get_action \ get_action_custom) */
 static action_last_t action_last =
@@ -382,7 +396,16 @@ static inline bool action_poll_button(action_last_t *last, action_cur_t *cur)
     bool ret = true;
     int *button = &cur->button;
 
-    *button = button_get_w_tmo(cur->timeout);
+#ifdef HAVE_ACCESSIBILITY_POWER
+    if (accessibility_power_release_pending)
+    {
+        accessibility_power_release_pending = false;
+        cur->power_replay = true;
+        *button = BUTTON_POWER | BUTTON_REL;
+    }
+    else
+#endif
+        *button = button_get_w_tmo(cur->timeout);
 
    /* ********************************************************
     * Can return button immediately, sys_event & multimedia
@@ -509,6 +532,66 @@ static inline bool action_poll_button(action_last_t *last, action_cur_t *cur)
 
     return ret;
 }
+
+#ifdef HAVE_ACCESSIBILITY_POWER
+static bool accessibility_power_allowed(const action_last_t *last,
+                                        const action_cur_t *cur)
+{
+    return global_settings.accessibility_shortcut_enabled &&
+        !(cur->context & CONTEXT_PLUGIN) && !last->wait_for_release;
+}
+
+static bool accessibility_power_filter(action_last_t *last, action_cur_t *cur,
+                                       bool immediate, bool enabled)
+{
+    if (cur->power_replay)
+        return immediate;
+    if (cur->button == (BUTTON_POWER | BUTTON_REPEAT | BUTTON_REL))
+    {
+        accessibility_power_reset(&accessibility_power);
+        return immediate;
+    }
+
+    enum accessibility_power_input input = ACCESSIBILITY_POWER_OTHER;
+    if (cur->button == BUTTON_POWER)
+        input = ACCESSIBILITY_POWER_PRESS;
+    else if (cur->button == (BUTTON_POWER | BUTTON_REL))
+        input = ACCESSIBILITY_POWER_RELEASE;
+    else if (cur->button == (BUTTON_POWER | BUTTON_REPEAT))
+        input = ACCESSIBILITY_POWER_REPEAT;
+    else if (cur->button == BUTTON_NONE)
+        input = ACCESSIBILITY_POWER_IDLE;
+    else if (cur->button == ACTION_REDRAW || cur->button == SYS_BATTERY_UPDATE ||
+             cur->button == SYS_CHARGER_CONNECTED || cur->button == SYS_CHARGER_DISCONNECTED)
+        input = ACCESSIBILITY_POWER_IGNORE;
+
+    /* HZ is 100 on both supported Sansas. Unsigned arithmetic also covers wrap. */
+    enum accessibility_power_result result = accessibility_power_process(
+        &accessibility_power, input, cur->context, enabled,
+        (uint32_t)current_tick * (1000u / HZ));
+    if (result == ACCESSIBILITY_POWER_REPLAY)
+    {
+        accessibility_power_release_pending = true;
+        cur->power_replay = true;
+        cur->button = BUTTON_POWER;
+        last->button = BUTTON_NONE | BUTTON_REL;
+        last->context = cur->context;
+        return false;
+    }
+    if (result == ACCESSIBILITY_POWER_CONSUME || result == ACCESSIBILITY_POWER_ACTIVATE)
+    {
+        last->button = cur->button;
+        last->action = ACTION_NONE;
+        last->tick = current_tick;
+        last->repeated = false;
+        if (result == ACCESSIBILITY_POWER_ACTIVATE)
+            accessibility_services_activate();
+        cur->button = ACTION_NONE;
+        return true;
+    }
+    return immediate;
+}
+#endif
 
 /*********************************************
 * update_screen_has_lock sets screen_has_lock
@@ -1251,6 +1334,9 @@ static void init_act_cur(action_cur_t *cur,
     cur->button              = BUTTON_NONE;
     cur->context             = context;
     cur->is_prebutton        = false;
+#ifdef HAVE_ACCESSIBILITY_POWER
+    cur->power_replay        = false;
+#endif
     cur->items               = NULL;
     cur->timeout             = timeout;
     cur->get_context_map = get_context_map;
@@ -1506,8 +1592,18 @@ static int get_action_worker(action_last_t *last, action_cur_t *cur)
     }
 #endif
 
-    /*if button = none/special; returns immediately*/
-    if (action_poll_button(last, cur))
+#ifdef HAVE_ACCESSIBILITY_POWER
+    bool power_allowed = accessibility_power_allowed(last, cur);
+    if (accessibility_power_waiting(&accessibility_power, cur->context, power_allowed) &&
+        (cur->timeout < 0 || cur->timeout > HZ / 10))
+        cur->timeout = HZ / 10;
+#endif
+    /* Filter after native release/context handling, so it cannot wedge that state. */
+    bool immediate = action_poll_button(last, cur);
+#ifdef HAVE_ACCESSIBILITY_POWER
+    immediate = accessibility_power_filter(last, cur, immediate, power_allowed);
+#endif
+    if (immediate)
     {
 #if defined(HAVE_TOUCHSCREEN) && defined(HAVE_ESPEAK) && !defined(HAS_BUTTON_HOLD) && !defined(BOOTLOADER)
         if (cur->button == BUTTON_NONE && accessibility_handle_touch_wake(last, cur))

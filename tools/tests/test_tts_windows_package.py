@@ -270,8 +270,23 @@ def main():
                 if arguments.target == 'hibyr1':
                     inputs.press('Insert', clicks=3)
                     time.sleep(1)
-                    language = 'en'
-                    run['triple_power_sent'] = True
+                else:
+                    for _ in range(3):
+                        press('Escape', 0.10)
+                language = 'en'
+                run['triple_power_sent'] = True
+                # Require real activation before the optional CFG can enable speech.
+                activation_deadline = time.monotonic() + 25
+                while time.monotonic() < activation_deadline:
+                    activated = log.read_text(encoding='utf-8', errors='replace') if log.exists() else ''
+                    if 'TTS parameters: language=en variant= rate=175' in activated:
+                        run['english_shortcut_activation_verified'] = True
+                        break
+                    if process.poll() is not None:
+                        raise AssertionError(f'Early shortcut exit: {process.returncode}')
+                    time.sleep(0.1)
+                else:
+                    raise AssertionError('Triple Power did not activate English speech before CFG import')
                 if import_profile:
                     # Fresh root selection is Files; the private test disk has
                     # exactly one visible file, the optional profile.
@@ -514,7 +529,7 @@ def main():
         current = release
         if manifest.get('default_profile') == 'standard-en':
             smoke(release, 'factory-defaults', False, factory=True)
-            report['checks'].append('compiled factory defaults without config.cfg: silent English; R1 triple Power and optional Polish import')
+            report['checks'].append('compiled factory defaults without config.cfg: silent English; target triple Power and optional Polish import')
         locked_log_error(release)
         report['checks'].append('locked local log produces bilingual native error and exits, without fallback')
         validate_manifest(release)

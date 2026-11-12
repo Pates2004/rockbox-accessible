@@ -3,8 +3,17 @@
 Czytnik nazywa się Talkbox; silnikiem pozostaje dostarczony fork eSpeaka.
 Te funkcje pochodzą z generacji ABI `0xe004` i nie występują w starszych paczkach alpha10/Windows13.
 Obecne ustawienia rozwojowe wymagają zgodnych modułów ABI `0xe007`.
-Czyste wydanie prywatne zachowuje polski interfejs i włączoną mowę. Angielski
-interfejs i początkowo wyłączona mowa pozostają na przyszłe wydanie publiczne.
+Nowe wydania startują po angielsku, z wyłączonym Talkboxem i przeglądaniem dotykowym.
+Opcjonalny Accessible-Polish.cfg wybiera polski i włącza te usługi.
+Na Clip+ i Clip Zip trzy razy szybko naciśnij i puść Power, aby przełączyć wybrane
+usługi dostępności. Skrót jest włączony w obu dostarczanych profilach.
+Przy włączonym skrócie jeden lub dwa krótkie kliki czekają 300 ms od ostatniego
+puszczenia, po czym wykonują jedną zwykłą sekwencję wciśnięcia i puszczenia Power.
+Działa to także w ustawieniach i klawiaturze; inny przycisk lub zmiana ekranu
+anulują niedokończoną serię. Przytrzymanie Power i awaryjne wyłączenie firmware
+zachowują osobną ścieżkę obsługi. Wyłączenie opcji Używaj skrótu dostępności
+przywraca natychmiastową zwykłą reakcję na Power.
+W Windows klawiszem Power Sans jest Escape, a R1 — Insert.
 Nowe profile R1 przypisują trzykrotny Power do grupowego skrótu w interfejsie
 i na ekranie odtwarzania. Zapisane wcześniej przypisania są zachowywane.
 Sterownik klawiatury ADC R1 nie pozwala polegać na jednoczesnym przytrzymaniu
@@ -33,8 +42,8 @@ Niezależnie przypisuj akcje Przełącz usługi skrótu dostępności, Włącz l
 Talkbox, Włącz lub wyłącz pliki głosowe interfejsu albo przełączanie przeglądania
 dotykowego:
 
-- Przyciski: Ustawienia → Ustawienia ogólne → System → Ustawienia przycisków fizycznych.
-- Gesty: Ustawienia → Ustawienia ogólne → Dostępność → Ustawienia przeglądania dotykowego → Przypisania gestów.
+- Przyciski R1: Ustawienia → Ustawienia ogólne → System → Ustawienia przycisków fizycznych.
+- Gesty ekranu dotykowego: Ustawienia → Ustawienia ogólne → Dostępność → Ustawienia przeglądania dotykowego → Przypisania gestów.
 
 W Systemie są ustawienia ekranu dotykowego i przycisków fizycznych.
 W wersji z dotykiem i eSpeakiem ustawienia ekranu

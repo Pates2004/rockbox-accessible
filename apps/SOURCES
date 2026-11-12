@@ -58,6 +58,9 @@ tts_reader_settings.c
 accessibility_screen.c
 accessibility_shortcut.c
 accessibility_services.c
+#if defined(SANSA_CLIPPLUS) || defined(SANSA_CLIPZIP)
+accessibility_power.c
+#endif
 #endif
 rbcodec_helpers.c
 menus/main_menu.c

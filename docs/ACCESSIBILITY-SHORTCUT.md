@@ -2,9 +2,17 @@
 
 Talkbox is the reader's interface name; its engine is still the supplied eSpeak
 fork. These controls originated in ABI `0xe004` and are absent from older alpha10/Windows13
-packages. Clean private editions keep Polish and speech on;
-English and initially disabled speech remain reserved for a public edition.
+packages. New editions start in English with Talkbox and touch exploration off.
+The optional Accessible-Polish.cfg selects Polish and enables these services.
 Current development settings require matching ABI `0xe007` modules.
+On Clip+ and Clip Zip, press and release Power three times quickly to toggle the
+selected accessibility services. The shortcut is enabled in both supplied profiles.
+With it enabled, one or two short clicks wait 300 ms after the last release, then
+perform one native Power press/release sequence. This also works in settings and
+the keyboard; unrelated buttons or a screen change cancel an unfinished group.
+Holding Power and firmware emergency shutdown keep their separate input path.
+Turn Use accessibility shortcut off to restore immediate ordinary Power input.
+Windows maps Sansa Power to Escape; R1 Power is Insert.
 New R1 profiles assign triple Power to the grouped shortcut in both interface
 and playback profiles. Existing saved assignments are preserved. R1's supplied
 ADC keyboard cannot reliably report both volume keys held together.
@@ -31,8 +39,8 @@ or disabled shortcut changes nothing. No arbitrary two-service limit applies.
 Assign Toggle accessibility shortcut services, Toggle Talkbox, Toggle interface
 voice files or Turn touch browsing on or off independently:
 
-- Physical buttons: Settings → General Settings → System → Physical button settings.
-- Gestures: Settings → General Settings → Accessibility → Touch exploration settings → Gesture assignments.
+- R1 physical buttons: Settings → General Settings → System → Physical button settings.
+- Touchscreen gestures: Settings → General Settings → Accessibility → Touch exploration settings → Gesture assignments.
 
 System contains Touchscreen settings and Physical button settings.
 For touchscreen builds with eSpeak, Touchscreen settings moves from
