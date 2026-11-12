@@ -72,7 +72,10 @@ class ClipplusPackageTests(unittest.TestCase):
             self.additions[package.CATALOG_PREFIX + language + '.vstrings'] = catalog()
         self.additions['.rockbox/config.cfg'] = package.DEFAULT_CONFIG
         self.additions.update({'.rockbox/espeak-clipplus/' + name: b'fixture documentation'
-                               for name in (*package.DOCUMENTS, *package.RUNTIME_NOTICES)})
+                               for name in (*package.DOCUMENTS, *package.RUNTIME_NOTICES,
+                                   'RADIO-DYNAMIC.md', 'RADIO-DYNAMIC-PL.md',
+                                   'ACCESSIBILITY-LISTS.md', 'ACCESSIBILITY-LISTS-PL.md',
+                                   'ACCESSIBILITY-SHORTCUT.md', 'ACCESSIBILITY-SHORTCUT-PL.md')})
         self.metadata = {
             'version': 'fixture', 'target': 'sansaclipplus', 'plugin_abi': package.PLUGIN_ABI,
             'engine_revision': package.ENGINE_REVISION, 'hardware_tested': False,

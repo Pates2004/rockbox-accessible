@@ -533,18 +533,23 @@ class TimerSpeechTests(unittest.TestCase):
         harness.write_text(prefix[:split] + labels + prefix[split:] + extracted + RUNNER +
                            {"countdown_timer": COUNTDOWN, "alarmclock": ALARM,
                             "chessclock": CHESS}[plugin], encoding="utf-8")
-        executable = output / "timers-test"
+        executable = output / ("timers-test.exe" if os.name == "nt" else "timers-test")
         command = shlex.split(os.environ.get("CC", "cc")) + [
             "-std=gnu99", "-O1", "-g", "-Wall", "-Wextra", "-Werror",
             "-Wno-unused-function", "-Wno-pointer-sign", "-fsanitize=address,undefined",
-            "-fno-sanitize-recover=all", "-fno-pie", "-no-pie", str(harness),
+            "-fno-sanitize-recover=all"]
+        if os.name != "nt":
+            command += ["-fno-pie", "-no-pie"]
+        command += [str(harness),
             "-o", str(executable)] + ["-D" + define for define in defines]
-        compiled = subprocess.run(command, capture_output=True, text=True, timeout=60)
+        compiled = subprocess.run(command, capture_output=True, text=True, timeout=60,
+                                  creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
         (output / "compile.log").write_text(shlex.join(command) + "\n" + compiled.stdout +
                                              compiled.stderr, encoding="utf-8")
         self.assertEqual(compiled.returncode, 0, compiled.stdout + compiled.stderr)
         tested = subprocess.run([str(executable)], capture_output=True, text=True, timeout=30,
-                                env=dict(os.environ, ASAN_OPTIONS="detect_leaks=0"))
+                                env=dict(os.environ, ASAN_OPTIONS="detect_leaks=0"),
+                                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
         (output / "report.json").write_text(json.dumps({
             "source_sha256": hashlib.sha256(
                 (ROOT / f"apps/plugins/{plugin}.c").read_bytes()).hexdigest(),

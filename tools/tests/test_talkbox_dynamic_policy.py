@@ -79,7 +79,8 @@ class TalkboxDynamicPolicyTests(unittest.TestCase):
             raise unittest.SkipTest("C compiler unavailable")
         cls.inputs = {name: (ROOT / name).read_bytes() for name in (
             "apps/settings.h", "apps/settings_list.c", "tools/tests/test_talkbox_dynamic_policy.py",
-            "tools/tests/test_talk_menu_policy.py", "apps/settings.c", "apps/settings_list.h")}
+            "tools/tests/test_talk_menu_policy.py", "apps/settings.c", "apps/settings_list.h",
+            "firmware/export/system.h")}
         settings = cls.inputs["apps/settings.h"].decode("utf-8")
         fields = []
         for name in ("tts_announce_position", "tts_announce_dynamic"):
@@ -162,6 +163,9 @@ class TalkboxDynamicPolicyTests(unittest.TestCase):
         functions = "\n".join(extract_block(parser, signature) for signature in (
             "const char* setting_get_cfgvals(", "bool cfg_string_to_int(", "bool copy_filename_setting(",
             "bool string_to_cfg(", "bool cfg_int_to_string(", "void cfg_to_string(", "void reset_setting("))
+        minmax = [line for line in self.inputs["firmware/export/system.h"].decode("utf-8").splitlines()
+                  if re.match(r"#define (?:MIN|MAX)\(", line)]
+        self.assertEqual(len(minmax), 2)
         return r'''
 #include <stdbool.h>
 #include <stdint.h>
@@ -179,7 +183,7 @@ enum { LANG_TALKBOX_ANNOUNCE_POSITION, LANG_TALKBOX_POSITION_EVERYWHERE,
        LANG_TALKBOX_POSITION_EXCEPT_SLIDERS, LANG_OFF };
 struct { unsigned int before; int tts_announce_position; unsigned int after;
          bool tts_announce_dynamic; } global_settings;
-''' + modes + macro + "\nconst struct settings_list settings[] = {\n" + entry + r'''
+''' + "\n".join(minmax) + "\n" + modes + macro + "\nconst struct settings_list settings[] = {\n" + entry + r'''
 };
 static const struct settings_list *find_setting_by_cfgname(const char *name)
 { return strcmp(name, settings[0].cfg_name) ? NULL : &settings[0]; }
