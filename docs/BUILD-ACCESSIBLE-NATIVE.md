@@ -359,7 +359,7 @@ says `source_frozen=false` and `publishable=false`.
 The base `make zip` is an intermediate output. It has not gone through the
 integrated release-data/catalog/notices/source packaging step. Do not rename
 it into a delivered hardware package. Do not mix its modules with stock or
-older integrated builds. These development sources use plugin ABI `0xe006`;
+older integrated builds. These development sources use plugin ABI `0xe007`;
 use the actual source/package ABI if it changes again.
 
 ## 6. Independent checks and their limits

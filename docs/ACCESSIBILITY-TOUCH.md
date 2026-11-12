@@ -209,7 +209,7 @@ difference is four semitones down when pitch distinction is enabled.
 
 Configuration is separate from ordinary Rockbox settings, at
 `/.rockbox/accessibility.cfg` on the player (beside the simulator's own
-`.rockbox` data). These development sources use plugin ABI `0xe006`; use their
+`.rockbox` data). These development sources use plugin ABI `0xe007`; use their
 matching bundled modules. The bounded typed format writes `RBACCESSIBILITY:11`, enabled/click/physical-hold/touch-hold/repeat
 fields, separate interface/playback gesture and physical assignments and four
 bounded launch paths and empty-target pitch distinction. A separate

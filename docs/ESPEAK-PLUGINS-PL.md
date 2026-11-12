@@ -1,5 +1,14 @@
 # Mowa we wtyczkach
 
+Generacja z 12 listopada 2026 przenosi wspólny Talkbox r34, poprawkę indeksów
+list i sterowanie odczytem RDS do nowych paczek Clip+, Clip Zip i HiBy R1.
+Używaj kompletnej zgodnej paczki ABI `0xe007` i jej manifestu/SHA256SUMS.
+Domyślnie: angielski, Talkbox i eksploracja wyłączone, skrót dostępności
+włączony. Opcjonalny Accessible-Polish.cfg włącza polski i dostępność.
+Nie zintegrowano czytnika DAISY. RDS wymaga portu i tunera FM; R1 go nie ma.
+Starsze numery wersji i zapisy o zachowaniu Sans poniżej dotyczą wcześniejszych
+etapów, nie nowej generacji ani odbioru sprzętowego. Zobacz [RDS](RADIO-DYNAMIC-PL.md).
+
 Wtyczki korzystają ze wspólnego `talk_*` Rockboksa i wbudowanego eSpeaka,
 nie z osobnego silnika. Włącz Talkbox w Dostępność -> Ustawienia Talkbox. Opcja „Używaj plików
 głosowych do czytania interfejsu” dotyczy tylko nagranej mowy; jej wyłączenie
@@ -86,6 +95,6 @@ nie odczytuje każdego kroku. Alarm nie gwarantuje pracy po wyłączeniu.
 Testy kodu, kompilacji i PCM nie zastępują prób na sprzęcie ani oceny słuchowej.
 Symulator mówi sam; nie udostępnia pełnego natywnego drzewa kontrolek NVDA.
 
-Używaj zgodnych wtyczek: obecne źródła R1 mają ABI `0xe006`, a zachowane
+Używaj zgodnych wtyczek: obecne źródła R1 mają ABI `0xe007`, a zachowane
 wydania Sans nadal `0xe003`. Nie mieszaj modułów tych generacji.
 Moduły ze standardowego Rockboksa lub innego celu nie są zgodne.

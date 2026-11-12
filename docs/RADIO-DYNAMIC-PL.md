@@ -1,5 +1,32 @@
 # Mowa radia i informacje o stacji
 
+Na Clip+ i Clip Zip, przy włączonym Talkboxie, krótki środkowy Select odczytuje
+oba pola RDS bez opuszczania ekranu radia. Przytrzymanie Select nadal otwiera
+menu radia; lista zapisanych stacji jest dostępna w tym menu. Gdy Talkbox jest
+wyłączony, krótki Select nadal otwiera listę stacji. Wspólna akcja `ACTION_FM_RDS`
+może być przypisana w mapach przycisków innych portów z RDS; ich domyślnych
+przypisań tu nie zmieniono. Brakujące pola są ogłaszane jako **Brak danych RDS**.
+
+Po włączeniu Talkboxa opcja **Menu radia FM → Automatyczne odczytywanie RDS**
+pozwala wybrać: **Wyłączone** (domyślnie), **Nazwa stacji**, **Tekst RDS** albo
+**Nazwa stacji i tekst RDS**. Obowiązuje także ustawienie dynamicznych ogłoszeń
+Talkboxa. Automatyczny odczyt działa na ekranie grającego radia, poza szukaniem
+stacji i nagrywaniem. Ręczny ekran **Informacje RDS** działa niezależnie od tej opcji.
+
+Każde pole musi być stabilne przez dwie sekundy. Mowa czeka na dwie sekundy bez
+naciskania przycisków i na zakończenie trwającej wypowiedzi. Odstęp między
+ogłoszeniami wynosi co najmniej dziesięć sekund. Przechowywane są tylko najnowsze
+dane; identyczne wartości nie są powtarzane, również po chwilowej utracie RDS.
+Zmiana częstotliwości, pauza albo wyłączenie ogłoszeń rozpoczynają nową sesję.
+Szybko zmieniane teksty mogą zostać pominięte. Odczyt nie działa w tle ani nad menu.
+
+RadioText pochodzi od nadawcy. Może zawierać wykonawcę i tytuł, inne wiadomości
+albo być pusty. Nie rozpoznajemy muzyki z dźwięku. Port Rockboxa dla HiBy R1 nie
+udostępnia tunera FM; radio internetowe nie korzysta z tego interfejsu RDS.
+Słyszalność mowy podczas analogowego FM, odbiór i antena wymagają testów sprzętu.
+Nowe wydania wymagają zgodnych wtyczek ABI `0xe007`; starsze moduły integracji
+i wtyczki standardowego Rockboxa nie są zgodne.
+
 Automatyczne skanowanie stacji trwa również po wstrzymaniu jego komunikatów.
 Zwykły klawisz nawigacji przerywa bieżącą wypowiedź; następne osobne naciśnięcie
 wznawia komunikaty o przyszłej lub ostatniej znalezionej częstotliwości.

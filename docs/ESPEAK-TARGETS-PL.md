@@ -1,5 +1,14 @@
 # Zintegrowany eSpeak: lista celów i testy symulatorów
 
+Generacja z 12 listopada 2026 przenosi wspólny Talkbox r34, poprawkę indeksów
+list i sterowanie odczytem RDS do nowych paczek Clip+, Clip Zip i HiBy R1.
+Używaj kompletnej zgodnej paczki ABI `0xe007` i jej manifestu/SHA256SUMS.
+Domyślnie: angielski, Talkbox i eksploracja wyłączone, skrót dostępności
+włączony. Opcjonalny Accessible-Polish.cfg włącza polski i dostępność.
+Nie zintegrowano czytnika DAISY. RDS wymaga portu i tunera FM; R1 go nie ma.
+Starsze numery wersji i zapisy o zachowaniu Sans poniżej dotyczą wcześniejszych
+etapów, nie nowej generacji ani odbioru sprzętowego. Zobacz [RDS](RADIO-DYNAMIC-PL.md).
+
 ## Eksperymentalne kompilacje społeczności, 2026-10-25
 
 [English version](ESPEAK-TARGETS.md)
@@ -100,7 +109,7 @@ Dostępność → Ustawienia Talkbox:
 Te preferencje należą do `HAVE_ESPEAK`, nie do `HAVE_TOUCHSCREEN` lub `HIBY_R1`.
 To zachowanie źródeł nowego etapu, wymagające świeżych testów, nie wynik
 zamkniętego odbioru alpha13/Windows16. Nowe pola `user_settings`, widoczne dla
-wtyczek, oraz role list wymagają ABI integracji **`0xe006`**. Zachowane wydania
+wtyczek, oraz role list wymagają ABI integracji **`0xe007`**. Zachowane wydania
 Sans pozostają przy **`0xe003`**; wcześniejsze generacje R1 używały `0xe004`
 i `0xe005`. Ich paczki nie są zgodne z nowym układem źródeł.
 Przebuduj wszystkie dołączone wtyczki dla wybranego celu i ABI zgodnego z rdzeniem
@@ -134,7 +143,7 @@ nieobsługiwanych kontrolek.
 
 | Cel | Zapisany stan i następny warunek |
 | --- | --- |
-| `sansaclipplus`, `sansaclipzip` | Zachowane natywne wydania r29 i zgodne symulatory Windows opisują [Clip+](ESPEAK-CLIPPLUS-PL.md), [Clip Zip](ESPEAK-CLIPZIP-PL.md) i [Windows](ESPEAK-WINDOWS-PL.md). Nie walidują nowych wspólnych preferencji, źródeł r34 ani ABI `0xe006`; powrót do Sans wymaga osobno zleconego etapu kompilacji/testów. Nie deklarujemy odbioru sprzętowego. |
+| `sansaclipplus`, `sansaclipzip` | Zachowane natywne wydania r29 i zgodne symulatory Windows opisują [Clip+](ESPEAK-CLIPPLUS-PL.md), [Clip Zip](ESPEAK-CLIPZIP-PL.md) i [Windows](ESPEAK-WINDOWS-PL.md). Nie walidują nowych wspólnych preferencji, źródeł r34 ani ABI `0xe007`; powrót do Sans wymaga osobno zleconego etapu kompilacji/testów. Nie deklarujemy odbioru sprzętowego. |
 | `ipod6g` | Eksperymentalna konfiguracja native i SDL jest otwarta z jawnym potwierdzeniem. Historyczne wyniki Windows poniżej nie potwierdzają bieżącej paczki native ani działania fizycznego odtwarzacza. |
 | `hibyr1` | Zamknięte wyniki programowe native alpha13 / Windows alpha16 dotyczą wyłącznie zapisanych wejść. Odbiór fizycznego R1, dostępności dotyku, Bluetooth/RF, baterii i NVDA pozostaje otwarty. Zobacz [R1](ESPEAK-HIBYR1-PL.md). |
 | Inne cele dotykowe lub linuksowe | Makro możliwości pozwala wybrać właściwy kod; nie przenosi odbioru R1 ani zgodności z usługą producenta. Przygotuj osobny zapis kompilacji i testów danego celu. |
@@ -159,7 +168,7 @@ nieobsługiwanych kontrolek.
    zmieszczenia programu w urządzeniu.
 4. Skoordynuj osoby zmieniające wspólne źródła, zakończ ich poprawki, przejrzyj
    całość i zamroź nowy stan źródeł/danych/narzędzi przed kompilacją. Zapisz cel,
-   bramki funkcji, ABI wtyczek `0xe006`, wersje i sumy. Kompilacje natywne wykonuj
+   bramki funkcji, ABI wtyczek `0xe007`, wersje i sumy. Kompilacje natywne wykonuj
    pod Linuksem/WSL z właściwymi narzędziami urządzenia; skrośne Windows używają
    MinGW i sprawdzonego SDK SDL2 opisanego niżej. Nie uruchamiaj testów komputera
    na nagłówkach celu podczas ich wymiany przy przygotowaniu czystej kompilacji.
@@ -732,7 +741,7 @@ Tryby raportowe używają celów zapisanych w raporcie, a nie filtrowania przez
 `--targets`. Test przechwytuje dźwięk po uruchomieniu i kończy proces; nie jest
 pełnym testem odbiorczym aplikacji. `--refresh-report` przyrostowo przebudowuje
 zakończoną grupę i sprawdza ABI integracji w źródłach oraz zlinkowanym mechanizmie
-ładowania. Dla źródeł nowego etapu oba muszą odpowiadać `0xe006`; historyczne
+ładowania. Dla źródeł nowego etapu oba muszą odpowiadać `0xe007`; historyczne
 raporty zachowują własne ABI i nie walidują tej generacji. Przed użyciem przejrzyj
 bieżący walidator i odświeżaj tylko świeży raport, nigdy zamknięte dowody.
 Źródła muszą pozostać niezmienione przez cały czas

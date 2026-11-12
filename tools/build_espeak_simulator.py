@@ -190,6 +190,7 @@ def main():
     parser.add_argument("--jobs", type=int, default=min(os.cpu_count() or 2, 12))
     parser.add_argument("--platform", choices=("linux", "windows"), default="windows")
     parser.add_argument("--target", choices=tuple(TARGETS), default="sansaclipplus")
+    parser.add_argument("--version", help="Explicit build/package version; must match the compiled executable")
     parser.add_argument("--sdl-sdk", type=Path,
                         default=_project_materials_root(ROOT) / "toolchains/SDL2-2.32.10/x86_64-w64-mingw32")
     parser.add_argument("--espeak-source", type=Path, default=ROOT.parent / "espeak-1.44.05-source")
@@ -222,6 +223,10 @@ def main():
         version = "0ed3734e5e-espeak-r29-clipzip-" + ("win-" if windows else "") + "alpha8-20261011"
     elif arguments.target == "hibyr1":
         version = "0ed3734e5e-espeak-r34-hibyr1-" + ("win-alpha20-20261025" if windows else "alpha15-20261023")
+    if arguments.version:
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}", arguments.version):
+            parser.error("Use a safe version identifier, up to 80 characters")
+        version = arguments.version
     environment = dict(os.environ, OMP_NUM_THREADS=str(arguments.jobs), VERSION=version)
     sdk = arguments.sdl_sdk.resolve()
     if windows:
@@ -248,6 +253,11 @@ def main():
     if provenance is not None and validate_supplied_data(source) != provenance:
         raise RuntimeError("Supplied eSpeak data changed before R1 simulator packaging")
     validate_build_target(build, arguments.target)
+    compiled_versions = re.findall(r"^Version:\s*(\S+)\s*$",
+                                  (build / "rockbox-info.txt").read_text(encoding="utf-8"),
+                                  re.MULTILINE)
+    if compiled_versions != [version]:
+        raise RuntimeError("The compiled simulator version does not match the package version; use --version")
     assert_not_running(executable)
     symbols = subprocess.check_output(["x86_64-w64-mingw32-nm" if windows else "nm", str(executable)], text=True)
     if " rb_espeak_synth\n" not in symbols or " tts_speak\n" not in symbols:
@@ -302,6 +312,11 @@ def main():
                          "BOOK-READER-FOUNDATION.md", "BOOK-READER-FOUNDATION-PL.md",
                          "BOOK-CONTAINERS.md", "BOOK-CONTAINERS-PL.md"):
                 shutil.copy2(ROOT / "docs" / name, release / name)
+        if arguments.target != "hibyr1":
+            for name in ("RADIO-DYNAMIC.md", "RADIO-DYNAMIC-PL.md",
+                         "ACCESSIBILITY-LISTS.md", "ACCESSIBILITY-LISTS-PL.md",
+                         "ACCESSIBILITY-SHORTCUT.md", "ACCESSIBILITY-SHORTCUT-PL.md"):
+                shutil.copy2(ROOT / "docs" / name, release / name)
     configuration = disk / ".rockbox" / "config.cfg"
     configuration.write_text("lang: /.rockbox/langs/english.lng\ntalk menu: off\ntalk dir: spell\n"
                              "talk file: spell\ntalk dir clip: off\ntalk file clip: off\n"
@@ -335,7 +350,7 @@ def main():
              for item in sorted(release.rglob("*")) if item.is_file()}
     (release / "manifest.json").write_text(json.dumps({"engine_revision": revision,
         "sonic_revision": "fbf75c3d6d846bad3bb3d456cbc5d07d9fd8c104",
-        "version": environment["VERSION"], "plugin_abi": 0xe006,
+        "version": environment["VERSION"], "plugin_abi": 0xe007,
         "rockbox_revision": subprocess.check_output(
             ["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip(),
         "target": arguments.target, "default_profile": "standard-en",

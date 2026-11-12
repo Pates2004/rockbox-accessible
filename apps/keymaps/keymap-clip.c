@@ -245,7 +245,11 @@ static const struct button_mapping button_context_radio[]  = {
     { ACTION_NONE,              BUTTON_UP|BUTTON_REPEAT,        BUTTON_NONE },
     { ACTION_NONE,              BUTTON_DOWN|BUTTON_REPEAT,      BUTTON_NONE },
     { ACTION_FM_MODE,           BUTTON_DOWN,                    BUTTON_NONE },
+#if defined(HAVE_RDS_CAP) && defined(HAVE_ESPEAK)
+    { ACTION_FM_RDS,            BUTTON_SELECT|BUTTON_REL,       BUTTON_SELECT },
+#else
     { ACTION_FM_PRESET,         BUTTON_SELECT|BUTTON_REL,       BUTTON_SELECT },
+#endif
     { ACTION_FM_STOP,           BUTTON_POWER|BUTTON_REL,        BUTTON_POWER },
     { ACTION_FM_MENU,           BUTTON_SELECT|BUTTON_REPEAT,    BUTTON_SELECT},
     { ACTION_FM_EXIT,           BUTTON_HOME|BUTTON_REL,         BUTTON_HOME },

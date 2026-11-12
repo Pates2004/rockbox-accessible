@@ -93,6 +93,9 @@ MENUITEM_SETTING(force_mono, &global_settings.fm_force_mono, NULL);
 #ifdef HAVE_RDS_CAP
 MENUITEM_FUNCTION(rds_info_item, MENU_FUNC_CHECK_RETVAL, ID2P(LANG_FM_RDS_INFO),
                   radio_show_info, NULL, Icon_Radio_screen);
+#ifdef HAVE_ESPEAK
+MENUITEM_SETTING(rds_talk_item, &global_settings.fm_rds_talk, NULL);
+#endif
 #endif
 #if defined(HAVE_RDS_CAP) && defined(CONFIG_RTC)
 MENUITEM_SETTING(sync_rds_time, &global_settings.sync_rds_time, NULL);
@@ -164,6 +167,9 @@ MAKE_MENU(radio_settings_menu, ID2P(LANG_FM_MENU), NULL,
 #endif
 #ifdef HAVE_RDS_CAP
             &rds_info_item,
+#ifdef HAVE_ESPEAK
+            &rds_talk_item,
+#endif
 #endif
             &scan_presets_item);
 

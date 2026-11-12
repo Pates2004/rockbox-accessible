@@ -505,6 +505,9 @@ struct user_settings
     unsigned char rfms_file[MAX_FILENAME+1];  /* last remote-fms */
 #endif
 #endif /* CONFIG_TUNER */
+#if defined(HAVE_RDS_CAP) && defined(HAVE_ESPEAK)
+    int fm_rds_talk; /* off, station, RadioText, both */
+#endif
 #if defined(HAVE_RDS_CAP) && defined(CONFIG_RTC)
     bool sync_rds_time; /* use RDS time to set the clock */
 #endif

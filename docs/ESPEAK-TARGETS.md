@@ -1,5 +1,14 @@
 # Integrated eSpeak: target inventory and simulator tests
 
+The November 12, 2026 generation brings the shared r34 Talkbox, categorical list-index
+fix and RDS speech controls to newly built Clip+, Clip Zip and HiBy R1 packages.
+Use the complete matching ABI `0xe007` package and its own manifest/SHA256SUMS.
+Default: English, Talkbox/exploration off, accessibility shortcut enabled;
+optional Accessible-Polish.cfg enables Polish and accessibility. No DAISY
+reader is integrated. RDS requires an FM-capable port and tuner; R1 has none.
+Older version numbers and Sansa preservation statements below describe prior
+stages, not the new generation or physical acceptance. See [RDS](RADIO-DYNAMIC.md).
+
 ## Experimental community builds, 2026-10-25
 
 [Polska wersja](ESPEAK-TARGETS-PL.md)
@@ -99,7 +108,7 @@ Talkbox settings:
 These preferences belong to `HAVE_ESPEAK`, not `HAVE_TOUCHSCREEN` or `HIBY_R1`.
 They are new-phase source behavior requiring fresh tests, not results covered
 by the closed alpha13/Windows16 acceptance. The new plugin-visible fields in
-`user_settings` and list-role fields require integrated plugin ABI **`0xe006`**.
+`user_settings` and list-role fields require integrated plugin ABI **`0xe007`**.
 Preserved Sansa releases remain **`0xe003`**; prior R1 generations used `0xe004`
 and `0xe005`. Their accepted packages do not accept the new source layout.
 Rebuild every bundled plugin for the chosen target and matching core ABI in
@@ -131,7 +140,7 @@ hardware. Keep platform code behind its guards and unsupported controls absent.
 
 | Target | Recorded state and next gate |
 | --- | --- |
-| `sansaclipplus`, `sansaclipzip` | Preserved native r29 releases and matching Windows simulators are described in [Clip+](ESPEAK-CLIPPLUS.md), [Clip Zip](ESPEAK-CLIPZIP.md) and [Windows](ESPEAK-WINDOWS.md). They do not validate the new shared preferences, r34 source or ABI `0xe006`; a return to Sansa needs a separately authorized build/test phase. Physical acceptance is not claimed. |
+| `sansaclipplus`, `sansaclipzip` | Preserved native r29 releases and matching Windows simulators are described in [Clip+](ESPEAK-CLIPPLUS.md), [Clip Zip](ESPEAK-CLIPZIP.md) and [Windows](ESPEAK-WINDOWS.md). They do not validate the new shared preferences, r34 source or ABI `0xe007`; a return to Sansa needs a separately authorized build/test phase. Physical acceptance is not claimed. |
 | `ipod6g` | Experimental native and SDL configuration is open with explicit confirmation. Historical Windows core linking/startup evidence exists below; this policy does not establish a current native package or physical acceptance. |
 | `hibyr1` | Closed native alpha13 / Windows alpha16 software results remain valid for their recorded inputs only. Physical R1, touchscreen accessibility, Bluetooth/RF, battery and NVDA acceptance remain open. See [R1](ESPEAK-HIBYR1.md). |
 | Other touchscreen or hosted targets | A capability macro permits relevant code selection; it does not transfer R1 acceptance or vendor-service compatibility. Establish a separate target-specific build and test record. |
@@ -155,7 +164,7 @@ hardware. Keep platform code behind its guards and unsupported controls absent.
    RAM and `MEMORYSIZE` do not justify increasing an arena or prove device fit.
 4. Coordinate shared-source workers, finish their edits, review the combined
    change and create a fresh source/data/toolchain freeze before building.
-   Record target, feature gates, plugin ABI `0xe006`, versions and hashes.
+   Record target, feature gates, plugin ABI `0xe007`, versions and hashes.
    Use Linux/WSL with the actual device toolchain for native builds; Windows
    cross-builds use MinGW and the checked SDL2 SDK described below. Do not run
    host suites against target headers while clean-build setup is replacing them.
@@ -694,7 +703,7 @@ Report modes use the report's targets, not `--targets` filtering. The smoke
 check captures startup audio and terminates the process; it is not a complete
 application acceptance test. `--refresh-report` rebuilds a completed group
 incrementally and checks the integrated plugin ABI in both source and linked
-loader. For new-phase sources both must match `0xe006`; historical reports keep
+loader. For new-phase sources both must match `0xe007`; historical reports keep
 their original ABI and do not validate this generation. Review the current
 validator before use and refresh only a fresh report, never closed evidence.
 Keep source files unchanged throughout the refresh and subsequent native smoke.

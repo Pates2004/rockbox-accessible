@@ -2,7 +2,7 @@
 
 Czytnik nazywa się Talkbox; silnikiem pozostaje dostarczony fork eSpeaka.
 Te funkcje pochodzą z generacji ABI `0xe004` i nie występują w starszych paczkach alpha10/Windows13.
-Obecne ustawienia rozwojowe wymagają zgodnych modułów ABI `0xe006`.
+Obecne ustawienia rozwojowe wymagają zgodnych modułów ABI `0xe007`.
 Czyste wydanie prywatne zachowuje polski interfejs i włączoną mowę. Angielski
 interfejs i początkowo wyłączona mowa pozostają na przyszłe wydanie publiczne.
 Nowe profile R1 przypisują trzykrotny Power do grupowego skrótu w interfejsie

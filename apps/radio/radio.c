@@ -43,6 +43,9 @@
 #include "iap.h"
 #endif
 #include "talk.h"
+#ifdef HAVE_ESPEAK
+#include "tts.h"
+#endif
 #include "tuner.h"
 #include "power.h"
 #include "sound.h"
@@ -347,6 +350,21 @@ static int radio_info_speak(int selected_item, void *data)
     return 0;
 }
 
+#ifdef HAVE_ESPEAK
+static void radio_speak_info(void)
+{
+    struct radio_rds_info info;
+    radio_read_info(&info);
+    talk_cancel_enqueue_next();
+    radio_info_speak(0, &info);
+    talk_id(LANG_FM_RDS_TEXT, true);
+    if (info.text[0])
+        talk_spell(info.text, true);
+    else
+        talk_id(LANG_FM_RDS_NO_DATA, true);
+}
+#endif
+
 static int radio_info_action(int action, struct gui_synclist *lists)
 {
     if (action == ACTION_STD_OK)
@@ -372,6 +390,100 @@ int radio_show_info(void)
     list.scroll_all = true;
     return simplelist_show_list(&list) ? MENU_ATTACHED_USB : 0;
 }
+
+#ifdef HAVE_ESPEAK
+/* One bounded candidate and last announcement per field; no metadata queue. */
+struct radio_rds_speech
+{
+    struct radio_rds_info candidate;
+    struct radio_rds_info spoken;
+    unsigned long changed[2];
+    unsigned long next_poll;
+    unsigned long quiet_until;
+    unsigned long talked;
+    int frequency;
+    int mode;
+    bool pending[2];
+    bool announced;
+};
+
+static struct radio_rds_speech rds_speech;
+
+static bool radio_rds_waiting(unsigned long now, unsigned long deadline)
+{
+    /* Subtract unsigned ticks before converting, including across tick wrap. */
+    return (long)(now - deadline) < 0;
+}
+
+static void radio_rds_speech_update(struct radio_rds_speech *state,
+                                    int frequency, bool idle, bool searching)
+{
+    int mode = global_settings.fm_rds_talk;
+    unsigned long now = current_tick;
+
+    if (mode != state->mode || frequency != state->frequency || searching ||
+        get_radio_status() != FMRADIO_PLAYING || !tts_is_available() ||
+        !talk_dynamic_enabled(&global_settings) || mode < 1 || mode > 3 ||
+        (audio_status() & AUDIO_STATUS_RECORD))
+    {
+        memset(state, 0, sizeof(*state));
+        state->frequency = frequency;
+        state->mode = mode;
+        state->next_poll = now;
+        state->quiet_until = now + 2 * HZ;
+        return;
+    }
+    if (!idle)
+        state->quiet_until = now + 2 * HZ;
+    if (radio_rds_waiting(now, state->next_poll))
+        return;
+    state->next_poll = now + HZ / 2;
+
+    struct radio_rds_info info;
+    radio_read_info(&info);
+    for (int field = 0; field < 2; ++field)
+    {
+        char *candidate = field ? state->candidate.text : state->candidate.name;
+        char *spoken = field ? state->spoken.text : state->spoken.name;
+        const char *text = field ? info.text : info.name;
+        size_t size = field ? sizeof(info.text) : sizeof(info.name);
+        if (strcmp(candidate, text))
+        {
+            strlcpy(candidate, text, size);
+            state->changed[field] = now;
+        }
+        /* An expired/empty field never erases its last spoken identity. */
+        state->pending[field] = (mode & (1 << field)) && text[0] &&
+                                strcmp(spoken, text) &&
+                                !radio_rds_waiting(now, state->changed[field] + 2 * HZ);
+    }
+
+    if (!idle || radio_rds_waiting(now, state->quiet_until) || tts_is_busy() ||
+        (state->announced && radio_rds_waiting(now, state->talked + 10 * HZ)))
+        return;
+
+    bool enqueue = false;
+    for (int field = 0; field < 2; ++field)
+    {
+        if (!state->pending[field])
+            continue;
+        const char *text = field ? info.text : info.name;
+        char *spoken = field ? state->spoken.text : state->spoken.name;
+        size_t size = field ? sizeof(info.text) : sizeof(info.name);
+        if (!enqueue)
+            talk_cancel_enqueue_next();
+        talk_id(field ? LANG_FM_RDS_TEXT : LANG_FM_RDS_NAME, enqueue);
+        talk_spell(text, true);
+        strlcpy(spoken, text, size);
+        enqueue = true;
+    }
+    if (enqueue)
+    {
+        state->talked = now;
+        state->announced = true;
+    }
+}
+#endif /* HAVE_ESPEAK */
 #endif
 
 void remember_frequency(void)
@@ -436,6 +548,9 @@ static void end_search(void)
 
 void radio_screen(void)
 {
+#if defined(HAVE_RDS_CAP) && defined(HAVE_ESPEAK)
+    memset(&rds_speech, 0, sizeof(rds_speech));
+#endif
     bool done = false;
     int button;
     bool stereo = false, last_stereo = false;
@@ -590,6 +705,7 @@ void radio_screen(void)
 
             case ACTION_STD_PREV:
             case ACTION_STD_NEXT:
+                talk_shutup();
                 next_station(button == ACTION_STD_PREV ? -1 : 1);
                 end_search();
                 update_type = SKIN_REFRESH_ALL;
@@ -599,6 +715,7 @@ void radio_screen(void)
             case ACTION_STD_PREVREPEAT:
             case ACTION_STD_NEXTREPEAT:
             {
+                talk_shutup();
                 int dir = search_dir;
                 search_dir = button == ACTION_STD_PREVREPEAT ? -1 : 1;
                 if (radio_mode != RADIO_SCAN_MODE)
@@ -653,6 +770,19 @@ void radio_screen(void)
                 update_type = SKIN_REFRESH_ALL;
                 break;
 
+#if defined(HAVE_RDS_CAP) && defined(HAVE_ESPEAK)
+            case ACTION_FM_RDS:
+                if (talk_tts_enabled(&global_settings))
+                {
+                    radio_speak_info();
+                    break;
+                }
+                /* Keep the ordinary preset shortcut when Talkbox is off. */
+#ifndef FM_PRESET
+                break;
+#endif
+                /* fall through */
+#endif
 #ifdef FM_PRESET
             case ACTION_FM_PRESET:
                 if(radio_preset_count() < 1)
@@ -788,6 +918,12 @@ void radio_screen(void)
             }
         }
         update_type = 0;
+
+#if defined(HAVE_RDS_CAP) && defined(HAVE_ESPEAK)
+        radio_rds_speech_update(&rds_speech, curr_freq,
+                                button == ACTION_NONE && !done,
+                                search_dir != 0 || done);
+#endif
 
         if (talk_file_names_enabled(&global_settings) && talk
             && radio_status == FMRADIO_PAUSED)

@@ -182,7 +182,7 @@ int plugin_open(const char *plugin, const char *parameter);
  * any new functions "waiting" at the end of the list.
  */
 #ifdef HAVE_ESPEAK
-#define PLUGIN_API_VERSION 0xe006
+#define PLUGIN_API_VERSION 0xe007
 #else
 #define PLUGIN_API_VERSION 285
 #endif

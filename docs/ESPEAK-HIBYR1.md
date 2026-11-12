@@ -1,7 +1,7 @@
 # Integrated eSpeak on HiBy R1 — development build
 
 Source update 2026-10-21: the public development branch includes the five list
-position modes and ongoing Bluetooth hardening, with plugin ABI `0xe006`.
+position modes and ongoing Bluetooth hardening, with plugin ABI `0xe007`.
 Publishing source is not a new accepted native/Windows binary release. The dated
 alpha12 and earlier sections below are historical package descriptions; use
 the exact manifest/ABI of any installed package, never mix its modules with a
@@ -141,7 +141,7 @@ modes affect prerecorded speech only, including when disabled or set to zero.
 The Windows prototype uses the same shared speech policy as the Sansa builds.
 
 Do not copy Sansa, stock or Bahusoid plugins/codecs into this build. Our plugin
-ABI for these development sources is `0xe006`; the R1 target ID is 124. Replace the complete matching card
+ABI for these development sources is `0xe007`; the R1 target ID is 124. Replace the complete matching card
 package for an update, not only the application executable.
 
 The shared core now implements semantic gestures and non-activating exploration

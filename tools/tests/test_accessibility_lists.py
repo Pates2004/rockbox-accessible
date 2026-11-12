@@ -446,7 +446,7 @@ static struct gui_synclist fixture_construct_generic(bool boolean, bool cancel)
         self.assertIn('list_boundary_feedback, LANG_ACCESSIBILITY_LIST_BOUNDARY, 1,', settings)
         self.assertRegex(menu, r'&list_boundary_feedback_item\b')
         self.assertIn('global_settings.list_wraparound', self.fixture)
-        self.assertIn('#define PLUGIN_API_VERSION 0xe006', self.inputs["apps/plugin.h"].decode("utf-8"))
+        self.assertIn('#define PLUGIN_API_VERSION 0xe007', self.inputs["apps/plugin.h"].decode("utf-8"))
         for language in ("english", "polski"):
             text = self.inputs["apps/lang/" + language + ".lang"].decode("utf-8")
             for label in ("LANG_ACCESSIBILITY_LIST_START", "LANG_ACCESSIBILITY_LIST_END",

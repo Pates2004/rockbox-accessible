@@ -386,6 +386,7 @@ enum {
     ACTION_LIST_LAST,
     ACTION_LIST_PAGE_FIRST,
     ACTION_LIST_PAGE_LAST,
+    ACTION_FM_RDS,
 #endif
     LAST_ACTION_PLACEHOLDER, /* custom actions should be this + something */
 };

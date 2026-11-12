@@ -153,7 +153,7 @@ def validate_manifest_target(manifest, target):
 
 def validate_module_identity(header, module, target):
     magic, target_id, version = header
-    expected_api = {'.codec': 50, '.ovl': 1, '.rock': 0xe006}[module.suffix]
+    expected_api = {'.codec': 50, '.ovl': 1, '.rock': 0xe007}[module.suffix]
     expected_magic = (0x52434f44, 0x52454e43) if module.suffix == '.codec' else (0x526f634b,)
     if target_id != TARGETS[target]['target_id'] or version != expected_api or magic not in expected_magic:
         raise AssertionError(f'Wrong target or ABI in {module}: {target_id}, {version:#x}, {magic:#x}')
@@ -456,7 +456,7 @@ def main():
         if digest(release / 'Sonic-PROVENANCE.md') != digest(ROOT / 'lib/espeak/sonic/README.md'):
             raise AssertionError('Sonic provenance was not preserved')
         report['checks'].append('exact bundled Sonic license and provenance')
-        if manifest.get('plugin_abi') != 0xe006:
+        if manifest.get('plugin_abi') != 0xe007:
             raise AssertionError('Package metadata does not identify the integrated plugin ABI')
         report['manifest_files'] = len(manifest['files'])
         report['checks'].append('all initial package SHA-256 hashes match')
@@ -481,7 +481,7 @@ def main():
             validate_module_identity(module_header(contents), module, arguments.target)
             if module.suffix == '.ovl':
                 plugin_api = struct.unpack_from('<H', contents, module_header_offset(contents) + 40)[0]
-                if plugin_api != 0xe006:
+                if plugin_api != 0xe007:
                     raise AssertionError(f'Wrong embedded plugin ABI in image decoder: {module}')
         report['native_modules'] = len(modules)
         report['checks'].append('all installed codecs and plugins are native x64 modules')

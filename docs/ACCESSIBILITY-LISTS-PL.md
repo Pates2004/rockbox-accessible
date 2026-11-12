@@ -1,5 +1,14 @@
 # Dostępna nawigacja po listach
 
+Generacja z 12 listopada 2026 przenosi wspólny Talkbox r34, poprawkę indeksów
+list i sterowanie odczytem RDS do nowych paczek Clip+, Clip Zip i HiBy R1.
+Używaj kompletnej zgodnej paczki ABI `0xe007` i jej manifestu/SHA256SUMS.
+Domyślnie: angielski, Talkbox i eksploracja wyłączone, skrót dostępności
+włączony. Opcjonalny Accessible-Polish.cfg włącza polski i dostępność.
+Nie zintegrowano czytnika DAISY. RDS wymaga portu i tunera FM; R1 go nie ma.
+Starsze numery wersji i zapisy o zachowaniu Sans poniżej dotyczą wcześniejszych
+etapów, nie nowej generacji ani odbioru sprzętowego. Zobacz [RDS](RADIO-DYNAMIC-PL.md).
+
 ## Pozycja elementu i zmiany treści
 
 W Ustawienia → Ustawienia ogólne → Dostępność → Ustawienia Talkbox znajdują
@@ -48,7 +57,7 @@ jej poprzednią nazwę wraz z indeksem, zamiast kolejkować mijane elementy.
 „1 z 10” jest jednym zleceniem syntezy, a nie trzema osobnymi wypowiedziami;
 łącznik pochodzi z aktualnego katalogu języka interfejsu.
 Te ustawienia dotyczą Talkboxa; nie zmieniają preferencji plików głosowych.
-Te źródła rozwojowe wymagają zgodnych wtyczek ABI `0xe006`; zachowane paczki Sans
+Te źródła rozwojowe wymagają zgodnych wtyczek ABI `0xe007`; zachowane paczki Sans
 nie są aktualizowane samą zmianą źródeł.
 
 ## Granice i nawigacja
@@ -62,7 +71,7 @@ przerywana przed dźwiękiem granicy. Kolejny ruch nadal może przerwać tę mow
 nie tworzy się kolejka wszystkich mijanych pozycji do odsłuchania później.
 
 Te funkcje pochodzą z generacji ABI `0xe004`; obecne wspólne ustawienia wymagają
-zgodnych modułów `0xe006`. Starsze paczki alpha10/Windows13 ich nie zawierają.
+zgodnych modułów `0xe007`. Starsze paczki alpha10/Windows13 ich nie zawierają.
 Talkbox to nazwa czytnika w interfejsie; dostarczony silnik
 eSpeak oraz jego licencje pozostają bez zmian.
 
@@ -122,4 +131,4 @@ Wspólny mechanizm obejmuje menu, ustawienia i listy wartości, przeglądarkę p
 zakładki oraz wtyczki korzystające z list rdzenia. Nie obejmuje automatycznie
 własnych graficznych interfejsów, gier ani surowych pętli przycisków we wtyczkach.
 Używaj kompletnego zgodnego wydania i dołączonych wtyczek: nowe ABI integracji
-to `0xe006`. Dotychczasowe paczki Sans pozostają przy `0xe003` i nie są zmieniane.
+to `0xe007`. Dotychczasowe paczki Sans pozostają przy `0xe003` i nie są zmieniane.

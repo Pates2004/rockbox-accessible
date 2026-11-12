@@ -40,6 +40,31 @@ output: 25 and 193 bytes respectively. They are read through the common tuner
 API, without changing tuner drivers or introducing a target-specific speech
 engine.
 
+On Clip+ and Clip Zip with Talkbox enabled, a short centre Select press reads
+both RDS fields directly, without leaving the radio screen. Hold Select still
+opens the radio menu; presets remain available there. With Talkbox disabled,
+short Select retains its preset-list action. Other integrated RDS ports can map
+the shared `ACTION_FM_RDS` action in their own keymap; their default bindings
+have not been changed. Missing fields are announced as **No RDS data**.
+
+With Talkbox enabled, **FM radio menu → Automatic RDS announcements** offers
+**Off** (default), **Station name**, **Radio text**, or **Station name and radio
+text**. Automatic speech also respects Talkbox's dynamic-announcements setting.
+It runs only on the radio screen while the radio is playing, outside searches
+and recording. Manual **RDS information** remains available independently.
+
+Each field must remain unchanged for two seconds. Speech waits for two seconds
+without user input and for Talkbox to become idle; announcements are separated
+by at least ten seconds. Only the latest metadata is retained. Identical values
+are not repeated, including after a temporary loss of RDS. Tuning, pausing or
+disabling announcements clears the announcement session. Rapidly changing text
+may therefore be omitted. Announcements do not run over menus or in the background.
+
+RadioText is supplied by the broadcaster: it may contain artist/title information,
+other messages, or nothing. There is no music recognition. HiBy R1's Rockbox port
+has no FM tuner; its Internet radio does not provide this RDS interface. Audible
+speech alongside analog FM, reception and antenna behavior require hardware tests.
+
 ## Target capabilities and validation
 
 Both Sansa Clip+ and Clip Zip configurations define `HAVE_RDS_CAP`. Clip+
@@ -66,4 +91,5 @@ These tests do not establish audible speech, firmware build compatibility or
 physical reception. The HiBy R1 software phase has no physical FM acceptance;
 Clip+/Clip Zip RF/RDS, real buttons, screen readers and audio still require
 separate target builds and hardware tests. Existing release artifacts are
-unchanged by this source work.
+not proof of reception. New builds require matching integrated plugin ABI
+`0xe007` modules; older integrated and stock plugins are incompatible.

@@ -1,7 +1,7 @@
 # Zintegrowany eSpeak na HiBy R1 — wydanie rozwojowe
 
 Aktualizacja źródeł 2026-10-21: publiczna gałąź rozwojowa zawiera pięć trybów
-ogłaszania pozycji i prace nad Bluetooth, z ABI wtyczek `0xe006`. Publikacja
+ogłaszania pozycji i prace nad Bluetooth, z ABI wtyczek `0xe007`. Publikacja
 źródeł nie oznacza nowego zaakceptowanego wydania native/Windows. Poniższe
 opisy alpha12 i wcześniejszych paczek są historyczne; sprawdzaj manifest i ABI
 rzeczywiście wgranej paczki, nigdy nie mieszaj jej modułów z nowym buildem.
@@ -146,7 +146,7 @@ ani ustawienie głośności na zero nie wycisza syntezy. Prototyp Windows korzys
 z tej samej wspólnej zasady co wydania Sans.
 
 Nie mieszaj tego wydania z wtyczkami/kodekami Sans, oficjalnego Rockboxa ani
-Bahusoida. ABI tych źródeł rozwojowych to `0xe006`, a identyfikator R1 — 124. Aktualizacja
+Bahusoida. ABI tych źródeł rozwojowych to `0xe007`, a identyfikator R1 — 124. Aktualizacja
 wymaga całej zgodnej paczki na karcie, nie tylko pliku aplikacji.
 
 Wspólny rdzeń implementuje teraz gesty semantyczne i eksplorację bez aktywacji

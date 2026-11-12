@@ -150,7 +150,8 @@ class SimulatorTargetTests(unittest.TestCase):
         self.write(build / ('rockboxui.exe' if windows else 'rockboxui'), 'Synthetic non-executable simulator')
         self.write(build / 'UI256.bmp', 'Synthetic target bitmap')
         self.write(build / 'Makefile', f'export MODELNAME={target}\n')
-        self.write(build / 'rockbox-info.txt', f'Target: {target}\n')
+        version = EXPECTED_VERSIONS[target]['windows' if windows else 'linux']
+        self.write(build / 'rockbox-info.txt', f'Target: {target}\nVersion: {version}\n')
         for language in ('english', 'polski'):
             self.write(build / 'apps/lang' / f'{language}.vstrings', f'Synthetic {language} voice strings')
         self.write(build / 'simdisk/.rockbox/config.cfg', 'tts rate: 450\n')
@@ -202,7 +203,7 @@ class SimulatorTargetTests(unittest.TestCase):
         else:
             self.assertNotIn('espeak_data_provenance', manifest)
             self.data_validation.assert_not_called()
-        self.assertEqual(manifest['plugin_abi'], 0xe006)
+        self.assertEqual(manifest['plugin_abi'], 0xe007)
         self.assertEqual(manifest['windows_system_imports'], ['KERNEL32.dll', 'USER32.dll'] if windows else [])
         self.assertEqual(validator.validate_clean_profile(release, manifest)['tts rate'], '175')
         expected = {name: digest for name, digest in validator.inventory(release).items() if name != 'manifest.json'}
@@ -237,7 +238,7 @@ class SimulatorTargetTests(unittest.TestCase):
                          'ACCESSIBILITY-SCREEN.md', 'ACCESSIBILITY-SCREEN-PL.md',
                          'HIBY-R1-POWER.md', 'HIBY-R1-POWER-PL.md',
                          'RADIO-DYNAMIC.md', 'RADIO-DYNAMIC-PL.md'):
-                if target == 'hibyr1':
+                if target == 'hibyr1' or name.startswith('RADIO-DYNAMIC'):
                     self.assertEqual((release / name).read_bytes(), (self.root / 'docs' / name).read_bytes())
                     self.assertEqual(manifest['files'][name], builder.digest(self.root / 'docs' / name))
                 else:
@@ -247,7 +248,7 @@ class SimulatorTargetTests(unittest.TestCase):
                                  (self.root / 'docs' / name).read_bytes())
             for name in ('ESPEAK-ROCKBOX.md', 'ESPEAK-ROCKBOX-PL.md',
                          'ACCESSIBILITY-LISTS.md', 'ACCESSIBILITY-LISTS-PL.md'):
-                if target == 'hibyr1':
+                if target == 'hibyr1' or name.startswith('ACCESSIBILITY-LISTS'):
                     self.assertTrue((release / name).is_file(), 'Missing new R1 guide: ' + name)
                     self.assertEqual((release / name).read_bytes(), (self.root / 'docs' / name).read_bytes())
                 else:
@@ -265,6 +266,20 @@ class SimulatorTargetTests(unittest.TestCase):
         self.assert_build('sansaclipplus', 'build-espeak-windows', 'clipplus-windows-development')
         self.assertEqual(self.run.call_count, 2)
         self.assertFalse((self.release_root).exists())
+
+    def test_explicit_package_version_must_match_compiled_version(self):
+        build = self.prepare_build('build-espeak-windows')
+        with self.assertRaisesRegex(RuntimeError, 'compiled simulator version'):
+            self.invoke('--package-only', '--version', 'different-version')
+        self.assertTrue((build / 'rockboxui.exe').exists())
+        self.run.assert_not_called()
+
+    def test_explicit_package_version_is_used_in_manifest(self):
+        build = self.prepare_build('build-espeak-windows')
+        self.write(build / 'rockbox-info.txt', 'Target: sansaclipplus\nVersion: new-r34-version\n')
+        self.invoke('--package-only', '--version', 'new-r34-version')
+        manifest = json.loads((self.release_root / 'simwindows/manifest.json').read_text())
+        self.assertEqual(manifest['version'], 'new-r34-version')
 
     def test_explicit_clipplus_matches_default(self):
         self.invoke('--target', 'sansaclipplus', '--build-only')
@@ -573,7 +588,7 @@ class WindowsValidatorTargetTests(unittest.TestCase):
 
     def test_target_ids_and_module_abis_for_both_targets(self):
         for target, model in (('sansaclipplus', 66), ('sansaclipzip', 68)):
-            for suffix, magic, abi in (('.rock', 0x526f634b, 0xe006), ('.ovl', 0x526f634b, 1),
+            for suffix, magic, abi in (('.rock', 0x526f634b, 0xe007), ('.ovl', 0x526f634b, 1),
                                        ('.codec', 0x52434f44, 50), ('.codec', 0x52454e43, 50)):
                 with self.subTest(target=target, suffix=suffix, magic=magic):
                     module = Path('fixture' + suffix)
@@ -585,7 +600,7 @@ class WindowsValidatorTargetTests(unittest.TestCase):
 
     def test_firmware_model_number_is_not_clipzip_module_target_id(self):
         with self.assertRaisesRegex(AssertionError, 'Wrong target or ABI'):
-            validator.validate_module_identity((0x526f634b, 79, 0xe006), Path('fixture.rock'), 'sansaclipzip')
+            validator.validate_module_identity((0x526f634b, 79, 0xe007), Path('fixture.rock'), 'sansaclipzip')
 
     def test_previous_plugin_apis_are_rejected_for_every_target(self):
         for target, configuration in validator.TARGETS.items():

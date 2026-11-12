@@ -202,7 +202,7 @@ class ScreenMenuTests(unittest.TestCase):
         self.assertNotRegex(settings_list, POLICY_FIELDS)
         self.assertNotIn("LANG_ACCESSIBILITY_SCREEN_", settings_list)
         self.assertRegex(read_source("apps/plugin.h"),
-                         r"#define\s+PLUGIN_API_VERSION\s+0xe006\b")
+                         r"#define\s+PLUGIN_API_VERSION\s+0xe007\b")
 
     def test_both_guides_cover_indices_shared_timer_and_migration(self):
         for path in ("docs/ACCESSIBILITY-SCREEN.md", "docs/ACCESSIBILITY-SCREEN-PL.md"):

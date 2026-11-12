@@ -70,7 +70,7 @@ class RadioDynamicSourceTests(unittest.TestCase):
     def test_rds_is_capability_gated_and_manual(self):
         source = (ROOT / "apps/radio/radio.c").read_text(encoding="utf-8")
         start = source.index("#ifdef HAVE_RDS_CAP\nstruct radio_rds_info")
-        stop = source.index("\n#endif", start)
+        stop = source.index("\nvoid remember_frequency", start)
         self.assertIn("int radio_show_info(void)", source[start:stop])
         self.assertNotIn("tts_pause", source[start:stop])
         self.assertIn("action == ACTION_STD_OK", extract_block(source, "static int radio_info_action("))
@@ -108,7 +108,7 @@ class RadioDynamicBehaviorTests(unittest.TestCase):
             "void talk_force_enqueue_next(", "void talk_cancel_enqueue_next("))
         row = extract_block(cls.inputs["apps/gui/list.c"].decode("utf-8"), "static void _gui_synclist_speak_item(")
         menu_start = radio.index("            case ACTION_FM_MENU:")
-        menu_end = radio.index("\n#ifdef FM_PRESET", menu_start)
+        menu_end = radio.index("\n#if defined(HAVE_RDS_CAP) && defined(HAVE_ESPEAK)", menu_start)
         startup_start = radio.index("    if(radio_preset_count() < 1 && yesno_pop(")
         startup_end = radio.index("    preset_set_current(preset_find(curr_freq));", startup_start)
         policy = "\n".join(extract_block(settings, "static inline bool " + name + "(")

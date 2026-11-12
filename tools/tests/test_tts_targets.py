@@ -651,7 +651,7 @@ def refresh_locked_report(path, arguments):
         for artifact in manifest["moves"]:
             verify_evidence({"path": artifact["archived_path"], "sha256": artifact["sha256"]})
     header = (ROOT / "apps/plugin.h").read_text(encoding="utf-8")
-    if not re.search(r"#define\s+PLUGIN_API_VERSION\s+0xe006\b", header):
+    if not re.search(r"#define\s+PLUGIN_API_VERSION\s+0xe007\b", header):
         raise RuntimeError("The requested integrated-eSpeak plugin ABI guard is not present")
     baseline = source_hashes()
     plans = [validate_refresh_entry(path, report, entry, arguments) for entry in report["targets"]]
@@ -764,7 +764,7 @@ def refresh_locked_report(path, arguments):
                 ], text=True)
                 (logs / "plugin-loader-abi.txt").write_text(loader, encoding="utf-8")
                 entry["plugin_abi_comparison"] = [
-                    line.strip() for line in loader.splitlines() if "cmp" in line and "$0xe006" in line]
+                    line.strip() for line in loader.splitlines() if "cmp" in line and "$0xe007" in line]
                 if not entry["plugin_abi_comparison"]:
                     raise RuntimeError("The linked plugin loader does not compare the requested eSpeak ABI")
             if source_hashes() != baseline:
@@ -785,7 +785,7 @@ def refresh_locked_report(path, arguments):
             entry["executable_sha256"] = digest(executable)
             entry["executable_bytes"] = executable.stat().st_size
             entry["compiled"] = entry["abi_refreshed"] = True
-            entry["plugin_api_version"] = "0xe006"
+            entry["plugin_api_version"] = "0xe007"
             entry["refresh_artifacts"] = {
                 name: {"path": evidence_reference(logs / name), "sha256": digest(logs / name)}
                 for name in ("build.log", "linked-symbols.txt", "pe-headers.txt", "plugin-loader-abi.txt") + CATALOG_LOGS

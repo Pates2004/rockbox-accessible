@@ -23069,3 +23069,33 @@
     *: "Nie udało się usunąć tymczasowych ustawień czytnika"
   </voice>
 </phrase>
+
+<phrase>
+  id: LANG_FM_RDS_TALK
+  desc: optional automatic FM metadata speech
+  user: core
+  <source>
+    *: "Automatic RDS announcements"
+  </source>
+  <dest>
+    *: "Automatyczne odczytywanie RDS"
+  </dest>
+  <voice>
+    *: "Automatyczne odczytywanie RDS"
+  </voice>
+</phrase>
+
+<phrase>
+  id: LANG_FM_RDS_BOTH
+  desc: optional automatic FM metadata speech
+  user: core
+  <source>
+    *: "Station name and radio text"
+  </source>
+  <dest>
+    *: "Nazwa stacji i tekst RDS"
+  </dest>
+  <voice>
+    *: "Nazwa stacji i tekst RDS"
+  </voice>
+</phrase>

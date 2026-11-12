@@ -224,7 +224,7 @@ półtony w dół, jeżeli rozróżnienie wysokości jest włączone.
 Konfiguracja jest niezależna od zwykłych ustawień Rockboxa. Na odtwarzaczu
 znajduje się w `/.rockbox/accessibility.cfg`, a w symulatorze we własnych danych
 `.rockbox` obok programu. Ta generacja wymaga zgodnych modułów wtyczek ABI
-`0xe006`. Format `RBACCESSIBILITY:11` zapisuje włączenie, źródła dźwięków, osobne
+`0xe007`. Format `RBACCESSIBILITY:11` zapisuje włączenie, źródła dźwięków, osobne
 czasy przytrzymania przycisków i dotyku, powtarzanie, osobne przypisania gestów
 i przycisków dla interfejsu i ekranu odtwarzania, cztery ograniczone ścieżki aplikacji oraz
 rozróżnienie wysokości pustych miejsc. Osobny `empty-feedback.cfg` pamięta tryb

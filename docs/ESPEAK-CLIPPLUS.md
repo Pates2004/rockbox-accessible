@@ -1,5 +1,14 @@
 # Experimental eSpeak firmware for Sansa Clip+
 
+The November 12, 2026 generation brings the shared r34 Talkbox, categorical list-index
+fix and RDS speech controls to newly built Clip+, Clip Zip and HiBy R1 packages.
+Use the complete matching ABI `0xe007` package and its own manifest/SHA256SUMS.
+Default: English, Talkbox/exploration off, accessibility shortcut enabled;
+optional Accessible-Polish.cfg enables Polish and accessibility. No DAISY
+reader is integrated. RDS requires an FM-capable port and tuner; R1 has none.
+Older version numbers and Sansa preservation statements below describe prior
+stages, not the new generation or physical acceptance. See [RDS](RADIO-DYNAMIC.md).
+
 The preserved release below retains Polish speech-enabled defaults. New builds
 use the [English, speech-disabled profile](RELEASE-PROFILES.md).
 

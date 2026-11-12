@@ -1,5 +1,14 @@
 # Plugin speech
 
+The November 12, 2026 generation brings the shared r34 Talkbox, categorical list-index
+fix and RDS speech controls to newly built Clip+, Clip Zip and HiBy R1 packages.
+Use the complete matching ABI `0xe007` package and its own manifest/SHA256SUMS.
+Default: English, Talkbox/exploration off, accessibility shortcut enabled;
+optional Accessible-Polish.cfg enables Polish and accessibility. No DAISY
+reader is integrated. RDS requires an FM-capable port and tuner; R1 has none.
+Older version numbers and Sansa preservation statements below describe prior
+stages, not the new generation or physical acceptance. See [RDS](RADIO-DYNAMIC.md).
+
 Plugins use Rockbox's shared `talk_*` interface and integrated eSpeak, not a
 second speech engine. Enable Talkbox in Accessibility -> Talkbox settings for synthesized speech.
 Use voice files to read the interface affects prerecorded speech only; turning
@@ -86,6 +95,6 @@ scans do not speak every step. The alarm does not promise operation after
 power-off. Source, build and PCM tests do not replace device testing or human
 listening. The simulator is self-voicing, not a complete NVDA-native control tree.
 
-Use only matching bundled plugins: current R1 sources use ABI `0xe006`, while
+Use only matching bundled plugins: current R1 sources use ABI `0xe007`, while
 preserved Sansa releases still use `0xe003`. Do not mix these generations. Stock Rockbox
 modules and modules for a different target are incompatible.

@@ -1,5 +1,14 @@
 # Eksperymentalny firmware eSpeak dla Sansa Clip+
 
+Generacja z 12 listopada 2026 przenosi wspólny Talkbox r34, poprawkę indeksów
+list i sterowanie odczytem RDS do nowych paczek Clip+, Clip Zip i HiBy R1.
+Używaj kompletnej zgodnej paczki ABI `0xe007` i jej manifestu/SHA256SUMS.
+Domyślnie: angielski, Talkbox i eksploracja wyłączone, skrót dostępności
+włączony. Opcjonalny Accessible-Polish.cfg włącza polski i dostępność.
+Nie zintegrowano czytnika DAISY. RDS wymaga portu i tunera FM; R1 go nie ma.
+Starsze numery wersji i zapisy o zachowaniu Sans poniżej dotyczą wcześniejszych
+etapów, nie nowej generacji ani odbioru sprzętowego. Zobacz [RDS](RADIO-DYNAMIC-PL.md).
+
 Zachowane wydanie poniżej ma nadal polski i włączoną mowę. Nowe buildy używają
 [angielskiego profilu z wyłączoną mową](RELEASE-PROFILES-PL.md).
 

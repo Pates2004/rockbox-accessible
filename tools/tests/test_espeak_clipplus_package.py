@@ -36,7 +36,7 @@ def catalog(voice=True):
 
 def module(plugin=True, target=66, abi=None):
     return struct.pack('<IHH', 0x526f634b if plugin else 0x52434f44,
-                       target, abi if abi is not None else (0xe006 if plugin else 50)) + bytes(24)
+                       target, abi if abi is not None else (0xe007 if plugin else 50)) + bytes(24)
 
 
 class ClipplusPackageTests(unittest.TestCase):
@@ -263,7 +263,7 @@ class ClipplusPackageTests(unittest.TestCase):
                 package.validate_module(name, content)
 
     def test_image_decoder_own_api_and_embedded_plugin_abi(self):
-        decoder = struct.pack('<IHH', 0x526f634b, 66, 1) + bytes(16) + struct.pack('<H', 0xe006) + bytes(14)
+        decoder = struct.pack('<IHH', 0x526f634b, 66, 1) + bytes(16) + struct.pack('<H', 0xe007) + bytes(14)
         package.validate_module('bmp.ovl', decoder)
         for invalid in (decoder[:28], decoder[:24] + struct.pack('<H', 285) + decoder[26:],
                         decoder[:24] + struct.pack('<H', 0xe003) + decoder[26:],

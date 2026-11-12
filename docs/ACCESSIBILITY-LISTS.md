@@ -1,5 +1,14 @@
 # Accessible list navigation
 
+The November 12, 2026 generation brings the shared r34 Talkbox, categorical list-index
+fix and RDS speech controls to newly built Clip+, Clip Zip and HiBy R1 packages.
+Use the complete matching ABI `0xe007` package and its own manifest/SHA256SUMS.
+Default: English, Talkbox/exploration off, accessibility shortcut enabled;
+optional Accessible-Polish.cfg enables Polish and accessibility. No DAISY
+reader is integrated. RDS requires an FM-capable port and tuner; R1 has none.
+Older version numbers and Sansa preservation statements below describe prior
+stages, not the new generation or physical acceptance. See [RDS](RADIO-DYNAMIC.md).
+
 ## Item position and content changes
 
 Settings → General Settings → Accessibility → Talkbox settings includes two
@@ -45,7 +54,7 @@ interrupts the previous name and position rather than queuing every passed row.
 “1 of 10” is one synthesis request, not three separate utterances; its connector
 comes from the current interface language catalog.
 These are Talkbox preferences, independent of prerecorded voice preferences.
-These development sources require matching ABI `0xe006` plugins; preserved Sansa
+These development sources require matching ABI `0xe007` plugins; preserved Sansa
 packages are not updated merely by editing shared sources.
 
 ## Boundaries and navigation
@@ -56,7 +65,7 @@ the boundary sound. Later movement can still interrupt that speech: rapid
 navigation does not accumulate every intermediate row for later playback.
 
 These controls originated in integrated ABI `0xe004`; the current shared settings
-require matching `0xe006` modules. Older alpha10/Windows13 packages
+require matching `0xe007` modules. Older alpha10/Windows13 packages
 do not contain them.
 Talkbox is the reader's interface name; the supplied eSpeak engine and its
 licensing remain unchanged.
@@ -113,4 +122,4 @@ The common list engine covers menus, settings/value dialogs, file browsers,
 bookmark lists and plugins using core synclists. Private plugin interfaces,
 games and raw custom drawing/input loops are not automatically covered. Use
 the complete matching build and bundled plugins: the new integrated ABI is
-`0xe006`; previous Sansa packages retain `0xe003` and are not changed by this work.
+`0xe007`; previous Sansa packages retain `0xe003` and are not changed by this work.

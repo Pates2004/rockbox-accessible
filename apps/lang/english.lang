@@ -23132,3 +23132,33 @@
     *: "Temporary reader preferences could not be removed"
   </voice>
 </phrase>
+
+<phrase>
+  id: LANG_FM_RDS_TALK
+  desc: optional automatic FM metadata speech
+  user: core
+  <source>
+    *: "Automatic RDS announcements"
+  </source>
+  <dest>
+    *: "Automatic RDS announcements"
+  </dest>
+  <voice>
+    *: "Automatic RDS announcements"
+  </voice>
+</phrase>
+
+<phrase>
+  id: LANG_FM_RDS_BOTH
+  desc: optional automatic FM metadata speech
+  user: core
+  <source>
+    *: "Station name and radio text"
+  </source>
+  <dest>
+    *: "Station name and radio text"
+  </dest>
+  <voice>
+    *: "Station name and radio text"
+  </voice>
+</phrase>

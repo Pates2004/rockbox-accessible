@@ -1,5 +1,14 @@
 # Rockbox Clip+ / Clip Zip with eSpeak — native Windows x64 simulators
 
+The November 12, 2026 generation brings the shared r34 Talkbox, categorical list-index
+fix and RDS speech controls to newly built Clip+, Clip Zip and HiBy R1 packages.
+Use the complete matching ABI `0xe007` package and its own manifest/SHA256SUMS.
+Default: English, Talkbox/exploration off, accessibility shortcut enabled;
+optional Accessible-Polish.cfg enables Polish and accessibility. No DAISY
+reader is integrated. RDS requires an FM-capable port and tuner; R1 has none.
+Older version numbers and Sansa preservation statements below describe prior
+stages, not the new generation or physical acceptance. See [RDS](RADIO-DYNAMIC.md).
+
 ## Releases dated 2026-10-11
 
 - Clip+: `0ed3734e5e-espeak-r29-win-alpha7-20261011`.

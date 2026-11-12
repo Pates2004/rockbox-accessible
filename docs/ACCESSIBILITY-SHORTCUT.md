@@ -4,7 +4,7 @@ Talkbox is the reader's interface name; its engine is still the supplied eSpeak
 fork. These controls originated in ABI `0xe004` and are absent from older alpha10/Windows13
 packages. Clean private editions keep Polish and speech on;
 English and initially disabled speech remain reserved for a public edition.
-Current development settings require matching ABI `0xe006` modules.
+Current development settings require matching ABI `0xe007` modules.
 New R1 profiles assign triple Power to the grouped shortcut in both interface
 and playback profiles. Existing saved assignments are preserved. R1's supplied
 ADC keyboard cannot reliably report both volume keys held together.

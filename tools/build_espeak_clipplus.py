@@ -48,7 +48,7 @@ CLIPPLUS = FirmwareTarget('sansaclipplus', 'clipplus', 'Clip+', 66, 66, b'cli+')
 CLIPZIP = FirmwareTarget('sansaclipzip', 'clipzip', 'Clip Zip', 79, 68, b'clzp')
 TARGETS = {target.name: target for target in (CLIPPLUS, CLIPZIP)}
 TARGET_ID = 66
-PLUGIN_ABI = 0xe006
+PLUGIN_ABI = 0xe007
 PREFIX = 'arm-none-eabi-'
 REQUIRED_SYMBOLS = ('rb_espeak_synth_tracked', 'rb_espeak_synth_character',
                     'espeak_Synth', 'tts_speak', 'reclist_speak', 'audio_set_pcm_output')
@@ -151,6 +151,10 @@ def documents(target):
     return dict(DOCUMENTS, **{
         'CZYTAJ.md': f'docs/ESPEAK-{target.slug.upper()}-PL.md',
         'README.md': f'docs/ESPEAK-{target.slug.upper()}.md',
+        **{name: 'docs/' + name for name in (
+            'RADIO-DYNAMIC.md', 'RADIO-DYNAMIC-PL.md',
+            'ACCESSIBILITY-LISTS.md', 'ACCESSIBILITY-LISTS-PL.md',
+            'ACCESSIBILITY-SHORTCUT.md', 'ACCESSIBILITY-SHORTCUT-PL.md')},
     })
 
 
