@@ -147,7 +147,7 @@ typedef struct
 #ifdef HAVE_ACCESSIBILITY_POWER
 static struct accessibility_power accessibility_power;
 /* Replay both edges: some native maps act on press, others on release. */
-static bool accessibility_power_release_pending;
+static int accessibility_power_pending_button;
 #endif
 
 /* holds the action state between calls to get_action \ get_action_custom) */
@@ -397,11 +397,11 @@ static inline bool action_poll_button(action_last_t *last, action_cur_t *cur)
     int *button = &cur->button;
 
 #ifdef HAVE_ACCESSIBILITY_POWER
-    if (accessibility_power_release_pending)
+    if (accessibility_power_pending_button != BUTTON_NONE)
     {
-        accessibility_power_release_pending = false;
+        *button = accessibility_power_pending_button;
+        accessibility_power_pending_button = BUTTON_NONE;
         cur->power_replay = true;
-        *button = BUTTON_POWER | BUTTON_REL;
     }
     else
 #endif
@@ -546,11 +546,15 @@ static bool accessibility_power_filter(action_last_t *last, action_cur_t *cur,
 {
     if (cur->power_replay)
         return immediate;
-    if (cur->button == (BUTTON_POWER | BUTTON_REPEAT | BUTTON_REL))
-    {
-        accessibility_power_reset(&accessibility_power);
-        return immediate;
-    }
+
+    /* HZ is 100 on both supported Sansas. Unsigned arithmetic also covers wrap. */
+    uint32_t now = (uint32_t)current_tick * (1000u / HZ);
+    uint32_t held_ms = now - accessibility_power.pressed;
+    bool held_release = cur->button == (BUTTON_POWER | BUTTON_REPEAT | BUTTON_REL);
+    bool hold_start = enabled && accessibility_power.down && !accessibility_power.held &&
+        (cur->button == (BUTTON_POWER | BUTTON_REPEAT) || held_release ||
+         (cur->button == (BUTTON_POWER | BUTTON_REL) &&
+          held_ms >= ACCESSIBILITY_POWER_CLICK_MS && held_ms < UINT32_C(0x80000000)));
 
     enum accessibility_power_input input = ACCESSIBILITY_POWER_OTHER;
     if (cur->button == BUTTON_POWER)
@@ -565,13 +569,16 @@ static bool accessibility_power_filter(action_last_t *last, action_cur_t *cur,
              cur->button == SYS_CHARGER_CONNECTED || cur->button == SYS_CHARGER_DISCONNECTED)
         input = ACCESSIBILITY_POWER_IGNORE;
 
-    /* HZ is 100 on both supported Sansas. Unsigned arithmetic also covers wrap. */
-    enum accessibility_power_result result = accessibility_power_process(
-        &accessibility_power, input, cur->context, enabled,
-        (uint32_t)current_tick * (1000u / HZ));
-    if (result == ACCESSIBILITY_POWER_REPLAY)
+    enum accessibility_power_result result = ACCESSIBILITY_POWER_PASS;
+    if (held_release)
+        accessibility_power_reset(&accessibility_power);
+    else
+        result = accessibility_power_process(&accessibility_power, input, cur->context, enabled, now);
+    if (result == ACCESSIBILITY_POWER_REPLAY || hold_start)
     {
-        accessibility_power_release_pending = true;
+        /* A hold also needs its deferred native press, followed by the actual
+         * repeat/release. Keep both edges in native context/release filtering. */
+        accessibility_power_pending_button = hold_start ? cur->button : BUTTON_POWER | BUTTON_REL;
         cur->power_replay = true;
         cur->button = BUTTON_POWER;
         last->button = BUTTON_NONE | BUTTON_REL;

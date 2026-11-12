@@ -68,7 +68,7 @@ static void fresh(void)
     action_last.button=BUTTON_REL;
     global_settings.accessibility_shortcut_enabled=true;
     accessibility_power_reset(&accessibility_power);
-    accessibility_power_release_pending=false;
+    accessibility_power_pending_button=BUTTON_NONE;
     current_tick=0;reads=activations=0;speech=fail_service=false;
 }
 static int event(int context,int button,int ticks,int timeout)
@@ -109,6 +109,19 @@ int main(void)
             CHECK(reads==before); /* Synthetic release never blocks the caller. */
             CHECK(activations==0 && (action_last.button&BUTTON_REL));
         }
+        fresh();global_settings.accessibility_shortcut_enabled=false;
+        int native_press=event(context,BUTTON_POWER,1,0);
+        int native_repeat=event(context,BUTTON_POWER|BUTTON_REPEAT,31,0);
+        int native_held_release=event(context,BUTTON_POWER|BUTTON_REL,1,0);
+        fresh();CHECK(event(context,BUTTON_POWER,1,0)==ACTION_NONE);
+        CHECK(event(context,BUTTON_POWER|BUTTON_REPEAT,31,0)==native_press);
+        CHECK(event(context,BUTTON_NONE,0,0)==native_repeat);
+        CHECK(event(context,BUTTON_POWER|BUTTON_REL,1,0)==native_held_release);
+        CHECK(!activations);
+        /* A slow release without a delivered repeat must preserve press actions too. */
+        fresh();CHECK(event(context,BUTTON_POWER,1,0)==ACTION_NONE);
+        CHECK(event(context,BUTTON_POWER|BUTTON_REL,30,0)==native_press);
+        CHECK(event(context,BUTTON_NONE,0,0)==release);
     }
     fresh();click(CONTEXT_STD);
     CHECK(event(CONTEXT_STD,BUTTON_NONE,0,0)==ACTION_NONE && observed_timeout==0);
@@ -143,6 +156,14 @@ int main(void)
     fresh();CHECK(event(CONTEXT_STD,BUTTON_POWER,1,0)==ACTION_NONE);
     CHECK(event(CONTEXT_SETTINGS,BUTTON_POWER|BUTTON_REL,6,0)==ACTION_NONE);
     triple(CONTEXT_SETTINGS);CHECK(activations==1);
+    fresh();event(CONTEXT_STD,BUTTON_POWER,1,0);
+    CHECK(event(CONTEXT_STD,BUTTON_POWER|BUTTON_REPEAT,31,0)==ACTION_STD_CANCEL);
+    action_last.wait_for_release=true;
+    CHECK(event(CONTEXT_SETTINGS,BUTTON_NONE,0,-1)==ACTION_NONE);
+    CHECK(action_last.wait_for_release);
+    CHECK(event(CONTEXT_SETTINGS,BUTTON_POWER|BUTTON_REL,1,0)==ACTION_NONE);
+    CHECK(!action_last.wait_for_release);
+    triple(CONTEXT_SETTINGS);CHECK(activations==1);
     /* A replayed Cancel can change screens before its synthetic release. */
     fresh();click(CONTEXT_STD);
     CHECK(event(CONTEXT_STD,BUTTON_NONE,30,0)==ACTION_STD_CANCEL);
@@ -152,11 +173,12 @@ int main(void)
     triple(CONTEXT_SETTINGS);CHECK(activations==1);
     /* Held/repeated buttons and Power combinations retain native mappings. */
     fresh();global_settings.accessibility_shortcut_enabled=false;
-    event(CONTEXT_WPS,BUTTON_POWER,1,0);
+    int native_press=event(CONTEXT_WPS,BUTTON_POWER,1,0);
     int held=event(CONTEXT_WPS,BUTTON_POWER|BUTTON_REPEAT,30,0);
     int held_release=event(CONTEXT_WPS,BUTTON_POWER|BUTTON_REPEAT|BUTTON_REL,1,0);
     fresh();click(CONTEXT_WPS);event(CONTEXT_WPS,BUTTON_POWER,8,0);
-    CHECK(event(CONTEXT_WPS,BUTTON_POWER|BUTTON_REPEAT,30,0)==held);
+    CHECK(event(CONTEXT_WPS,BUTTON_POWER|BUTTON_REPEAT,30,0)==native_press);
+    CHECK(event(CONTEXT_WPS,BUTTON_NONE,0,0)==held);
     CHECK(event(CONTEXT_WPS,BUTTON_POWER|BUTTON_REPEAT|BUTTON_REL,1,0)==held_release);
     CHECK(event(CONTEXT_WPS,BUTTON_NONE,50,0)==ACTION_NONE && !activations);
     triple(CONTEXT_WPS);CHECK(activations==1);
