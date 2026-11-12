@@ -288,9 +288,13 @@ static bool reply_timeout(void)
 
 void rmt_tuner_rds_data(unsigned int len, const unsigned char *buf)
 {
+    /* rds_push_info clamps to its destination, not to the received packet. */
+    if (len < 4)
+        return;
+
     if (buf[2] == 0x1E)
     {
-        rds_push_info(RDS_INFO_PS, (uintptr_t)(buf+4), 8);
+        rds_push_info(RDS_INFO_PS, (uintptr_t)(buf+4), MIN(len-4, 8u));
     }
     else if(buf[2] == 0x04)
     {
