@@ -27,9 +27,9 @@ from build_espeak_clipplus import diagnostic_card_state
 
 ROOT = Path(__file__).resolve().parents[2]
 TARGETS = {
-    'sansaclipplus': {'target_id': 66, 'label': 'Clip+', 'release': 'simwindows'},
-    'sansaclipzip': {'target_id': 68, 'label': 'Clip Zip', 'release': 'simwindows-clipzip'},
-    'hibyr1': {'target_id': 124, 'label': 'HiBy R1', 'release': 'simwindows-hibyr1'},
+    'sansaclipplus': {'target_id': 66, 'label': 'Clip+', 'release': 'simwindows', 'root_items': 10},
+    'sansaclipzip': {'target_id': 68, 'label': 'Clip Zip', 'release': 'simwindows-clipzip', 'root_items': 10},
+    'hibyr1': {'target_id': 124, 'label': 'HiBy R1', 'release': 'simwindows-hibyr1', 'root_items': 8},
 }
 
 
@@ -241,7 +241,8 @@ def main():
                 ready = time.monotonic() + 25
                 while time.monotonic() < ready:
                     initial = log.read_text(encoding='utf-8', errors='replace') if log.exists() else ''
-                    if re.search(r'A11Y list geometry:.*count=8 selected=0', initial):
+                    root_items = TARGETS[arguments.target]['root_items']
+                    if re.search(r'A11Y list geometry:.*count=' + str(root_items) + r' selected=0', initial):
                         break
                     if process.poll() is not None:
                         raise AssertionError('Simulator exited before the root menu was ready')
