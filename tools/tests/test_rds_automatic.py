@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shlex
 import shutil
@@ -15,6 +16,78 @@ from project_materials import project_materials_root
 
 
 class RdsAutomaticTests(unittest.TestCase):
+    def test_actual_choice_constructor_preserves_language_ids(self):
+        compiler = shlex.split(os.environ.get('CC', 'cc'))
+        if not shutil.which(compiler[0]):
+            self.skipTest('Host C compiler required')
+        area = project_materials_root(ROOT) / 'rds-choice-tests' / uuid.uuid4().hex
+        area.mkdir(parents=True)
+        paths = ('apps/settings_list.c', 'apps/settings_list.h', 'apps/settings.h')
+        inputs = {name: (ROOT / name).read_text(encoding='utf-8') for name in paths}
+        source, header, settings = (inputs[name] for name in paths)
+
+        def macro(text, name):
+            rows = text.splitlines(keepends=True)
+            definitions = []
+            for index, row in enumerate(rows):
+                if re.match(r'#define\s+' + name + r'\b', row):
+                    body = row
+                    while rows[index].rstrip().endswith('\\'):
+                        index += 1
+                        body += rows[index]
+                    definitions.append(body)
+            self.assertTrue(definitions, name)
+            return definitions[-1]
+
+        virtual = settings[settings.index('#define VIRT_SIZE'):settings.index('/* !defined(HAVE_LCD_COLOR)')]
+        start = source.index('CHOICE_SETTING(0, fm_rds_talk,')
+        statement = source[start:source.index('\n#endif', start)]
+        preamble = ('#include <stdint.h>\n#include <stddef.h>\n#include <stdbool.h>\n#include <string.h>\n'
+                    '#define CONFIG_CPU 1\n#define DM320 2\n#define RK27XX 3\n#define S3C2440 4\n'
+                    '#define IMX31L 5\n#define STM32H743 6\n'
+                    'enum { LANG_FM_RDS_TALK=10, LANG_OFF=11, LANG_FM_RDS_NAME=12, '
+                    'LANG_FM_RDS_TEXT=13, LANG_FM_RDS_BOTH=14 };\n'
+                    'typedef int (*_isfunc_type)(void);\n'
+                    'struct { int fm_rds_talk; } global_settings;\n')
+        for signature in ('union storage_type', 'struct choice_setting', 'struct settings_list'):
+            preamble += extract_block(header, signature) + ';\n'
+        for name in ('F_T_INT', 'F_CHOICE_SETTING'):
+            preamble += macro(header, name)
+        preamble += virtual + macro(source, 'INT') + macro(source, 'CHOICE_SETTING')
+        main = r'''
+int main(void) {
+    const struct choice_setting *choice = items[0].choice_setting;
+    const int expected[] = {LANG_OFF, LANG_FM_RDS_NAME, LANG_FM_RDS_TEXT, LANG_FM_RDS_BOTH};
+    if (choice->count != 4 || items[0].default_val.int_ != 0 ||
+        items[0].setting != &global_settings.fm_rds_talk ||
+        strcmp(choice->cfg_vals, "off,station,text,both")) return 101;
+    for (int index=0; index<4; index++) {
+        const unsigned char *label=choice->desc[index];
+        if (P2ID(label) != expected[index]) return 101;
+    }
+    return 0;
+}
+'''
+        results = []
+        try:
+            for label, declaration in (('actual', statement), ('raw-id-control', re.sub(r'ID2P\((LANG_\w+)\)', r'\1', statement))):
+                path = area / (label + '.c')
+                path.write_text(preamble + '\nstatic const struct settings_list items[]={\n' + declaration + '};\n' + main, encoding='utf-8')
+                binary = area / (label + ('.exe' if os.name == 'nt' else '.bin'))
+                command = compiler + ['-std=c99', '-Wall', '-Wextra', '-Werror', '-Werror=int-conversion', str(path), '-o', str(binary)]
+                result = subprocess.run(command, capture_output=True, text=True, timeout=60)
+                results.append(dict(label=label, command=command, exit=result.returncode, stderr=result.stderr))
+                if label == 'raw-id-control':
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn('int-conversion', result.stderr)
+                else:
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    result = subprocess.run([str(binary)], capture_output=True, text=True, timeout=5)
+                    results.append(dict(label=label, stage='execute', exit=result.returncode, stderr=result.stderr))
+                    self.assertEqual(result.returncode, 0, result.stderr)
+        finally:
+            (area / 'report.json').write_text(json.dumps(dict(inputs={k: hashlib.sha256(v.encode()).hexdigest() for k,v in inputs.items()}, results=results), indent=2), encoding='utf-8')
+
     def test_centre_key_and_common_dispatch(self):
         keymap = (ROOT / 'apps/keymaps/keymap-clip.c').read_text(encoding='utf-8')
         mapping = extract_block(keymap, 'static const struct button_mapping button_context_radio[]')

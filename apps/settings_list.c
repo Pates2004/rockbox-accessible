@@ -1460,7 +1460,8 @@ const struct settings_list settings[] = {
 #if defined(HAVE_RDS_CAP) && defined(HAVE_ESPEAK)
     CHOICE_SETTING(0, fm_rds_talk, LANG_FM_RDS_TALK, 0,
                    "rds announcements", "off,station,text,both", NULL, 4,
-                   LANG_OFF, LANG_FM_RDS_NAME, LANG_FM_RDS_TEXT, LANG_FM_RDS_BOTH),
+                   ID2P(LANG_OFF), ID2P(LANG_FM_RDS_NAME),
+                   ID2P(LANG_FM_RDS_TEXT), ID2P(LANG_FM_RDS_BOTH)),
 #endif
 
 #ifdef HAVE_REMOTE_LCD

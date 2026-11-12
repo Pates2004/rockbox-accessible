@@ -23,6 +23,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include "strlcpy.h"
 #include "config.h"
 #include "system.h"
 #include "settings.h"
