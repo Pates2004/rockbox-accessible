@@ -97,14 +97,16 @@ static inline uint32_t swap32_hw(uint32_t value)
 #ifdef __thumb__
     uint32_t mask = 0x00FF00FF;
     asm (                            /* val  = ABCD */
-        "and %1, %0              \n" /* mask = .B.D */
-        "eor %0, %1              \n" /* val  = A.C. */
-        "lsl %1, #8              \n" /* mask = B.D. */
-        "lsr %0, #8              \n" /* val  = .A.C */
-        "orr %0, %1              \n" /* val  = BADC */
-        "mov %1, #16             \n" /* mask = 16   */
-        "ror %0, %1              \n" /* val  = DCBA */
-        : "+l"(value), "+l"(mask));
+        BEGIN_ARM_ASM_SYNTAX_UNIFIED
+        "ands %1, %0             \n" /* mask = .B.D */
+        "eors %0, %1             \n" /* val  = A.C. */
+        "lsls %1, #8             \n" /* mask = B.D. */
+        "lsrs %0, #8             \n" /* val  = .A.C */
+        "orrs %0, %1             \n" /* val  = BADC */
+        "movs %1, #16            \n" /* mask = 16   */
+        "rors %0, %1             \n" /* val  = DCBA */
+        END_ARM_ASM_SYNTAX_UNIFIED
+        : "+l"(value), "+&l"(mask) : : "cc");
 #else
     uint32_t tmp;
     asm (
@@ -126,12 +128,14 @@ static inline uint32_t swap_odd_even32_hw(uint32_t value)
 #ifdef __thumb__
     uint32_t mask = 0x00FF00FF;
     asm (                            /* val  = ABCD */
-        "and %1, %0             \n"  /* mask = .B.D */
-        "eor %0, %1             \n"  /* val  = A.C. */
-        "lsl %1, #8             \n"  /* mask = B.D. */
-        "lsr %0, #8             \n"  /* val  = .A.C */
-        "orr %0, %1             \n"  /* val  = BADC */
-        : "+l"(value), "+l"(mask));
+        BEGIN_ARM_ASM_SYNTAX_UNIFIED
+        "ands %1, %0            \n"  /* mask = .B.D */
+        "eors %0, %1            \n"  /* val  = A.C. */
+        "lsls %1, #8            \n"  /* mask = B.D. */
+        "lsrs %0, #8            \n"  /* val  = .A.C */
+        "orrs %0, %1            \n"  /* val  = BADC */
+        END_ARM_ASM_SYNTAX_UNIFIED
+        : "+l"(value), "+&l"(mask) : : "cc");
 #else
     uint32_t tmp;
     asm (                            /* ABCD      */
@@ -154,8 +158,10 @@ static inline uint32_t swaw32_hw(uint32_t value)
     */
 #ifdef __thumb__
     asm (
-        "ror %0, %1"
-        : "+l"(value) : "l"(16));
+        BEGIN_ARM_ASM_SYNTAX_UNIFIED
+        "rors %0, %1\n"
+        END_ARM_ASM_SYNTAX_UNIFIED
+        : "+l"(value) : "l"(16) : "cc");
     return value;
 #else
     uint32_t retval;

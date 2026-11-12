@@ -164,13 +164,13 @@ INLINE unsigned range_limit(int value)
         [v]"+d"(value)
     );
     return value;
-#elif defined(CPU_ARM)
+#elif defined(CPU_ARM) && !defined(__thumb__)
     /* Note: Uses knowledge that only the low byte of the result is used */
     asm (
         "cmp     %[v], #255          \n"  /* out of range 0..255? */
         "mvnhi   %[v], %[v], asr #31 \n"  /* yes: set all bits to ~(sign_bit) */
         : /* outputs */
-        [v]"+r"(value)
+        [v]"+r"(value) : : "cc"
     );
     return value;
 #else
